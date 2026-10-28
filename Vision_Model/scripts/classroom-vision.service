@@ -1,0 +1,29 @@
+[Unit]
+Description=Classroom four quadrant occupancy vision
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# Replace all three paths and the user before installing this template.
+User=classroom
+SupplementaryGroups=video render
+WorkingDirectory=/home/classroom/Classroom_Automation/Vision_Model
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=1
+EnvironmentFile=-/home/classroom/Classroom_Automation/Vision_Model/config/mqtt.env
+ExecStart=/home/classroom/Classroom_Automation/Vision_Model/.venv/bin/python -m src.main run --config /home/classroom/Classroom_Automation/Vision_Model/config/config.yaml
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

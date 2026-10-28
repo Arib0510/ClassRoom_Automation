@@ -1,0 +1,15 @@
+# ILLUSTRATIVE ONLY. Replace polygons using tomorrow's actual oriented image.
+# Coordinates [x,y] in [0,1], origin top-left. Convex, non-overlapping polygons.
+# Physical left/right are from the front of the room looking toward the back.
+# Back is assumed near image top; verify this assumption after mounting.
+calibrated: false
+anchor: bottom_center
+zones:
+  - id: front_left
+    polygon: [[0.10, 0.48], [0.50, 0.48], [0.50, 0.96], [0.02, 0.96]]
+  - id: front_right
+    polygon: [[0.50, 0.48], [0.90, 0.48], [0.98, 0.96], [0.50, 0.96]]
+  - id: back_left
+    polygon: [[0.22, 0.18], [0.50, 0.18], [0.50, 0.48], [0.10, 0.48]]
+  - id: back_right
+    polygon: [[0.50, 0.18], [0.78, 0.18], [0.90, 0.48], [0.50, 0.48]]

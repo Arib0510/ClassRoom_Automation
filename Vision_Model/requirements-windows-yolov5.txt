@@ -1,0 +1,23 @@
+# Windows x86-64 Python 3.12 experiment only; never install on the Pi.
+torch==2.5.1
+torchvision==0.20.1
+numpy==1.26.4
+Pillow==11.3.0
+PyYAML==6.0.3
+opencv-python==4.10.0.84
+ipython==8.37.0
+pandas==2.2.3
+matplotlib==3.9.4
+seaborn==0.13.2
+requests==2.32.5
+scipy==1.15.3
+tqdm==4.67.1
+psutil==7.1.0
+setuptools==75.8.0
+pytest==8.4.2
+ruff==0.14.0
+onnx==1.17.0
+onnxruntime==1.20.1
+paho-mqtt==2.1.0
+ncnn==1.0.20250503
+pnnx==20250530

@@ -1,0 +1,50 @@
+# Relative paths are resolved against this file's directory.
+device_id: classroom-01-vision
+zones_path: zones.yaml
+poll_seconds: 0.2
+log_level: INFO
+camera:
+  width: 640
+  height: 480
+  fps: 5.0
+  hflip: false
+  vflip: false
+  timeout_seconds: 3.0
+detector:
+  model_path: ../models/ssd_mobilenet_v2_coco_quant.tflite
+  labels_path: ../models/coco_labels.txt
+  sha256: 3438ee45f33153b1fe6c49e18bcd869ce7c94ef01c485d4eb027eaf8fc0db8ac
+  input_encoding: raw_uint8  # Coral example uses RGB bytes directly.
+  input_dtype: uint8
+  input_width: 300
+  input_height: 300
+  input_mean: 127.5  # Used only with input_encoding: normalized_real.
+  input_std: 127.5
+  input_scale: 0.007843137718737125
+  input_zero_point: 127
+  # Positions in get_output_details(), NOT tensor indices; statically verified.
+  boxes_output: 1
+  classes_output: 3
+  scores_output: 0
+  count_output: 2
+  person_class_id: 0
+  confidence_threshold: 0.55
+  num_threads: 2
+occupancy:
+  enter_seconds: 0.5
+  enter_hits: 2
+  clear_seconds: 10.0
+  clear_misses: 3
+  stale_seconds: 4.0
+mqtt:
+  host: 192.168.1.10  # Set the existing LAN MQTT broker address.
+  port: 1883
+  client_id: classroom-01-vision
+  topic_prefix: classroom/classroom-01/vision
+  keepalive: 10
+  heartbeat_seconds: 2.0
+  expiry_seconds: 8
+  username_env: CLASSROOM_MQTT_USERNAME
+  password_env: CLASSROOM_MQTT_PASSWORD
+  tls: false
+  ca_path: null

@@ -1,0 +1,32 @@
+[Unit]
+Description=Classroom Phase 5 observe only
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=@USER@
+SupplementaryGroups=video render
+WorkingDirectory=@RELEASE@
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=1
+EnvironmentFile=-@RELEASE@/config/mqtt.env
+ExecStart=@RELEASE@/.venv-phase5/bin/python scripts/launch_phase5.py --config @RELEASE@/config/phase5.example.yaml --run-root /var/lib/classroom-phase5
+StateDirectory=classroom-phase5
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+KillSignal=SIGTERM
+KillMode=control-group
+MemoryMax=350M
+TasksMax=64
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

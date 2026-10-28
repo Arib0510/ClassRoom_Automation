@@ -1,0 +1,37 @@
+schema_version: 1
+base_config: config.yaml
+mode: OBSERVE
+camera:
+  id: classroom-pi-camera
+  pose_id: unresolved-mounted-pose
+  rotation: 0
+  restart_attempts: 2
+strategy:
+  mode: single_pass
+  roi: [0.0, 0.2, 1.0, 1.0]
+  overlap: 0.2
+  nms_iou: 0.5
+  allow_multipass: false
+resources:
+  inference_timeout_seconds: 3.0
+  startup_timeout_seconds: 60.0
+  max_pipeline_seconds: 4.0
+  max_total_rss_mb: 300.0
+  min_available_mb: 48.0
+mqtt:
+  enabled: false
+  prefix: classroom/phase5/uncommissioned
+  command_qos: 0
+  lease_seconds: 3.0
+  ack_timeout_seconds: 1.0
+  status_timeout_seconds: 4.0
+  min_command_interval_seconds: 0.5
+  max_attempts: 2
+# No firmware, GPIO, topic, polarity or ownership facts have been supplied.
+controllers: []
+appliances: []
+commissioning: null
+authorization: null
+logging:
+  max_bytes: 2000000
+  backup_count: 3

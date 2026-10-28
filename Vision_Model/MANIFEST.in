@@ -1,0 +1,16 @@
+include requirements-windows.txt requirements-pi.txt AGENTS.md
+include requirements-windows-inference.txt
+include requirements-windows-inference-lock.txt
+include .gitignore .gitattributes
+include .gitignore .gitattributes
+recursive-include config *.yaml
+recursive-include docs *.md *.json
+recursive-include models *.md *.json *.txt *.tflite LICENSE.*
+recursive-include scripts *.py *.ps1 *.sh *.service
+recursive-include tests *.py
+include requirements-windows-yolov5.txt requirements-windows-yolov5-lock.txt
+prune models/experimental/yolov5n/source
+prune models/experimental/yolov5n/runtime_config
+include requirements-windows-yolov5.txt requirements-windows-yolov5-lock.txt
+prune models/experimental/yolov5n/source
+prune models/experimental/yolov5n/runtime_config

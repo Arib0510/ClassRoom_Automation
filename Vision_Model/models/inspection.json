@@ -1,0 +1,93 @@
+{
+  "inspection": "FlatBuffer only; no interpreter allocation or inference",
+  "sha256": "3438ee45f33153b1fe6c49e18bcd869ce7c94ef01c485d4eb027eaf8fc0db8ac",
+  "size_bytes": 6741896,
+  "schema_version": 3,
+  "inputs": [
+    {
+      "tensor_index": 0,
+      "name": "serving_default_input:0",
+      "shape": [
+        1,
+        300,
+        300,
+        3
+      ],
+      "dtype": "UINT8",
+      "scales": [
+        0.007843137718737125
+      ],
+      "zero_points": [
+        127
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "tensor_index": 252,
+      "name": "StatefulPartitionedCall:3;StatefulPartitionedCall:2;StatefulPartitionedCall:1;StatefulPartitionedCall:02",
+      "shape": [],
+      "dtype": "FLOAT32",
+      "scales": [],
+      "zero_points": []
+    },
+    {
+      "tensor_index": 250,
+      "name": "StatefulPartitionedCall:3;StatefulPartitionedCall:2;StatefulPartitionedCall:1;StatefulPartitionedCall:0",
+      "shape": [],
+      "dtype": "FLOAT32",
+      "scales": [],
+      "zero_points": []
+    },
+    {
+      "tensor_index": 253,
+      "name": "StatefulPartitionedCall:3;StatefulPartitionedCall:2;StatefulPartitionedCall:1;StatefulPartitionedCall:03",
+      "shape": [],
+      "dtype": "FLOAT32",
+      "scales": [],
+      "zero_points": []
+    },
+    {
+      "tensor_index": 251,
+      "name": "StatefulPartitionedCall:3;StatefulPartitionedCall:2;StatefulPartitionedCall:1;StatefulPartitionedCall:01",
+      "shape": [],
+      "dtype": "FLOAT32",
+      "scales": [],
+      "zero_points": []
+    }
+  ],
+  "tensor_dtype_counts": {
+    "UINT8": 1,
+    "INT32": 75,
+    "FLOAT32": 11,
+    "INT8": 175
+  },
+  "custom_ops": [
+    {
+      "name": "TFLite_Detection_PostProcess",
+      "inputs": [
+        244,
+        249,
+        4
+      ],
+      "outputs": [
+        250,
+        251,
+        252,
+        253
+      ],
+      "options": {
+        "h_scale": 5.0,
+        "max_classes_per_detection": 1,
+        "max_detections": 20,
+        "nms_iou_threshold": 0.6000000238418579,
+        "nms_score_threshold": 0.0,
+        "num_classes": 90,
+        "use_regular_nms": 0,
+        "w_scale": 5.0,
+        "x_scale": 10.0,
+        "y_scale": 10.0
+      }
+    }
+  ]
+}

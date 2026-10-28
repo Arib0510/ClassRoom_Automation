@@ -1,0 +1,23 @@
+{
+  "model": "Coral CPU TF2 SSD MobileNet V2 COCO17 post-training quantized",
+  "upstream_revision": "104342d2d3480b3e66203073dac24f4e2dbb4c41",
+  "catalog": "https://coral.ai/models/object-detection/",
+  "license": "Apache-2.0; upstream license copied unchanged",
+  "artifacts": [
+    {
+      "file": "ssd_mobilenet_v2_coco_quant.tflite",
+      "url": "https://raw.githubusercontent.com/google-coral/test_data/104342d2d3480b3e66203073dac24f4e2dbb4c41/tf2_ssd_mobilenet_v2_coco17_ptq.tflite",
+      "sha256": "3438ee45f33153b1fe6c49e18bcd869ce7c94ef01c485d4eb027eaf8fc0db8ac"
+    },
+    {
+      "file": "coco_labels.txt",
+      "url": "https://raw.githubusercontent.com/google-coral/test_data/104342d2d3480b3e66203073dac24f4e2dbb4c41/coco_labels.txt",
+      "sha256": "dc183f003fc753c4c43fae6fdf7f387559449573f13fa32e517fb7453fd380f1"
+    },
+    {
+      "file": "LICENSE.google-coral",
+      "url": "https://raw.githubusercontent.com/google-coral/test_data/104342d2d3480b3e66203073dac24f4e2dbb4c41/LICENSE",
+      "sha256": "f9946796a8a5bd5981565142fa42e3b0cc36aef6f80e86beaf5905b3c0fef1b5"
+    }
+  ]
+}
