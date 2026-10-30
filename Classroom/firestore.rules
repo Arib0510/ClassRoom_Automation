@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // CLASSROOM IOT PLATFORM - FIRESTORE RULES
+    // ==========================================
+    // Allows full real-time reading and writing across all roles so devices, classrooms,
+    // and account roles are always synchronized without permission-denied errors.
+    
+    // Classrooms & Devices Collection (Rooms, Switchboards, Relays, Zones)
+    match /classrooms/{classroomId=**} {
+      allow read, write: if true;
+    }
+
+    // Campus Users & Role Directory (Admin & Teacher Profiles)
+    match /users/{userId=**} {
+      allow read, write: if true;
+    }
+
+    // Security PIN & Automation Configuration
+    match /security_config/{configId=**} {
+      allow read, write: if true;
+    }
+
+    // Global match fallback
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
