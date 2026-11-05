@@ -14,6 +14,8 @@ import '../widgets/connectivity_sheet.dart';
 import '../widgets/pulsing_beacon.dart';
 import '../widgets/route_transitions.dart';
 import 'auth_screen.dart';
+import '../widgets/cyber_update_dialog.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -31,10 +33,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedDeptFilter = 'ALL';
   final TextEditingController _userSearchController = TextEditingController();
   String _userSearchQuery = '';
+  String _appVersion = 'v1.0.0+1';
 
   @override
   void initState() {
     super.initState();
+    _loadAppVersion();
     _usersStream = FirebaseFirestore.instance.collection('users').snapshots();
     _connState.addListener(_onStateChange);
     AuthState().addListener(_onStateChange);
@@ -42,6 +46,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _mqttSub = MqttService().statusStream.listen((_) {
       if (mounted) setState(() {});
     });
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _appVersion = 'v${info.version}+${info.buildNumber}';
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -521,7 +536,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildDetailRow(
                       icon: Icons.verified_rounded,
                       label: 'Version',
-                      value: 'v2.4.1 (Build 840)',
+                      value: _appVersion,
                     ),
                   ],
                 ),
@@ -604,18 +619,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer.withValues(alpha: 0.4),
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      CyberUpdateDialog.show(context);
+                    },
+                    child: const Text('Check Updates', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
                 ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryContainer.withValues(alpha: 0.4),
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -2088,8 +2121,126 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               const Icon(Icons.info_outline, size: 14, color: AppColors.secondaryLight),
                             ],
                           ),
-                          Text('v2.4.1 - Build 840', style: AppTypography.labelSm(color: AppColors.secondaryLight)),
+                          Text(_appVersion, style: AppTypography.labelSm(color: AppColors.secondaryLight)),
                         ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Divider(color: Colors.white.withValues(alpha: 0.06)),
+                  const SizedBox(height: 10),
+
+                  // OTA Software Update Section
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.12),
+                          AppColors.secondary.withValues(alpha: 0.06),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => CyberUpdateDialog.show(context),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primary.withValues(alpha: 0.18),
+                                  border: Border.all(
+                                    color: AppColors.primary.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.system_update_rounded,
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Check for Updates',
+                                          style: AppTypography.bodyMd(color: Colors.white).copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const PulsingBeacon(size: 6, color: AppColors.onlineMint),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'GitHub OTA release synchronizer',
+                                      style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                  border: Border.all(
+                                    color: AppColors.primary.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.cloud_sync_rounded,
+                                      size: 14,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'UPDATE',
+                                      style: AppTypography.labelSm(color: AppColors.primary).copyWith(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),

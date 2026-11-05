@@ -2,7 +2,7 @@ name: smart_classroom_iot
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.3+4
 
 environment:
   sdk: ^3.8.1
@@ -24,6 +24,10 @@ dependencies:
   flutter_dotenv: ^5.2.1
   mqtt_client: ^10.14.0
   shared_preferences: ^2.3.2
+  package_info_plus: ^9.0.1
+  path_provider: ^2.1.5
+  dio: ^5.11.1
+  open_filex: ^5.0.0
 
 dev_dependencies:
   flutter_test:
