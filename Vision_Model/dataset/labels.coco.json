@@ -1,0 +1,701 @@
+{
+  "info": {
+    "description": "Visible person boxes; no predictions used as ground truth",
+    "annotation_source": "human_manual",
+    "coordinates": "COCO pixel xywh in EXIF-oriented full-resolution image",
+    "box_policy": "Enclose visible person extent; do not invent hidden body parts"
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "person"
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-148_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "88e56d12cd1b6a92dc224e1a7b19700535931449e2dbc2ec071fecadfa7a780f",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 2,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-148_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "b93ea1a6abe0fef87b19bf0d3cd0d85a6f6ee6261265b9af6244a74f37123dca",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 3,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-154_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "45ce032d5d91edd5a8ad0d867511a904342d3c16115c40dc963d0264bbe51d9a",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 4,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-154_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "5e5596f759fb9c993b4727a1517c4f701edaa2986010df57884fd52a311d92db",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 5,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-194_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "5b9d6d6d7810ce5341cd6f3776b94d4ced4a35c608409eb67bdd62181e272670",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 6,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-194_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "a7450afbb44f863841e933982ac05f160be3f1b19b85deef8546b412f9a4e556",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 7,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-200_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "0d82589d15f2b3efe7f2290bbf039a226023818fa047cf358ce850e215d72266",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 8,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-200_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "cc6ed7d3f080551d0e7a792ce0105f1c7d00a9ea989b8c2c9a42b8b32636dc71",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 9,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-237_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "1e2a694c90e518b69f6c7a44a87b96649ebf8f73e22bb60b322fb57631d302a4",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 10,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-237_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "4a689a4efdb7cf24ae9ab59cb0e698e5a697fe0f66409dc2fd7998d9172cce08",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 11,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-243_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "11f1e3ba0b068a1e87ff5811cb90f2e0c3aceda6c430d07e6ae61d0cd14e623e",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 12,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-243_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "9dd6af8e73c33cff43c161dccfd8d3f9fa2efd1353fdf2d9b22fd9a838d205db",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 13,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-277_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "85fe2e370167d99035ade99381b9c38d93172a110d18a5c8130c24533c0d08c8",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 14,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-277_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "45d309a220bbf27cdda6ff4b90d050b802966126418983b0f768b8f0cde1e454",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 15,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-284_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "660bab66ebac432ec32d810b121e191dcd32c4cd29404ead5f08f22c335d3fa5",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 16,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-284_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "bb5189f5f5ccdee0c4dd3d72c61ce1465529238d5389760fbb5c6cf4bace1505",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 17,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-322_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "170e545ca095b811f96b0076412e8341e354a8a3d7babbbeefb664cdd500b06b",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 18,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-322_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "b8fddd1ce88063bb725e7949e63318b6877ebd2c6b683e5ededf4fe5ddc2c33f",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 19,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-342_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "333acae2750b670430db6c60b8d22173c53d385abb6ab26070b86b0319c874dc",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 20,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-342_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "3d469da5466bb670eb94af2068c4f499778d1d9895e19374d56de616b6828d7e",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 21,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-370_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "f54680c6cdb1b1311fa86545f9062bfcba5d3750d2672098953e67a1907cb788",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 22,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-370_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "d5587af4a8e0a2117ca38865ab7f060a6a6054cd3d9c4b30cc6466f603421f41",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 23,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-392_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "d4e84e1320d84a1fd430fc30cf2c2688365e8570f9395d5a780cc6491259b52b",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 24,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-392_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "ef1d59a2bac045d49aff7ddbc97745baa7a85ede21cef99cedfb7409ec7ea0ca",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 25,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-410_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "d0500dfaeddacd3579d71906c6d2ec0effb0afb7ef262fe624157d5b7a50cad2",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 26,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-410_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "f8a39e7af46888f6c62b1df8c7ec8bd9843dae95594bda804d8cca02402a3927",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 27,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-460_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "331428bb3018509c0df384938ebf3599d73ee56ad8a3003b27740595367b0395",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 28,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-460_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "50f5e98996134f0e58cbcd07c009bbe388466fa33f5df167f16433762e93eaa4",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 29,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-468_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "03a7b5a6415e2ddd3d2e457b07e953e8be245c962142a44a70a458bbd267d343",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 30,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-468_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "a48fe8f56ecc647373ab13c949bc41aafadf141c0ce8b548dd8c24c88ba535a8",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 31,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-488_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "3dc378bca14399820db37bacdb338938c693e615d6b986d99f2e812671f7ce49",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 32,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-488_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "ffe32bbf1331e441d3d362140d0ce936e9ef3de9350086c5e3da02e289f30508",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 33,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-516_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "ac6c0035614dd8c34e28bb30f30facdcecfb400efa84ca1b4f33eb2f7325e557",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 34,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-516_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "ca08f224e639c8a62759bc3b27530ce48425a80a43c70638b021fb2c1bbfdf52",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 35,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-522_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "c8d682655dcfbc2c128d0279ceccca91a36559f9ab50387e152e92a8f5ff380e",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 36,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-522_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "8ffaceb57036c8e4d5235d37819e4d4f5d827a9399bad9a410df9709a4dcc3ac",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 37,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-559_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "736bc131b7abd5e04731efefec3ed43baed51eca6c4aae7103b25770c611e211",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 38,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-559_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "4a824ae37ad13cc5f15bb20a68f19896cae50536d6ee6232b883d761a9e2380a",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 39,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-753_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "24db59418077f090d2d2d5b4f89e40f0255f40e169b37f24d0b5ba265775aafe",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 40,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-753_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "60780f9c4d9da5e3ec33db058885e10b4d0e1ce2a65c18fff2b55bbb274730e6",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 41,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-771_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "00d33b32dc365421fc4e27b0234be895aa818af1621f65d5dc208c4879c2bfec",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 42,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-771_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "e9d1ec5d1ba863b24b72323144690fab4a79bd07abf808e48f8b0acbc235f805",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 43,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-795_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "82d623fe64c80ab6824a704fd97a570bc1c18afe6d3e2f77c8f930949b11122f",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 44,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-795_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "a4c12d60ed1406698a45aa5199812c7e818deafe8ef45cb5040b76460af2409b",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 45,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-827_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "5684bdb2c2be2b80cded6ea99c307866bd210cd3964d0cedf67cb380720c1eb9",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 46,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-827_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "353079e464bdba21b572d8d4011c8a5398e6719418fc962fddab8b59a6320769",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 47,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-837_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "1a46190b2d5bbdd72fd0ffba86169ab954a200fda068cb375cc1bfb5663f4369",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 48,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-837_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "52544237f016a161713196bf849d7794a24028741a3c5d2e8f05c0f65d9bcac4",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 49,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-898_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "adc3153b39f7eb80c71a095bf2008b261cfdd4ecde794a86379bf36dcef4b71b",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 50,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-898_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "a7697b16b750d5a499f52d51c4cb4c2a6e10a4f49de2c30ff4b623f2811f46d0",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 51,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-907_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "8f70da73bf0cda5121b14e18b98af94a6cbe3f75050d819271f40b9282b76353",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 52,
+      "file_name": "classroom_35e03e81869e4aa4a2baa110803b9e9f-907_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "f78c21e8b1deb93ae9ad85bb87652f48482bde1e09470540c77071a8cc2cb7ca",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 53,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-150_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "4484fdd661fa774d6a9652397606c86ac4f1f157b9887e3d35812530cccda6c2",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 54,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-150_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "3fc3211007d4061d1edf14c2d6a1765c2d5825a2606bc10aa990b788babba931",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 55,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-404_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "e72123efaa37b184f407c7bdb681cb7238f4a0249acb4099348f599fe2f39076",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 56,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-404_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "c0db727068b694d7bc0bd002f6158ba96f2c7b4ba8c512d661b146305be429ff",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 57,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-476_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "2d6ec76286b6361f0529ffd730a472ac35d2a1f2a8ad2ef403c0384443b2cc5c",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 58,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-476_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "068a8cfc27a3f563669683a964cef883dd6137be2d8dbe0d7dfa5eed0ada042f",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 59,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-496_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "6bc68eff9456398fa47306d0255936b553a5fea80b6a0fc0c585768bec8b1879",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 60,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-496_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "33d232645baf6990081f3f6ebcbbea897d353efacf4a3478503ff3524d9c90af",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 61,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-634_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "2de57860007c5d60ccc10f3986377e8bfb38cafab1a4daafb382d9cca1c84785",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 62,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-634_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "4d7f64cde1e2193a7322f730644ed4ec185c1230c0bcc606b007869510fcb494",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 63,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-639_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "0c1c9e58eba8aa288fa31e8b9f4ccb85f26a2092b7a751908728201a03468beb",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 64,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-639_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "b258ccc61f6036c27f4b1c7b293d07f88bee315d6969472b4f576d15b535701a",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 65,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-646_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "60b509c3dcb3caa6f15d59903580a32a31c4c2bb109e80b58672709cb32e6a8b",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 66,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-646_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "c23549b97595d24b03a4c689cb08583cd1ee1a8d59ed004d13ce9c31992bca88",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 67,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-654_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "71cadace8017e8d20c978313288e9ec6ea559bb6d1aed58993400478c3262f13",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 68,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-654_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "043b65fe823e0a003bf7e62920e2d341980cbd636b928a28474ef401caef482f",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 69,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-676_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "b28b8e0222cf7c0a3c5c1264ed1224aa68f00d04092d248786326a7d53648974",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 70,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-676_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "cb5a0552dccc177e3574e6f694ec4ae0cd127da0c09276a01a0ef307e155e09a",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 71,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-701_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "bd1fcb8c320f1e7332aac7d903bf89437d337fc2a763428aa479f7aac320ea6c",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 72,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-701_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "2d8f1f415b6b60586eca4fccc4ee745659e09dd5f0459f2415448707c6736619",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 73,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-705_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "81f22a0f0f30e8402558b22adbeacb4c7a7f9b8eda5f33d148d81aa8d5e366c8",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 74,
+      "file_name": "classroom_a9f9d5602a864a899ba63494779514fc-705_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "61ed165a8d58fc4e56452836c5428804cb8c0a90e07f1fb3304e3a5eab92ee1b",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 75,
+      "file_name": "classroom_e48bd237672c41de8bfc8d8170bba0d5-448_clean.png",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "46aea897da09039359d13628ea446ec060fb46d79bcebb615968041a6e8dbef0",
+      "reviewed": false,
+      "reviewed_by": ""
+    },
+    {
+      "id": 76,
+      "file_name": "classroom_e48bd237672c41de8bfc8d8170bba0d5-448_detected.jpg",
+      "width": 640,
+      "height": 480,
+      "source_sha256": "3015bd5c66e35538d8075f81531169f587d6a0d1ac3296439a84800595e05c8b",
+      "reviewed": false,
+      "reviewed_by": ""
+    }
+  ],
+  "annotations": []
+}

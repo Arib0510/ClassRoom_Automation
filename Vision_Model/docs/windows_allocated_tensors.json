@@ -1,0 +1,216 @@
+{
+  "model": {
+    "filename": "ssd_mobilenet_v2_coco_quant.tflite",
+    "path": "D:\\Projects\\Classroom_Automation\\Vision_Model\\models\\ssd_mobilenet_v2_coco_quant.tflite",
+    "expected_sha256": "3438ee45f33153b1fe6c49e18bcd869ce7c94ef01c485d4eb027eaf8fc0db8ac",
+    "sha256": "3438ee45f33153b1fe6c49e18bcd869ce7c94ef01c485d4eb027eaf8fc0db8ac"
+  },
+  "software": {
+    "python_version": "3.12.0",
+    "python_executable": "D:\\Projects\\Classroom_Automation\\Vision_Model\\.venv-inference\\Scripts\\python.exe",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "numpy_version": "1.26.4",
+    "pillow_version": "11.3.0"
+  },
+  "runtime": {
+    "backend": "tensorflow",
+    "version": "2.16.2",
+    "distributions": {
+      "tensorflow-cpu": "2.16.2",
+      "tensorflow-intel": "2.16.2"
+    },
+    "interpreter_class": "tensorflow.lite.python.interpreter.Interpreter",
+    "execution": "CPU",
+    "default_delegates": false,
+    "num_threads": 2
+  },
+  "allocated_tensors": {
+    "allocated": true,
+    "inputs": [
+      {
+        "name": "serving_default_input:0",
+        "index": 0,
+        "shape": [
+          1,
+          300,
+          300,
+          3
+        ],
+        "shape_signature": [
+          1,
+          300,
+          300,
+          3
+        ],
+        "dtype": "uint8",
+        "quantization": {
+          "scale": 0.007843137718737125,
+          "zero_point": 127
+        },
+        "quantization_parameters": {
+          "scales": [
+            0.007843137718737125
+          ],
+          "zero_points": [
+            127
+          ],
+          "quantized_dimension": 0
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "name": "StatefulPartitionedCall:3;StatefulPartitionedCall:2;StatefulPartitionedCall:1;StatefulPartitionedCall:02",
+        "index": 252,
+        "shape": [
+          1,
+          20
+        ],
+        "shape_signature": [
+          1,
+          20
+        ],
+        "dtype": "float32",
+        "quantization": {
+          "scale": 0.0,
+          "zero_point": 0
+        },
+        "quantization_parameters": {
+          "scales": [],
+          "zero_points": [],
+          "quantized_dimension": 0
+        },
+        "position": 0
+      },
+      {
+        "name": "StatefulPartitionedCall:3;StatefulPartitionedCall:2;StatefulPartitionedCall:1;StatefulPartitionedCall:0",
+        "index": 250,
+        "shape": [
+          1,
+          20,
+          4
+        ],
+        "shape_signature": [
+          1,
+          20,
+          4
+        ],
+        "dtype": "float32",
+        "quantization": {
+          "scale": 0.0,
+          "zero_point": 0
+        },
+        "quantization_parameters": {
+          "scales": [],
+          "zero_points": [],
+          "quantized_dimension": 0
+        },
+        "position": 1
+      },
+      {
+        "name": "StatefulPartitionedCall:3;StatefulPartitionedCall:2;StatefulPartitionedCall:1;StatefulPartitionedCall:03",
+        "index": 253,
+        "shape": [
+          1
+        ],
+        "shape_signature": [
+          1
+        ],
+        "dtype": "float32",
+        "quantization": {
+          "scale": 0.0,
+          "zero_point": 0
+        },
+        "quantization_parameters": {
+          "scales": [],
+          "zero_points": [],
+          "quantized_dimension": 0
+        },
+        "position": 2
+      },
+      {
+        "name": "StatefulPartitionedCall:3;StatefulPartitionedCall:2;StatefulPartitionedCall:1;StatefulPartitionedCall:01",
+        "index": 251,
+        "shape": [
+          1,
+          20
+        ],
+        "shape_signature": [
+          1,
+          20
+        ],
+        "dtype": "float32",
+        "quantization": {
+          "scale": 0.0,
+          "zero_point": 0
+        },
+        "quantization_parameters": {
+          "scales": [],
+          "zero_points": [],
+          "quantized_dimension": 0
+        },
+        "position": 3
+      }
+    ],
+    "output_roles": {
+      "boxes": 1,
+      "classes": 3,
+      "scores": 0,
+      "count": 2
+    },
+    "capacity": 20,
+    "operator_names": [
+      "ADD",
+      "CONCATENATION",
+      "CONV_2D",
+      "DEPTHWISE_CONV_2D",
+      "DEQUANTIZE",
+      "LOGISTIC",
+      "QUANTIZE",
+      "RESHAPE",
+      "TFLite_Detection_PostProcess"
+    ],
+    "ssd_postprocess_supported": true,
+    "invocation_count": 27
+  },
+  "person_class_id": 0,
+  "confidence_threshold": 0.55,
+  "preprocessing": {
+    "exif_transpose": true,
+    "color": "RGB",
+    "resize": "bilinear stretch",
+    "input_encoding": "raw_uint8",
+    "normalization_applied": false,
+    "configured_mean": 127.5,
+    "configured_std": 127.5,
+    "resize_target_width_height": [
+      300,
+      300
+    ]
+  },
+  "zone_overlay": {
+    "enabled": true,
+    "label": "UNCALIBRATED"
+  },
+  "mqtt_used": false,
+  "camera_used": false,
+  "status": "real_model_inference_completed",
+  "processing": {
+    "schema_version": 1,
+    "status": "completed",
+    "result_type": "model_predictions",
+    "ground_truth_available": false,
+    "accuracy_evaluated": false,
+    "images_discovered": 27,
+    "images_processed": 27,
+    "images_failed": 0,
+    "images_not_attempted": 0,
+    "images_with_person_detections": 1,
+    "total_person_detections": 1
+  },
+  "warnings": [
+    "Model predictions only; no ground truth, accuracy assessment or performance benchmark.",
+    "At most the allocated SSD detection capacity can be returned per full image.",
+    "Zone overlay is UNCALIBRATED for these images; no occupancy decisions are made."
+  ]
+}

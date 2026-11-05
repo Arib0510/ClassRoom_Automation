@@ -1,0 +1,8 @@
+# Classroom Person Detection Dataset (YOLOv8 / YOLO11)
+path: C:/Users/Ori-424/Desktop/app/Vision_Model/dataset
+train: images/train
+val: images/val
+
+# Single unified person class for high recall on occluded & seated students
+names:
+  0: person

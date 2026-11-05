@@ -1,0 +1,10 @@
+{
+  "frame_id": "a9f9d5602a864a899ba63494779514fc-705",
+  "capture_age_seconds_at_download": 1.4554230759999882,
+  "image_size_wh": [
+    640,
+    480
+  ],
+  "clean_image": "processed RGB without overlays; not sensor RAW",
+  "paired_images_same_capture": true
+}
