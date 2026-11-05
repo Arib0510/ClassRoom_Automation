@@ -25,6 +25,7 @@ class Classroom {
   List<ClassroomDevice> devices;
   DateTime? lastIntervalSync;
   int? classSyncInterval;
+  DateTime? lastVisionTelemetry;
 
   Classroom({
     required this.id,
@@ -49,6 +50,7 @@ class Classroom {
     required this.devices,
     this.lastIntervalSync,
     this.classSyncInterval,
+    this.lastVisionTelemetry,
   })  : zoneCount = zoneCount ?? (zones != null && zones.isNotEmpty ? zones.length : 2),
         zones = zones ?? (zoneCount != null && zoneCount > 0
             ? List.generate(zoneCount, (i) => 'Zone ${i + 1}')

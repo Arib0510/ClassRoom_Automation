@@ -2098,9 +2098,11 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isOcc
-                      ? '$total Detected (Front: ${room.frontOccupancy} · Back: ${room.backOccupancy} · $moving Mov · $seated Seat)'
-                      : 'Room Vacant (Front: 0 · Back: 0) · Standby Guard Active',
+                  room.visionMode == 'OFFLINE'
+                      ? 'Vision Model Offline · Standby Guard Active'
+                      : (isOcc
+                          ? '$total Detected (Front: ${room.frontOccupancy} · Back: ${room.backOccupancy} · $moving Mov · $seated Seat)'
+                          : 'Room Vacant (Front: 0 · Back: 0) · Standby Guard Active'),
                   style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(
                     fontSize: 12,
                     fontWeight: isOcc ? FontWeight.w600 : FontWeight.normal,
@@ -2111,7 +2113,9 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
           ),
           PulsingBeacon(
             size: 8,
-            color: isOcc ? AppColors.primary : AppColors.outline,
+            color: room.visionMode == 'OFFLINE'
+                ? AppColors.outlineVariant
+                : (isOcc ? AppColors.primary : AppColors.outline),
           ),
         ],
       ),

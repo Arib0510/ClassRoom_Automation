@@ -20,6 +20,7 @@ class ClassroomState extends ChangeNotifier {
   StreamSubscription<List<Classroom>>? _classroomsStreamSub;
   final Map<String, int> _lastKnownFrontOcc = {};
   final Map<String, int> _lastKnownBackOcc = {};
+  Timer? _visionWatchdogTimer;
 
   ClassroomState._internal() {
     _classrooms = [];
@@ -29,6 +30,7 @@ class ClassroomState extends ChangeNotifier {
     _initFirestoreClassroomsSync();
     _initMqttSync();
     _startClassIntervalSyncTimer();
+    _startVisionWatchdogTimer();
   }
 
   // --- Fast In-Memory Lookups (Building-scoped to eliminate cross-talk) ---
@@ -184,6 +186,16 @@ class ClassroomState extends ChangeNotifier {
           // Normalize room IDs to match building-scoped convention (e.g., ete_room_304)
           for (int i = 0; i < loadedRooms.length; i++) {
             final r = loadedRooms[i];
+            r.currentOccupancy = 0;
+            r.frontOccupancy = 0;
+            r.backOccupancy = 0;
+            r.movingOccupancy = 0;
+            r.stationaryOccupancy = 0;
+            r.isOccupied = false;
+            r.visionMode = 'OFFLINE';
+            r.lastVisionTelemetry = null;
+            _lastKnownFrontOcc[r.id] = 0;
+            _lastKnownBackOcc[r.id] = 0;
             final roomDigits = RegExp(r'\d+').firstMatch(r.roomNumber)?.group(0) ?? '304';
             final b = r.buildingShort.replaceAll(RegExp(r'[^a-z0-9]'), '');
             final cleanId = r.id.startsWith('${b}_')
@@ -198,10 +210,21 @@ class ClassroomState extends ChangeNotifier {
             // Restore device power state from local SharedPreferences disk cache
             for (final d in loadedRooms[i].devices) {
               final rId = loadedRooms[i].id;
-              final savedPwr = prefs.getBool('pwr_${d.id}') ??
-                  prefs.getBool('pwr_${rId}_b${d.boardId}_r${d.relayNumber}');
-              if (savedPwr != null) {
-                d.isOn = savedPwr;
+              final isZoneDev = d.boardId == 1 || d.boardId == 2 ||
+                  d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') ||
+                  d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back');
+              if (isZoneDev) {
+                // Autonomous zone devices boot in standby OFF when cold-starting without active camera
+                d.isOn = false;
+                d.statusDescription = 'Standby · Vacant Zone';
+                prefs.setBool('pwr_${d.id}', false);
+                prefs.setBool('pwr_${rId}_b${d.boardId}_r${d.relayNumber}', false);
+              } else {
+                final savedPwr = prefs.getBool('pwr_${d.id}') ??
+                    prefs.getBool('pwr_${rId}_b${d.boardId}_r${d.relayNumber}');
+                if (savedPwr != null) {
+                  d.isOn = savedPwr;
+                }
               }
               if (d.type == DeviceType.fan) {
                 final savedSpd = prefs.getInt('spd_${d.id}');
@@ -359,6 +382,32 @@ class ClassroomState extends ChangeNotifier {
       if (room == null) return;
 
       bool changed = false;
+      room.lastVisionTelemetry = DateTime.now();
+      room.visionMode = 'LIVE';
+
+      final isOfflinePkt = occupancy['status'] == 'OFFLINE' || occupancy['online'] == false;
+      if (isOfflinePkt) {
+        room.visionMode = 'OFFLINE';
+        room.currentOccupancy = 0;
+        room.frontOccupancy = 0;
+        room.backOccupancy = 0;
+        room.movingOccupancy = 0;
+        room.stationaryOccupancy = 0;
+        room.isOccupied = false;
+        _lastKnownFrontOcc[room.id] = 0;
+        _lastKnownBackOcc[room.id] = 0;
+        for (var d in room.devices) {
+          if (d.boardId == 1 || d.boardId == 2 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back')) {
+            d.isOn = false;
+            d.manualOverrideOff = false;
+            d.statusDescription = 'Standby · Vacant Zone';
+            _persistDevicePower(d, roomId: room.id);
+            changed = true;
+          }
+        }
+        notifyListeners();
+        return;
+      }
       if (occupancy.isNotEmpty) {
         final count = occupancy['count'] ?? occupancy['total_count'];
         if (count is num) {
@@ -650,6 +699,54 @@ class ClassroomState extends ChangeNotifier {
 
   int get currentClassInterval => _currentClassInterval;
   DateTime? get lastClassIntervalSyncTime => _lastClassIntervalSyncTime;
+
+  void _startVisionWatchdogTimer() {
+    _visionWatchdogTimer?.cancel();
+    _visionWatchdogTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      final now = DateTime.now();
+      bool changed = false;
+      for (final room in _classrooms) {
+        final isTimedOut = room.lastVisionTelemetry == null ||
+            now.difference(room.lastVisionTelemetry!) > const Duration(seconds: 6);
+        if (isTimedOut) {
+          if (room.visionMode != 'OFFLINE' ||
+              room.currentOccupancy > 0 ||
+              room.frontOccupancy > 0 ||
+              room.backOccupancy > 0 ||
+              room.isOccupied) {
+            debugPrint('[ClassroomState] Watchdog: Vision model offline for ${room.id}. Marking OFFLINE & Vacant.');
+            room.visionMode = 'OFFLINE';
+            room.currentOccupancy = 0;
+            room.frontOccupancy = 0;
+            room.backOccupancy = 0;
+            room.movingOccupancy = 0;
+            room.stationaryOccupancy = 0;
+            room.isOccupied = false;
+            _lastKnownFrontOcc[room.id] = 0;
+            _lastKnownBackOcc[room.id] = 0;
+
+            for (var d in room.devices) {
+              if (d.boardId == 1 || d.boardId == 2 ||
+                  d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') ||
+                  d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back')) {
+                if (d.isOn && !d.manualOverrideOff) {
+                  d.isOn = false;
+                  d.statusDescription = 'Standby · Vacant Zone';
+                  _persistDevicePower(d, roomId: room.id);
+                  changed = true;
+                }
+              }
+            }
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        notifyListeners();
+        _scheduleLocalStorageSave();
+      }
+    });
+  }
 
   void _startClassIntervalSyncTimer() {
     _classIntervalSyncTimer?.cancel();

@@ -946,6 +946,20 @@ class ClassroomVisionController:
         self.app_res_topic = f"classpulse/{self.room_id}/app/results"
         self.app_state_topic = f"classpulse/{self.room_id}/app/state"
 
+        lwt_doc = {
+            "occupancy": {
+                "count": 0,
+                "front_count": 0,
+                "back_count": 0,
+                "moving_count": 0,
+                "stationary_count": 0,
+                "zones": {"Zone 1": 0, "Zone 2": 0}
+            },
+            "status": "OFFLINE",
+            "online": False
+        }
+        self.mqtt_client.will_set(self.app_state_topic, json.dumps(lwt_doc), qos=1, retain=True)
+
         try:
             LOG.info(f"Connecting to MQTT Broker: {self.broker}:{self.port}...")
             self.mqtt_client.connect(self.broker, self.port, keepalive=30)
@@ -1473,6 +1487,26 @@ class ClassroomVisionController:
                     self.preview_server.server_close()
                 except Exception:
                     pass
+            try:
+                LOG.info("[SHUTDOWN] Broadcasting OFFLINE state and turning OFF zone relays...")
+                offline_pkt = {
+                    "occupancy": {
+                        "count": 0,
+                        "front_count": 0,
+                        "back_count": 0,
+                        "moving_count": 0,
+                        "stationary_count": 0,
+                        "zones": {"Zone 1": 0, "Zone 2": 0}
+                    },
+                    "status": "OFFLINE",
+                    "online": False
+                }
+                self.mqtt_client.publish(self.app_state_topic, json.dumps(offline_pkt), qos=1, retain=True)
+                self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/zone/1/command/all", "ALL_OFF", qos=1)
+                self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/zone/2/command/all", "ALL_OFF", qos=1)
+                time.sleep(0.3)
+            except Exception as e:
+                LOG.warning(f"Error during shutdown broadcast: {e}")
             self.mqtt_client.loop_stop()
             self.mqtt_client.disconnect()
             LOG.info("Clean shutdown complete.")
