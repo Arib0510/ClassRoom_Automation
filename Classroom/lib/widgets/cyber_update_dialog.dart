@@ -786,18 +786,48 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
         ),
         const SizedBox(height: 20),
 
-        SizedBox(
-          width: double.infinity,
-          height: 44,
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.outline,
+                  side: BorderSide(color: AppColors.outline.withValues(alpha: 0.3)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Dismiss'),
+              ),
             ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Dismiss'),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.surfaceContainerLowest,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  if (_releaseInfo == null || _releaseInfo!.apkUrl == null) {
+                    _releaseInfo = AppReleaseInfo(
+                      tagName: release?.tagName ?? 'v1.0.4+5',
+                      cleanVersion: release?.cleanVersion ?? '1.0.4',
+                      buildNumber: release?.buildNumber ?? 5,
+                      releaseName: 'ClassPulse Latest Build',
+                      releaseNotes: 'OTA distribution build from GitHub repository.',
+                      apkUrl: AppUpdateService.directApkUrl,
+                      apkFileName: 'app-release.apk',
+                      apkSize: 56709983,
+                      isUpdateAvailable: true,
+                      currentVersion: release?.currentVersion ?? '1.0.4+5',
+                    );
+                  }
+                  _startDownload();
+                },
+                child: const Text('Reinstall APK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+            ),
+          ],
         ),
       ],
     );
