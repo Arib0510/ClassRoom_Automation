@@ -1,0 +1,12 @@
+{
+  "frame_id": "classroom_fa6cd2f8-0013",
+  "session_id": "fa6cd2f8",
+  "image_size_wh": [
+    1920,
+    1440
+  ],
+  "awb_mode": "auto",
+  "inverted": true,
+  "timestamp": 1793965287.474882,
+  "clean_image": true
+}
