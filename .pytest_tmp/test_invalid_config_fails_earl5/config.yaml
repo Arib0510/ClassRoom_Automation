@@ -1,0 +1,48 @@
+camera:
+  fps: 5.0
+  height: 480
+  hflip: false
+  timeout_seconds: 3.0
+  vflip: false
+  width: 640
+detector:
+  boxes_output: 1
+  classes_output: 0
+  confidence_threshold: 0.55
+  count_output: 2
+  input_dtype: uint8
+  input_encoding: raw_uint8
+  input_height: 300
+  input_mean: 127.5
+  input_scale: 0.007843137718737125
+  input_std: 127.5
+  input_width: 300
+  input_zero_point: 127
+  labels_path: ../models/coco_labels.txt
+  model_path: ../models/ssd_mobilenet_v2_coco_quant.tflite
+  num_threads: 2
+  person_class_id: 0
+  scores_output: 0
+  sha256: 3438ee45f33153b1fe6c49e18bcd869ce7c94ef01c485d4eb027eaf8fc0db8ac
+device_id: classroom-01-vision
+log_level: INFO
+mqtt:
+  ca_path: null
+  client_id: classpulse-room-304-vision
+  expiry_seconds: 8
+  heartbeat_seconds: 2.0
+  host: broker.emqx.io
+  keepalive: 20
+  password_env: CLASSROOM_MQTT_PASSWORD
+  port: 1883
+  tls: false
+  topic_prefix: classpulse/room_304/vision
+  username_env: CLASSROOM_MQTT_USERNAME
+occupancy:
+  clear_misses: 3
+  clear_seconds: 10.0
+  enter_hits: 2
+  enter_seconds: 0.5
+  stale_seconds: 4.0
+poll_seconds: 0.2
+zones_path: zones.yaml

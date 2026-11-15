@@ -13,6 +13,15 @@ if TYPE_CHECKING:
     from .calibration import PhysicalCalibration
 
 ZONE_IDS = ("front_left", "front_right", "back_left", "back_right")
+SIX_ZONE_IDS = (
+    "left_near",
+    "left_far",
+    "centre_near",
+    "centre_far",
+    "right_near",
+    "right_far",
+)
+VALID_ZONE_SETS = (ZONE_IDS, SIX_ZONE_IDS)
 EPSILON = 1e-9
 Point = tuple[float, float]
 
@@ -67,13 +76,14 @@ class ZoneMap:
             raise ValueError("anchor must be bottom_center or center")
         if not isinstance(data["calibrated"], bool):
             raise ValueError("calibrated must be a YAML boolean")
-        if not isinstance(data["zones"], list) or len(data["zones"]) != 4:
-            raise ValueError("Exactly four physical quadrant polygons are required")
+        if not isinstance(data["zones"], list) or len(data["zones"]) not in (4, 6):
+            raise ValueError("Exactly four or six physical quadrant/zone polygons are required")
+        expected_ids = SIX_ZONE_IDS if len(data["zones"]) == 6 else ZONE_IDS
         zones = []
         for entry in data["zones"]:
             if not isinstance(entry, dict) or set(entry) != {"id", "polygon"}:
                 raise ValueError("Each zone needs id and polygon")
-            if not isinstance(entry["id"], str) or entry["id"] not in ZONE_IDS:
+            if not isinstance(entry["id"], str) or entry["id"] not in expected_ids:
                 raise ValueError("Unknown physical quadrant ID")
             polygon = entry["polygon"]
             if not isinstance(polygon, list) or not 3 <= len(polygon) <= 12:
@@ -103,13 +113,13 @@ class ZoneMap:
                 if any(v > EPSILON for v in side) and any(v < -EPSILON for v in side):
                     raise ValueError("Self-intersecting zone polygon")
             zones.append(Zone(entry["id"], p))
-        if {z.id for z in zones} != set(ZONE_IDS):
-            raise ValueError(f"Zone IDs must be {ZONE_IDS}")
+        if {z.id for z in zones} != set(expected_ids):
+            raise ValueError(f"Zone IDs must be {expected_ids}")
         for i, zone in enumerate(zones):
             if any(_overlap(zone, other) for other in zones[i + 1 :]):
                 raise ValueError("Zone polygon interiors overlap")
         # A fixed priority makes shared edges deterministic regardless of YAML ordering.
-        ordered = tuple(next(z for z in zones if z.id == key) for key in ZONE_IDS)
+        ordered = tuple(next(z for z in zones if z.id == key) for key in expected_ids)
         return cls(ordered, data["anchor"], data["calibrated"])
 
     def assign(self, box: tuple[float, float, float, float]) -> str | None:
@@ -121,7 +131,7 @@ class ZoneMap:
         return next((z.id for z in self.zones if z.contains(point)), None)
 
     def count(self, boxes: list[tuple[float, float, float, float]]) -> dict[str, int]:
-        counts = dict.fromkeys(ZONE_IDS, 0)
+        counts = {z.id: 0 for z in self.zones}
         for box in boxes:
             zone = self.assign(box)
             if zone is not None:

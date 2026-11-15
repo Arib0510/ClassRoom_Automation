@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "person_labels_sha256": "f560df1d43c9324f6f9875e8b0f29b1104c7ba5103b802c0e843c9da5f50f323",
+  "physical_layout_verified": false,
+  "reviewer": "",
+  "layout_evidence": "",
+  "persons": [
+    {
+      "annotation_id": 1,
+      "image_id": 1,
+      "zone": "UNKNOWN",
+      "reviewer": "",
+      "basis": ""
+    }
+  ],
+  "images": [
+    {
+      "image_id": 1,
+      "file_name": "a.jpg",
+      "source_sha256": "7a1e9525c6a2563425db50dc6b0907b82c6402153ac369322f39e655efcaa74a",
+      "zones": {
+        "front_left": "UNKNOWN",
+        "front_right": "UNKNOWN",
+        "back_left": "UNKNOWN",
+        "back_right": "UNKNOWN"
+      },
+      "reviewer": "",
+      "basis": ""
+    }
+  ]
+}

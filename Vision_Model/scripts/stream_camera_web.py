@@ -34,8 +34,23 @@ except ImportError:
 from picamera2 import Picamera2
 
 cam = Picamera2()
-config = cam.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
+config = cam.create_video_configuration(
+    main={"size": (640, 480), "format": "RGB888"},
+    buffer_count=2,
+    queue=False,
+    controls={"FrameRate": 25.0},
+)
 cam.configure(config)
+try:
+    from libcamera import controls
+    cam.set_controls({
+        "AwbMode": controls.AwbModeEnum.Fluorescent,
+        "Sharpness": 1.0,
+        "Contrast": 1.0,
+        "Saturation": 1.0,
+    })
+except Exception:
+    pass
 cam.start()
 time.sleep(1)
 
@@ -209,21 +224,24 @@ def get_next_filename() -> str:
 
 
 def get_current_frame_bytes(invert: bool) -> tuple[bytes, object]:
-    frame = cam.capture_array()
+    # Picamera2 "RGB888" is [B, G, R] in memory (native OpenCV BGR)
+    frame_bgr = cam.capture_array()
     if invert:
-        # 180 degree flip (both axes)
-        frame = frame[::-1, ::-1]
-
-    if Image is not None:
-        img = Image.fromarray(frame)
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=80)
-        return buf.getvalue(), img
+        if cv2 is not None:
+            frame_bgr = cv2.flip(frame_bgr, -1)
+        else:
+            frame_bgr = frame_bgr[::-1, ::-1]
 
     if cv2 is not None:
-        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        _, jpeg = cv2.imencode(".jpg", frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+        _, jpeg = cv2.imencode(".jpg", frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
         return jpeg.tobytes(), frame_bgr
+
+    if Image is not None:
+        # PIL expects RGB, so reverse BGR -> RGB for PIL only
+        img = Image.fromarray(frame_bgr[:, :, ::-1])
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=82)
+        return buf.getvalue(), img
 
     buf = io.BytesIO()
     cam.capture_file(buf, format="jpeg")

@@ -74,7 +74,9 @@ class ColorCorrectedCollector:
 
             config = self.cam.create_video_configuration(
                 main={"size": (self.max_w, self.max_h), "format": "RGB888"},
-                controls={"FrameRate": 20.0},
+                buffer_count=2,
+                queue=False,
+                controls={"FrameRate": 25.0},
             )
             self.cam.configure(config)
 
@@ -116,23 +118,24 @@ class ColorCorrectedCollector:
 
         while self.running:
             try:
-                frame_rgb = self.cam.capture_array()
+                # Note: Picamera2 "RGB888" outputs [B, G, R] bytes in memory (native OpenCV BGR)
+                # Do NOT call cv2.cvtColor(COLOR_RGB2BGR), or Red and Blue channels will swap!
+                frame_bgr = self.cam.capture_array()
 
                 if self.invert:
-                    frame_rgb = frame_rgb[::-1, ::-1]
+                    frame_bgr = cv2.flip(frame_bgr, -1)
 
                 # Web preview
                 prev_h = int(960 * (self.max_h / self.max_w))
-                prev_rgb = cv2.resize(frame_rgb, (960, prev_h), interpolation=cv2.INTER_AREA)
-                prev_bgr = cv2.cvtColor(prev_rgb, cv2.COLOR_RGB2BGR)
+                prev_bgr = cv2.resize(frame_bgr, (960, prev_h), interpolation=cv2.INTER_AREA)
                 ret, jpeg = cv2.imencode(".jpg", prev_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
 
                 with self.lock:
-                    self.latest_full_rgb = frame_rgb
+                    self.latest_full_rgb = frame_bgr
                     if ret:
                         self.latest_preview_jpeg = jpeg.tobytes()
 
-                time.sleep(0.04)
+                time.sleep(0.03)
             except Exception as e:
                 LOG.warning(f"Loop error: {e}")
                 time.sleep(0.1)
@@ -155,7 +158,8 @@ class ColorCorrectedCollector:
         jpg_path = os.path.join(SAVE_DIR, jpg_name)
         meta_path = os.path.join(SAVE_DIR, f"{fname_base}_metadata.json")
 
-        full_bgr = cv2.cvtColor(full_rgb, cv2.COLOR_RGB2BGR)
+        # latest_full_rgb is already native OpenCV BGR from Picamera2 "RGB888"
+        full_bgr = full_rgb
 
         # 1. Lossless PNG
         cv2.imwrite(img_path, full_bgr, [int(cv2.IMWRITE_PNG_COMPRESSION), 1])
@@ -168,6 +172,7 @@ class ColorCorrectedCollector:
             "image_size_wh": [w, h],
             "megapixels": round((w * h) / 1_000_000.0, 2),
             "color_format": "RGB888",
+            "color_swap_fixed": True,
             "awb_mode": self.current_awb,
             "inverted": self.invert,
             "timestamp": time.time(),

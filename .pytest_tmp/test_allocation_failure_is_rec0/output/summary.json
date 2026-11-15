@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "status": "failed",
+  "result_type": "model_predictions",
+  "ground_truth_available": false,
+  "accuracy_evaluated": false,
+  "images_discovered": 2,
+  "images_processed": 0,
+  "images_failed": 0,
+  "images_not_attempted": 2,
+  "images_with_person_detections": 0,
+  "total_person_detections": 0,
+  "image_statuses": []
+}

@@ -44,7 +44,7 @@ mqtt:
   keepalive: 20
   heartbeat_seconds: 2.0
   expiry_seconds: 8
-  username_env: null
-  password_env: null
+  username_env: CLASSROOM_MQTT_USERNAME
+  password_env: CLASSROOM_MQTT_PASSWORD
   tls: false
   ca_path: null

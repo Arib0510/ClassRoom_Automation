@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "status": "completed_with_errors",
+  "result_type": "model_predictions",
+  "ground_truth_available": false,
+  "accuracy_evaluated": false,
+  "images_discovered": 3,
+  "images_processed": 2,
+  "images_failed": 1,
+  "images_not_attempted": 0,
+  "images_with_person_detections": 1,
+  "total_person_detections": 1,
+  "image_statuses": [
+    {
+      "image_filename": "a.jpg",
+      "status": "processed",
+      "error": null
+    },
+    {
+      "image_filename": "b.png",
+      "status": "processed",
+      "error": null
+    },
+    {
+      "image_filename": "corrupt.jpeg",
+      "status": "unreadable",
+      "error": "corrupt.jpeg: UnidentifiedImageError: cannot identify image file 'C:\\\\Users\\\\Ori-424\\\\Desktop\\\\app\\\\.pytest_tmp\\\\test_unreadable_image_is_not_a0\\\\input\\\\corrupt.jpeg'"
+    }
+  ]
+}

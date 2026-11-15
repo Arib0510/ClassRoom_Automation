@@ -1,0 +1,7 @@
+{
+  "human_labels_complete": false,
+  "matching_iou": 0.5,
+  "result_type": "per_label_raw_output_review",
+  "persons": null,
+  "reason": "Human labeling incomplete; no missed-person attribution available"
+}

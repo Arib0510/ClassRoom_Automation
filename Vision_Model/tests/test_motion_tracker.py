@@ -92,3 +92,29 @@ def test_track_expiry_after_missed_frames():
     tracker.update([], now=0.3)
     assert len(tracker.tracks) == 0
 
+
+def test_classroom_motion_tracker_six_zones_and_iou():
+    from scripts.run_classroom_vision import ClassroomMotionTracker
+
+    # Verify _compute_iou uses box_b's height (yb2 - yb1), not box_a's height
+    box_a = (0.1, 0.1, 0.3, 0.2)  # w=0.2, h=0.1, area=0.02
+    box_b = (0.1, 0.1, 0.3, 0.5)  # w=0.2, h=0.4, area=0.08
+    # intersection is box_a (0.02), union is 0.08 -> IoU = 0.25
+    assert ClassroomMotionTracker._compute_iou(box_a, box_b) == pytest.approx(0.25)
+
+    tracker = ClassroomMotionTracker(split_y=0.50, invert_zones=True)
+    # Person in lower-left (near left bench in ceiling camera with invert_zones=True)
+    # and person in upper-middle (far centre bench)
+    dets = [
+        ((0.10, 0.65, 0.25, 0.90), 0.88),
+        ((0.45, 0.20, 0.55, 0.45), 0.82),
+    ]
+    tracks = tracker.update(dets, now=1.0)
+    assert len(tracks) == 2
+    by_zone6 = {t.zone6: t for t in tracks}
+    assert "left_near" in by_zone6
+    assert by_zone6["left_near"].is_front is True
+    assert "centre_far" in by_zone6
+    assert by_zone6["centre_far"].is_front is False
+
+

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "result_type": "model_predictions",
+  "ground_truth_available": false,
+  "coordinate_conventions": {
+    "xmin_ymin_xmax_ymax_center_x_center_y": "continuous pixels; origin top-left; x in [0,width], y in [0,height]",
+    "normalized_suffix": "normalized to [0,1] in the same image",
+    "image_frame": "full source resolution after EXIF orientation correction, before resize",
+    "box_order_from_model": "ymin,xmin,ymax,xmax",
+    "detection_index": "1-based within each image, filtered model output order"
+  },
+  "images": [
+    {
+      "image_filename": "a.jpg",
+      "status": "processed",
+      "error": null,
+      "detections": [
+        {
+          "image_filename": "a.jpg",
+          "detection_index": 1,
+          "class_name": "person",
+          "class_id": 0,
+          "confidence": 0.9,
+          "xmin": 20.0,
+          "ymin": 5.0,
+          "xmax": 70.0,
+          "ymax": 40.0,
+          "center_x": 44.99999999999999,
+          "center_y": 22.5,
+          "xmin_normalized": 0.2,
+          "ymin_normalized": 0.1,
+          "xmax_normalized": 0.7,
+          "ymax_normalized": 0.8,
+          "center_x_normalized": 0.44999999999999996,
+          "center_y_normalized": 0.45
+        }
+      ],
+      "annotated_image": "annotated/a.jpg.annotated.jpg",
+      "width": 100,
+      "height": 50,
+      "encoded_width": 100,
+      "encoded_height": 50,
+      "exif_orientation": null,
+      "source_sha256": "bf808f7c6f6088577eb1f1b7e3fa4db9c2176d0867fdf30c69f14580afec1788"
+    },
+    {
+      "image_filename": "b.png",
+      "status": "processed",
+      "error": null,
+      "detections": [],
+      "annotated_image": "annotated/b.png.annotated.jpg",
+      "width": 100,
+      "height": 50,
+      "encoded_width": 100,
+      "encoded_height": 50,
+      "exif_orientation": null,
+      "source_sha256": "980aafe1e46633c663b8a95ea2ce1085207302a46b1361cc3e36b5a7fc7724bf"
+    }
+  ]
+}

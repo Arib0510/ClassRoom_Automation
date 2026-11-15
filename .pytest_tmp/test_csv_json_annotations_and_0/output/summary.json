@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "result_type": "model_predictions",
+  "ground_truth_available": false,
+  "accuracy_evaluated": false,
+  "images_discovered": 2,
+  "images_processed": 2,
+  "images_failed": 0,
+  "images_not_attempted": 0,
+  "images_with_person_detections": 1,
+  "total_person_detections": 1,
+  "image_statuses": [
+    {
+      "image_filename": "a.jpg",
+      "status": "processed",
+      "error": null
+    },
+    {
+      "image_filename": "b.png",
+      "status": "processed",
+      "error": null
+    }
+  ]
+}

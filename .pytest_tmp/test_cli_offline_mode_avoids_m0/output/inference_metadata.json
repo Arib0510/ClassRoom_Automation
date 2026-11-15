@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "status": "completed_with_errors",
+  "mode": "offline_image_folder",
+  "model": {
+    "filename": "ssd_mobilenet_v2_coco_quant.tflite",
+    "path": "C:\\Users\\Ori-424\\Desktop\\app\\Vision_Model\\models\\ssd_mobilenet_v2_coco_quant.tflite",
+    "expected_sha256": "3438ee45f33153b1fe6c49e18bcd869ce7c94ef01c485d4eb027eaf8fc0db8ac",
+    "sha256": "3438ee45f33153b1fe6c49e18bcd869ce7c94ef01c485d4eb027eaf8fc0db8ac"
+  },
+  "software": {
+    "python_version": "3.13.13",
+    "python_executable": "C:\\Users\\Ori-424\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "numpy_version": "2.3.2",
+    "pillow_version": "12.0.0"
+  },
+  "requested_backend": "auto",
+  "input_folder": "C:\\Users\\Ori-424\\Desktop\\app\\.pytest_tmp\\test_cli_offline_mode_avoids_m0\\input",
+  "output_folder": "C:\\Users\\Ori-424\\Desktop\\app\\.pytest_tmp\\test_cli_offline_mode_avoids_m0\\output",
+  "images_discovered": 3,
+  "discovery": "nonrecursive; .jpg/.jpeg/.png case-insensitive; sorted by (casefold(name),name)",
+  "source_filenames": [
+    "a.jpg",
+    "b.png",
+    "corrupt.png"
+  ],
+  "coordinate_conventions": {
+    "xmin_ymin_xmax_ymax_center_x_center_y": "continuous pixels; origin top-left; x in [0,width], y in [0,height]",
+    "normalized_suffix": "normalized to [0,1] in the same image",
+    "image_frame": "full source resolution after EXIF orientation correction, before resize",
+    "box_order_from_model": "ymin,xmin,ymax,xmax",
+    "detection_index": "1-based within each image, filtered model output order"
+  },
+  "person_class_id": 0,
+  "confidence_threshold": 0.55,
+  "preprocessing": {
+    "exif_transpose": true,
+    "color": "RGB",
+    "resize": "bilinear stretch",
+    "input_encoding": "raw_uint8",
+    "normalization_applied": false,
+    "configured_mean": 127.5,
+    "configured_std": 127.5,
+    "resize_target_width_height": [
+      300,
+      300
+    ]
+  },
+  "zone_overlay": {
+    "enabled": false,
+    "label": null
+  },
+  "mqtt_used": false,
+  "camera_used": false,
+  "weights_modified": false,
+  "warnings": [
+    "Model predictions only; no ground truth, accuracy assessment or performance benchmark.",
+    "At most the allocated SSD detection capacity can be returned per full image."
+  ],
+  "error": null,
+  "processing": {
+    "schema_version": 1,
+    "status": "completed_with_errors",
+    "result_type": "model_predictions",
+    "ground_truth_available": false,
+    "accuracy_evaluated": false,
+    "images_discovered": 3,
+    "images_processed": 2,
+    "images_failed": 1,
+    "images_not_attempted": 0,
+    "images_with_person_detections": 1,
+    "total_person_detections": 1
+  },
+  "updated_at_utc": "2026-11-15T15:02:02.673198+00:00",
+  "runtime": {
+    "backend": "UNIT_TEST_FIXTURE",
+    "version": "test"
+  },
+  "allocated_tensors": {
+    "allocated": true,
+    "invocation_count": 2
+  }
+}

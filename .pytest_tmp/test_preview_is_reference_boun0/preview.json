@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "calibrated": false,
+  "geometry_digest": "7b0c063922a41e675079fdcb81eb4a8ca797cf5a55f3ed3bad36d104fccdc556",
+  "reference": {
+    "file_name": "synthetic_reference.png",
+    "sha256": "aad72a5c97d68a9179d820c07aa507cdf959aa1c84b7c07113c8ee516051bc4a",
+    "width": 1000,
+    "height": 600,
+    "kind": "illustrative",
+    "camera_id": "",
+    "pose_id": "",
+    "hflip": false,
+    "vflip": false
+  },
+  "assignments": [
+    {
+      "status": "preview",
+      "zone_id": "front_left",
+      "reason": "draft_candidate_only",
+      "image_anchor": [
+        0.2,
+        0.66
+      ],
+      "floor_anchor": null,
+      "seat_id": "front_left_seat"
+    }
+  ],
+  "homography": null,
+  "homography_status": "At least four verified floor landmarks are required",
+  "camera_used": false,
+  "mqtt_used": false,
+  "appliance_control_enabled": false
+}

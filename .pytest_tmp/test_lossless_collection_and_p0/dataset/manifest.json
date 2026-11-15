@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "session": {
+    "session_id": "synthetic-session",
+    "consent_reference": "synthetic-test"
+  },
+  "images": [
+    {
+      "file_name": "frame_00001.png",
+      "sha256": "2b9e8b62f880025e9395ab8a2d9cccb3228c52e86d5e09c587e9b7870301be54",
+      "width": 5,
+      "height": 4,
+      "capture": {
+        "frame_id": "synthetic",
+        "captured_at": 1
+      },
+      "saved_at_utc": "2026-11-15T15:02:07.802341+00:00",
+      "lighting": "synthetic",
+      "physical_occupancy": {
+        "front_left": "UNKNOWN",
+        "front_right": "UNKNOWN",
+        "back_left": "UNKNOWN",
+        "back_right": "UNKNOWN"
+      },
+      "annotation_source": "human_entered_or_UNKNOWN",
+      "consent_reference": "synthetic-test",
+      "encoding": "lossless RGB PNG; not raw Bayer sensor data"
+    }
+  ],
+  "ground_truth_from_predictions": false
+}

@@ -8,5 +8,6 @@
   "awb_mode": "auto",
   "inverted": true,
   "timestamp": 1793965622.5011797,
-  "clean_image": true
+  "clean_image": true,
+  "color_swap_fixed": true
 }

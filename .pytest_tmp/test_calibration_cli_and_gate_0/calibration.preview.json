@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "calibrated": false,
+  "geometry_digest": "4699cecf93632a73b79ef4ae603401b27941ff367416ed42396651c3cc6a4ac1",
+  "reference": {
+    "file_name": "synthetic_reference.png",
+    "sha256": "aad72a5c97d68a9179d820c07aa507cdf959aa1c84b7c07113c8ee516051bc4a",
+    "width": 1000,
+    "height": 600,
+    "kind": "illustrative",
+    "camera_id": "",
+    "pose_id": "",
+    "hflip": false,
+    "vflip": false
+  },
+  "assignments": [],
+  "homography": null,
+  "homography_status": "At least four verified floor landmarks are required",
+  "camera_used": false,
+  "mqtt_used": false,
+  "appliance_control_enabled": false
+}

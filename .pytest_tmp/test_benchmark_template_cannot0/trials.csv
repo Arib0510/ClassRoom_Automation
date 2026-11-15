@@ -1,0 +1,2 @@
+trial_id,zone,phase,source,clock_id,arrival_seconds,output_seconds,evidence_file,evidence_sha256
+synthetic,front_left,sustained,external_synchronized_observation,same-timeline,1,6.2,synthetic-evidence.txt,12916b23847306167c7a7a7513769309cf404c950d4b613ee4ec0ba49e92aab0

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "result_type": "model_predictions",
+  "ground_truth_available": false,
+  "coordinate_conventions": {
+    "xmin_ymin_xmax_ymax_center_x_center_y": "continuous pixels; origin top-left; x in [0,width], y in [0,height]",
+    "normalized_suffix": "normalized to [0,1] in the same image",
+    "image_frame": "full source resolution after EXIF orientation correction, before resize",
+    "box_order_from_model": "ymin,xmin,ymax,xmax",
+    "detection_index": "1-based within each image, filtered model output order"
+  },
+  "images": []
+}

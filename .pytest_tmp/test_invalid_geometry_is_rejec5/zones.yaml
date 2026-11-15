@@ -1,0 +1,43 @@
+anchor: bottom_center
+calibrated: false
+zones:
+- id: front_left
+  polygon:
+  - - 0.1
+    - 0.48
+  - - 0.5
+    - 0.96
+  - - 0.5
+    - 0.48
+  - - 0.02
+    - 0.96
+- id: front_right
+  polygon:
+  - - 0.5
+    - 0.48
+  - - 0.9
+    - 0.48
+  - - 0.98
+    - 0.96
+  - - 0.5
+    - 0.96
+- id: back_left
+  polygon:
+  - - 0.22
+    - 0.18
+  - - 0.5
+    - 0.18
+  - - 0.5
+    - 0.48
+  - - 0.1
+    - 0.48
+- id: back_right
+  polygon:
+  - - 0.5
+    - 0.18
+  - - 0.78
+    - 0.18
+  - - 0.9
+    - 0.48
+  - - 0.5
+    - 0.48

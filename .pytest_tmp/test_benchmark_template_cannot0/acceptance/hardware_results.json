@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "hardware_acceptance": "PENDING",
+  "mains_authorized": false,
+  "tests": {
+    "environment": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "camera": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "ssd": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "crop_strategies": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "physical_calibration": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "mqtt": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "isolated_outputs": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "arrival_latency": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "faults": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "extended_operation": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    },
+    "electrical_commissioning": {
+      "status": "PENDING",
+      "reviewer": "",
+      "measured_at": null,
+      "evidence_files": [],
+      "notes": ""
+    }
+  }
+}

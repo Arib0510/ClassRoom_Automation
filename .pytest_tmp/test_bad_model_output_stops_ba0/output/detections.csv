@@ -1,0 +1,1 @@
+image_filename,detection_index,class_name,class_id,confidence,xmin,ymin,xmax,ymax,center_x,center_y,xmin_normalized,ymin_normalized,xmax_normalized,ymax_normalized,center_x_normalized,center_y_normalized

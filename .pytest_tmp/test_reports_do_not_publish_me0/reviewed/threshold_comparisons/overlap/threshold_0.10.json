@@ -1,0 +1,48 @@
+{
+  "mode": "overlap",
+  "threshold": 0.1,
+  "matching_iou": 0.5,
+  "accuracy_evaluated": true,
+  "images": [
+    {
+      "image_filename": "test.jpg",
+      "prediction_count": 0,
+      "pre_global_nms_count": 0,
+      "suppressed_detection_indices": [],
+      "metrics": {
+        "actual_certain": 1,
+        "actual_uncertain": 0,
+        "detected": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 1,
+        "false_negative_annotation_ids": [
+          1
+        ],
+        "matched_annotation_ids": [],
+        "false_positive_prediction_indices": [],
+        "uncertain_ignored_prediction_indices": [],
+        "partial_actual": 1,
+        "partial_matched": 0,
+        "partial_seated_actual": 1,
+        "partial_seated_matched": 0
+      },
+      "detections": []
+    }
+  ],
+  "prediction_count": 0,
+  "images_with_predictions": 0,
+  "metrics": {
+    "true_positives": 0,
+    "false_positives": 0,
+    "false_negatives": 1,
+    "partial_actual": 1,
+    "partial_matched": 0,
+    "partial_seated_actual": 1,
+    "partial_seated_matched": 0,
+    "precision": null,
+    "person_recall": 0.0,
+    "partial_recall": 0.0,
+    "partial_seated_recall": 0.0
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "result_type": "model_predictions",
+  "ground_truth_available": false,
+  "coordinate_conventions": {
+    "xmin_ymin_xmax_ymax_center_x_center_y": "continuous pixels; origin top-left; x in [0,width], y in [0,height]",
+    "normalized_suffix": "normalized to [0,1] in the same image",
+    "image_frame": "full source resolution after EXIF orientation correction, before resize",
+    "box_order_from_model": "ymin,xmin,ymax,xmax",
+    "detection_index": "1-based within each image, filtered model output order"
+  },
+  "images": [
+    {
+      "image_filename": "a.jpg",
+      "status": "failed",
+      "error": "ModelContractError: invalid actual output",
+      "detections": [],
+      "annotated_image": null,
+      "width": 100,
+      "height": 50,
+      "encoded_width": 100,
+      "encoded_height": 50,
+      "exif_orientation": null,
+      "source_sha256": "bf808f7c6f6088577eb1f1b7e3fa4db9c2176d0867fdf30c69f14580afec1788"
+    }
+  ]
+}

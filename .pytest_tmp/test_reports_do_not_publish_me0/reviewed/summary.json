@@ -1,0 +1,438 @@
+{
+  "status": "completed",
+  "result_type": "model_predictions",
+  "ground_truth_complete": true,
+  "accuracy_evaluated": true,
+  "images": 1,
+  "images_human_reviewed": 1,
+  "settings": {
+    "nms_iou": 0.5,
+    "matching_iou": 0.5
+  },
+  "modes": {
+    "full": {
+      "0.10": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.20": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.30": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.40": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.50": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.55": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      }
+    },
+    "roi": {
+      "0.10": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.20": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.30": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.40": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.50": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.55": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      }
+    },
+    "left_right": {
+      "0.10": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.20": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.30": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.40": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.50": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.55": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      }
+    },
+    "overlap": {
+      "0.10": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.20": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.30": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.40": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.50": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      },
+      "0.55": {
+        "prediction_count": 0,
+        "images_with_predictions": 0,
+        "metrics": {
+          "true_positives": 0,
+          "false_positives": 0,
+          "false_negatives": 1,
+          "partial_actual": 1,
+          "partial_matched": 0,
+          "partial_seated_actual": 1,
+          "partial_seated_matched": 0,
+          "precision": null,
+          "person_recall": 0.0,
+          "partial_recall": 0.0,
+          "partial_seated_recall": 0.0
+        }
+      }
+    }
+  },
+  "matching": "score-greedy one-to-one certain labels; unmatched predictions overlapping uncertain labels at matching IoU are ignored",
+  "metrics_unavailable_reason": null,
+  "warnings": [
+    "Low scores are not proof of a human",
+    "Only returned SSD postprocess slots are observable, not raw anchors",
+    "Multiple crops multiply invocations; no Pi timing/resource validation",
+    "Detection ROI is independent of physical occupancy zones"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "human_labels_complete": true,
+  "matching_iou": 0.5,
+  "result_type": "per_label_raw_output_review",
+  "persons": [
+    {
+      "annotation_id": 1,
+      "file_name": "test.jpg",
+      "attributes": {
+        "uncertain": false,
+        "partial": true,
+        "seated": true
+      },
+      "modes": {
+        "full": {
+          "status": "no_returned_person_box_at_matching_iou",
+          "best_overlapping_person_output": null
+        },
+        "roi": {
+          "status": "no_returned_person_box_at_matching_iou",
+          "best_overlapping_person_output": null
+        },
+        "left_right": {
+          "status": "no_returned_person_box_at_matching_iou",
+          "best_overlapping_person_output": null
+        },
+        "overlap": {
+          "status": "no_returned_person_box_at_matching_iou",
+          "best_overlapping_person_output": null
+        }
+      }
+    }
+  ]
+}

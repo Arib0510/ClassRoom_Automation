@@ -1,0 +1,5 @@
+trial_id,zone,phase,source,clock_id,arrival_seconds,output_seconds,evidence_file,evidence_sha256
+PENDING-front_left,front_left,sustained,external_synchronized_observation,,,,,
+PENDING-front_right,front_right,sustained,external_synchronized_observation,,,,,
+PENDING-back_left,back_left,sustained,external_synchronized_observation,,,,,
+PENDING-back_right,back_right,sustained,external_synchronized_observation,,,,,

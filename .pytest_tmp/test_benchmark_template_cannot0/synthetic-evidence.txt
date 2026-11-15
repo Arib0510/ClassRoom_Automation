@@ -1,0 +1,1 @@
+synthetic same-instrument timestamps for parser test only

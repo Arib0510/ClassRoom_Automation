@@ -1,0 +1,19 @@
+{
+  "mode": "overlap",
+  "threshold": 0.55,
+  "matching_iou": 0.5,
+  "accuracy_evaluated": false,
+  "images": [
+    {
+      "image_filename": "test.jpg",
+      "prediction_count": 0,
+      "pre_global_nms_count": 0,
+      "suppressed_detection_indices": [],
+      "metrics": null,
+      "detections": []
+    }
+  ],
+  "prediction_count": 0,
+  "images_with_predictions": 0,
+  "metrics": null
+}

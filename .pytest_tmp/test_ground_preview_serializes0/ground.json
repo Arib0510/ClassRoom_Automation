@@ -1,0 +1,41 @@
+{
+  "schema_version": 2,
+  "calibrated": false,
+  "geometry_digest": "3b3df9cb2e6aee341d0619f1cd32311ab052696de29431f677c55a25cf9c6af0",
+  "reference": {
+    "file_name": "synthetic_reference.png",
+    "sha256": "aad72a5c97d68a9179d820c07aa507cdf959aa1c84b7c07113c8ee516051bc4a",
+    "width": 1000,
+    "height": 600,
+    "kind": "illustrative",
+    "camera_id": "",
+    "pose_id": "",
+    "hflip": false,
+    "vflip": false
+  },
+  "assignments": [
+    {
+      "status": "preview",
+      "zone_id": "front_left",
+      "reason": "draft_candidate_only",
+      "image_anchor": [
+        0.4,
+        0.7000000000000001
+      ],
+      "floor_anchor": [
+        0.25000000000000017,
+        0.24999999999999978
+      ],
+      "seat_id": null
+    }
+  ],
+  "homography": {
+    "rms_error_px": 2.3130571513708304e-13,
+    "max_error_px": 3.8463259691301505e-13,
+    "reference_count": 4
+  },
+  "homography_status": "computed; physical checks still required",
+  "camera_used": false,
+  "mqtt_used": false,
+  "appliance_control_enabled": false
+}

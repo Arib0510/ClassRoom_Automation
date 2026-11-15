@@ -16,7 +16,7 @@ from pathlib import Path
 import yaml
 
 from .calibration_geometry import fit_homography, inside_margin, point, polygon, project
-from .zones import ZONE_IDS, Zone, _overlap
+from .zones import SIX_ZONE_IDS, ZONE_IDS, Zone, _overlap
 
 SCHEMA_VERSION = 2
 CONFIRMATION_PHRASE = "CONFIRM MOUNTED CAMERA CALIBRATION"
@@ -236,10 +236,12 @@ class PhysicalCalibration:
         _number(settings["boundary_margin_px"], "boundary_margin_px", 0, 1000)
         _number(settings["ground_margin"], "ground_margin", 0, 0.25)
         zones = data["appliance_zones"]
-        if not isinstance(zones, list) or len(zones) != 4:
-            raise ValueError("Exactly four appliance zones are required")
-        if {z.get("id") for z in zones} != set(ZONE_IDS):
-            raise ValueError("Four unique physical appliance zone IDs are required")
+        if not isinstance(zones, list) or len(zones) not in (4, 6):
+            raise ValueError("Exactly four or six appliance zones are required")
+        expected_zone_ids = SIX_ZONE_IDS if len(zones) == 6 else ZONE_IDS
+        if {z.get("id") for z in zones} != set(expected_zone_ids):
+            raise ValueError("Unique physical appliance zone IDs are required")
+        self.zone_ids = expected_zone_ids
         floor_zones = []
         for z in zones:
             _keys(z, ("id", "floor_polygon", "image_polygon"), "appliance zone")
@@ -268,7 +270,7 @@ class PhysicalCalibration:
         self.seats = []
         for seat in data["seat_regions"]:
             _keys(seat, ("id", "row_id", "zone_id", "polygon", "floor_point"), "seat region")
-            if seat["zone_id"] not in ZONE_IDS or seat["row_id"] not in row_ids:
+            if seat["zone_id"] not in self.zone_ids or seat["row_id"] not in row_ids:
                 raise ValueError("Seat requires a known row and an appliance zone")
             vertices = polygon(seat["polygon"], "seat region")
             self.seats.append((seat, vertices))
@@ -335,7 +337,7 @@ class PhysicalCalibration:
         needed = {"mounted_frame", "zone_ownership", "anchors", "exclusions"}
         if data["assignment"]["method"] == "seat_regions":
             needed.add("seat_regions")
-            if {seat["zone_id"] for seat, _ in self.seats} != set(ZONE_IDS):
+            if {seat["zone_id"] for seat, _ in self.seats} != set(self.zone_ids):
                 raise ValueError(
                     "Confirmed seat mode needs seat coverage for all four appliance zones"
                 )
@@ -471,7 +473,7 @@ class PhysicalCalibration:
             or any(a.status != "assigned" for a in assignments)
         ):
             return ZoneObservation(None, assignments)
-        counts = dict.fromkeys(ZONE_IDS, 0)
+        counts = dict.fromkeys(self.zone_ids, 0)
         for a in assignments:
             counts[a.zone_id] += 1
         return ZoneObservation(counts, assignments)
