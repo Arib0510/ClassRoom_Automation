@@ -26,7 +26,6 @@ import sys
 import threading
 import time
 import uuid
-from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -46,6 +45,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from src.ac_control import ClassroomACController
+from src.classroom_tracker import ClassroomMotionTracker, TrackedPerson
 
 try:
     import paho.mqtt.client as mqtt
@@ -67,28 +67,6 @@ SIX_ZONE_IDS = (
     "right_near",
     "right_far",
 )
-
-
-# ============================================================================
-# Classroom Motion & Persistence Tracker
-# ============================================================================
-@dataclass
-class TrackedPerson:
-    track_id: int
-    bbox: Tuple[float, float, float, float]  # (x1, y1, x2, y2) normalized [0, 1]
-    centroid: Tuple[float, float]             # (cx, cy) center
-    anchor: Tuple[float, float]               # (ax, ay) upper-body seating anchor
-    confidence: float = 0.50
-    velocity: Tuple[float, float] = (0.0, 0.0)
-    speed: float = 0.0
-    state: str = "STATIONARY"                 # "MOVING" or "STATIONARY"
-    zone: str = "front_left"                  # Legacy quadrant (front_left, front_right, back_left, back_right)
-    zone6: str = "left_near"                  # 6-zone ID (left_near, left_far, centre_near, centre_far, right_near, right_far)
-    is_front: bool = True                     # True = Near/Front Zone, False = Far/Back Zone
-    last_seen_time: float = 0.0
-    frames_tracked: int = 1
-    missed_frames: int = 0
-    confirmed: bool = False
 
 
 class FastMotionFilter:
@@ -124,236 +102,6 @@ class FastMotionFilter:
         self.last_gray = small_gray
         has_motion = changed_pixels >= max(4, self.min_motion_pixels // 16)
         return has_motion, ratio, motion_mask
-
-
-class ClassroomMotionTracker:
-    """
-    Classroom-tuned person tracker with corrected IoU + Upper-Body Seating Anchor
-    + Centroid proximity matching + 6-zone & 4-quadrant classification.
-    """
-
-    def __init__(
-        self,
-        iou_threshold: float = 0.20,
-        centroid_distance_thresh: float = 0.12,
-        max_missed_frames: int = 10,
-        min_hits: int = 1,
-        motion_speed_threshold: float = 0.035,
-        smoothing_factor: float = 0.6,
-        split_y: float = 0.48,
-        col_left_x: float = 0.34,
-        col_right_x: float = 0.66,
-        invert_zones: bool = False,
-    ):
-        self.iou_threshold = iou_threshold
-        self.dist_thresh = centroid_distance_thresh
-        self.max_missed_frames = max_missed_frames
-        self.min_hits = min_hits
-        self.motion_speed_threshold = motion_speed_threshold
-        self.smoothing = smoothing_factor
-        self.split_y = split_y
-        self.col_left_x = col_left_x
-        self.col_right_x = col_right_x
-        self.invert_zones = invert_zones
-
-        self.tracks: Dict[int, TrackedPerson] = {}
-        self.next_track_id: int = 1
-        self.last_update_time: Optional[float] = None
-
-    @staticmethod
-    def _compute_iou(box_a: Tuple[float, float, float, float], box_b: Tuple[float, float, float, float]) -> float:
-        xa1, ya1, xa2, ya2 = box_a
-        xb1, yb1, xb2, yb2 = box_b
-        inter_x1 = max(xa1, xb1)
-        inter_y1 = max(ya1, yb1)
-        inter_x2 = min(xa2, xb2)
-        inter_y2 = min(ya2, yb2)
-        if inter_x2 <= inter_x1 or inter_y2 <= inter_y1:
-            return 0.0
-        inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
-        area_a = max(0.0, xa2 - xa1) * max(0.0, ya2 - ya1)
-        area_b = max(0.0, xb2 - xb1) * max(0.0, yb2 - yb1)
-        union = area_a + area_b - inter_area
-        return inter_area / union if union > 0.0 else 0.0
-
-    @staticmethod
-    def _centroid(box: Tuple[float, float, float, float]) -> Tuple[float, float]:
-        return ((box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0)
-
-    @staticmethod
-    def _upper_body_anchor(box: Tuple[float, float, float, float]) -> Tuple[float, float]:
-        """Upper-torso anchor (x_center, y1 + 0.25 * height) immune to desk occlusion."""
-        return ((box[0] + box[2]) / 2.0, box[1] + 0.25 * (box[3] - box[1]))
-
-    def classify_zone(self, anchor: Tuple[float, float]) -> Tuple[str, str, bool]:
-        """
-        Classifies an upper-body anchor (ax, ay) into:
-          - quadrant: 'front_left' | 'front_right' | 'back_left' | 'back_right'
-          - zone6:    'left_near' | 'left_far' | 'centre_near' | 'centre_far' | 'right_near' | 'right_far'
-          - is_front: True if in the near/front zone, False if in the far/back zone.
-        Note: In the upright ceiling camera view of the classroom, near benches are in the
-        lower half of the image (y >= split_y) and far benches are in the upper half (y < split_y)
-        when invert_zones is True, or vice-versa. Default split_y divides Top vs Bottom half.
-        """
-        ax, ay = anchor
-        is_front_raw = ay < self.split_y
-        is_front = (not is_front_raw) if self.invert_zones else is_front_raw
-        is_left_half = ax < 0.5
-
-        if is_front and is_left_half:
-            quadrant = "front_left"
-        elif is_front and not is_left_half:
-            quadrant = "front_right"
-        elif not is_front and is_left_half:
-            quadrant = "back_left"
-        else:
-            quadrant = "back_right"
-
-        # 3-Column x 2-Depth 6-Zone Classification
-        if ax < self.col_left_x:
-            col_prefix = "left"
-        elif ax < self.col_right_x:
-            col_prefix = "centre"
-        else:
-            col_prefix = "right"
-
-        depth_suffix = "near" if is_front else "far"
-        zone6 = f"{col_prefix}_{depth_suffix}"
-
-        return quadrant, zone6, is_front
-
-    def update(
-        self,
-        detections: List[Tuple[Tuple[float, float, float, float], float]],
-        now: Optional[float] = None,
-    ) -> List[TrackedPerson]:
-        now = time.monotonic() if now is None else float(now)
-        dt = (now - self.last_update_time) if self.last_update_time is not None else 0.1
-        dt = max(0.01, min(dt, 2.0))
-        self.last_update_time = now
-
-        unmatched_dets = set(range(len(detections)))
-        unmatched_tracks = set(self.tracks.keys())
-        matched_pairs: List[Tuple[int, int]] = []
-
-        # Pass 1: Greedy IoU matching
-        if self.tracks and detections:
-            track_ids = list(self.tracks.keys())
-            iou_matrix = np.zeros((len(track_ids), len(detections)), dtype=np.float32)
-            for i, tid in enumerate(track_ids):
-                for j, (det_box, _) in enumerate(detections):
-                    iou_matrix[i, j] = self._compute_iou(self.tracks[tid].bbox, det_box)
-
-            while True:
-                max_iou = float(np.max(iou_matrix)) if iou_matrix.size > 0 else 0.0
-                if max_iou < self.iou_threshold:
-                    break
-                row, col = np.unravel_index(np.argmax(iou_matrix), iou_matrix.shape)
-                tid = track_ids[int(row)]
-                col_idx = int(col)
-                matched_pairs.append((tid, col_idx))
-                unmatched_tracks.discard(tid)
-                unmatched_dets.discard(col_idx)
-                iou_matrix[row, :] = -1.0
-                iou_matrix[:, col] = -1.0
-
-        # Pass 2: Centroid proximity matching for occluded/seated students
-        if unmatched_tracks and unmatched_dets:
-            for tid in list(unmatched_tracks):
-                old_c = self.tracks[tid].centroid
-                best_det = None
-                min_dist = self.dist_thresh
-                for det_idx in list(unmatched_dets):
-                    det_box, _ = detections[det_idx]
-                    c = self._centroid(det_box)
-                    dist = math.hypot(c[0] - old_c[0], c[1] - old_c[1])
-                    if dist < min_dist:
-                        min_dist = dist
-                        best_det = det_idx
-                if best_det is not None:
-                    matched_pairs.append((tid, best_det))
-                    unmatched_tracks.discard(tid)
-                    unmatched_dets.discard(best_det)
-
-        # Update matched tracks
-        for tid, det_idx in matched_pairs:
-            det_box, conf = detections[det_idx]
-            new_c = self._centroid(det_box)
-            new_anchor = self._upper_body_anchor(det_box)
-            old_c = self.tracks[tid].centroid
-
-            raw_vx = (new_c[0] - old_c[0]) / dt
-            raw_vy = (new_c[1] - old_c[1]) / dt
-
-            old_vx, old_vy = self.tracks[tid].velocity
-            vx = self.smoothing * old_vx + (1.0 - self.smoothing) * raw_vx
-            vy = self.smoothing * old_vy + (1.0 - self.smoothing) * raw_vy
-            speed = math.hypot(vx, vy)
-
-            state = "MOVING" if speed > self.motion_speed_threshold else "STATIONARY"
-            quadrant, zone6, is_front = self.classify_zone(new_anchor)
-
-            t = self.tracks[tid]
-            # Smooth bounding box jitter for stationary students
-            if state == "STATIONARY":
-                ox1, oy1, ox2, oy2 = t.bbox
-                nx1, ny1, nx2, ny2 = det_box
-                t.bbox = (
-                    0.4 * ox1 + 0.6 * nx1,
-                    0.4 * oy1 + 0.6 * ny1,
-                    0.4 * ox2 + 0.6 * nx2,
-                    0.4 * oy2 + 0.6 * ny2,
-                )
-            else:
-                t.bbox = det_box
-            t.centroid = new_c
-            t.anchor = new_anchor
-            t.confidence = conf
-            t.velocity = (vx, vy)
-            t.speed = speed
-            t.state = state
-            t.zone = quadrant
-            t.zone6 = zone6
-            t.is_front = is_front
-            t.last_seen_time = now
-            t.frames_tracked += 1
-            t.missed_frames = 0
-            if t.frames_tracked >= self.min_hits:
-                t.confirmed = True
-
-        # Age unmatched tracks
-        for tid in list(unmatched_tracks):
-            self.tracks[tid].missed_frames += 1
-            if self.tracks[tid].missed_frames > self.max_missed_frames:
-                del self.tracks[tid]
-
-        # Register new tracks
-        for det_idx in unmatched_dets:
-            det_box, conf = detections[det_idx]
-            c = self._centroid(det_box)
-            anchor = self._upper_body_anchor(det_box)
-            quadrant, zone6, is_front = self.classify_zone(anchor)
-            new_person = TrackedPerson(
-                track_id=self.next_track_id,
-                bbox=det_box,
-                centroid=c,
-                anchor=anchor,
-                confidence=conf,
-                velocity=(0.0, 0.0),
-                speed=0.0,
-                state="STATIONARY",
-                zone=quadrant,
-                zone6=zone6,
-                is_front=is_front,
-                last_seen_time=now,
-                frames_tracked=1,
-                missed_frames=0,
-                confirmed=(self.min_hits <= 1 or conf >= 0.42),
-            )
-            self.tracks[self.next_track_id] = new_person
-            self.next_track_id += 1
-
-        return list(self.tracks.values())
 
 
 # ============================================================================
@@ -907,6 +655,13 @@ class ClassroomVisionController:
         camera_source: int | str = 0,
         show_window: bool = False,
         conf_thresh: float = 0.28,
+        iou_thresh: float = 0.45,
+        track_iou_thresh: float = 0.18,
+        confirmation_hits: int = 2,
+        track_max_age: float = 1.5,
+        centroid_distance_thresh: float = 0.06,
+        occupancy_hold_seconds: float = 1.5,
+        diagnostic_overlay: bool = False,
         preview_port: int = 8080,
         width: int = 640,
         height: int = 480,
@@ -929,6 +684,16 @@ class ClassroomVisionController:
         self.camera_source = camera_source
         self.show_window = show_window
         self.conf_thresh = conf_thresh
+        if not 0 < iou_thresh <= 1:
+            raise ValueError("iou_thresh must be in (0,1]")
+        if occupancy_hold_seconds <= 0 or not math.isfinite(occupancy_hold_seconds):
+            raise ValueError("occupancy_hold_seconds must be finite and positive")
+        self.iou_thresh = iou_thresh
+        self.track_iou_thresh = track_iou_thresh
+        self.confirmation_hits = confirmation_hits
+        self.track_max_age = track_max_age
+        self.occupancy_hold_seconds = occupancy_hold_seconds
+        self.diagnostic_overlay = diagnostic_overlay
         self.preview_port = preview_port
         self.cam_width = width
         self.cam_height = height
@@ -946,6 +711,10 @@ class ClassroomVisionController:
         self.prev_front_occupied = None
         self.prev_back_occupied = None
         self.prev_zone6_occupied: Dict[str, Optional[bool]] = {z: None for z in SIX_ZONE_IDS}
+        self.last_confirmed_zone_time: Dict[str, Optional[float]] = {
+            zone: None for zone in ("front", "back", *SIX_ZONE_IDS)
+        }
+        self.last_frame_ok = True
 
         # State tracking across boards
         self.active_overrides: Dict[str, Dict] = {}
@@ -959,13 +728,16 @@ class ClassroomVisionController:
         # Multi-Zone Motion Tracker
         self.motion_filter = FastMotionFilter(threshold=18, min_motion_pixels=96)
         self.tracker = ClassroomMotionTracker(
-            iou_threshold=0.20,
-            centroid_distance_thresh=0.12,
-            max_missed_frames=10,
-            min_hits=1,
+            iou_threshold=track_iou_thresh,
+            centroid_distance_thresh=centroid_distance_thresh,
+            max_missed_frames=14,
+            max_age_seconds=track_max_age,
+            confirmation_hits=confirmation_hits,
             motion_speed_threshold=0.035,
             smoothing_factor=0.6,
             split_y=split_y,
+            col_left_x=0.34,
+            col_right_x=0.66,
             invert_zones=invert_zones,
         )
 
@@ -985,6 +757,16 @@ class ClassroomVisionController:
         self.latest_capture_frame: Optional[np.ndarray] = None
         self.latest_capture_seq: int = 0
         self.active_people_snapshot: List[TrackedPerson] = []
+        self.tracked_people_snapshot: List[TrackedPerson] = []
+        self.raw_detections_snapshot: List[
+            Tuple[Tuple[float, float, float, float], float, int]
+        ] = []
+        self.tracker_diagnostics_snapshot: Dict[str, int] = {
+            "observed_confirmed_count": 0,
+            "tentative_track_count": 0,
+            "retained_track_count": 0,
+        }
+        self.merged_detection_count_snapshot = 0
         self.zone_counts_snapshot: Dict[str, int] = {
             "front_left": 0,
             "front_right": 0,
@@ -1196,10 +978,29 @@ class ClassroomVisionController:
             try:
                 data = json.loads(payload_str) if payload_str.startswith("{") else {"state": payload_str}
                 req_state = str(data.get("state", payload_str)).upper()
-                is_back = ("/zone/2" in topic) or ("/zone/back" in topic) or ("/board/2" in topic)
+                is_back = ("/zone/2" in topic) or ("/zone/back" in topic) or ("/board/2" in topic) or (data.get("zone") == 2)
                 target_board = self.back_board_id if is_back else self.front_board_id
+                zone_id = 2 if is_back else 1
                 zone_count = self.latest_back_count if is_back else self.latest_front_count
                 zone_label = "Back Zone (Zone 2)" if is_back else "Front Zone (Zone 1)"
+
+                # Check if this is an Optical IR AC command (GPIO 4) from the Flutter App
+                is_ac_cmd = ("/ac" in topic) or (str(data.get("type", "")).lower() == "ac") or (str(data.get("protocol", "")).upper() == "GREE")
+                if is_ac_cmd:
+                    pub_fn = lambda t, p: self.mqtt_client.publish(t, p, qos=0)
+                    self.ac_controller.handle_app_ac_request(
+                        zone_id=zone_id,
+                        occupant_count=zone_count,
+                        desired_state=req_state,
+                        temp=int(data["temp"]) if "temp" in data else None,
+                        mode=str(data["mode"]) if "mode" in data else None,
+                        fan=int(data["fan"]) if "fan" in data else None,
+                        swing=bool(data["swing"]) if "swing" in data else None,
+                        now=time.monotonic(),
+                        publish_fn=pub_fn if zone_count <= 0 else None,  # If occupied, ESP32 already received the direct MQTT packet
+                        operation_mode=self.mode,
+                    )
+                    return
 
                 if (req_state == "ON" or req_state == "ALL_ON") and zone_count <= 0:
                     LOG.warning(f"[VISION GATE INTERCEPT] Direct MQTT ON on '{topic}' BLOCKED: {zone_label} is EMPTY (0 occupants)!")
@@ -1220,8 +1021,38 @@ class ClassroomVisionController:
 
                 is_back = any(x in aid.lower() for x in ["zone 2", "zone_2", "b2", "_2", "back"])
                 target_board = self.back_board_id if is_back else self.front_board_id
+                zone_id = 2 if is_back else 1
                 zone_count = self.latest_back_count if is_back else self.latest_front_count
                 zone_label = "Back Zone (Zone 2)" if is_back else "Front Zone (Zone 1)"
+
+                # Route AC / HVAC requests through ClassroomACController (GPIO 4 Optical IR)
+                if any(k in aid.lower() for k in ("ac", "hvac", "gree")):
+                    pub_fn = lambda t, p: self.mqtt_client.publish(t, p, qos=0)
+                    accepted, reason = self.ac_controller.handle_app_ac_request(
+                        zone_id=zone_id,
+                        occupant_count=zone_count,
+                        desired_state=desired,
+                        temp=int(data["temp"]) if "temp" in data else None,
+                        mode=str(data["mode"]) if "mode" in data else None,
+                        fan=int(data["fan"]) if "fan" in data else None,
+                        swing=bool(data["swing"]) if "swing" in data else None,
+                        duration_seconds=dur,
+                        now=time.monotonic(),
+                        publish_fn=pub_fn,
+                        operation_mode=self.mode,
+                    )
+                    res_packet = {
+                        "schema_version": 1,
+                        "kind": "app_result",
+                        "request_id": req_id,
+                        "result": "ACCEPTED" if accepted else "REJECTED",
+                        "reason": reason,
+                        "appliance_id": aid,
+                        "desired_state": desired if accepted else "OFF",
+                        "event_time_unix_ms": int(now * 1000),
+                    }
+                    self.mqtt_client.publish(self.app_res_topic, json.dumps(res_packet), qos=0)
+                    return
 
                 if desired == "ON":
                     if zone_count <= 0:
@@ -1346,6 +1177,9 @@ class ClassroomVisionController:
 
             last_yolo_time = now_mono
             cur_conf = self.conf_thresh
+            cur_iou = self.iou_thresh
+            frame_ok = True
+            results = None
 
             # 2. YOLOv8 Inference inside inference_mode
             with torch.inference_mode():
@@ -1353,18 +1187,29 @@ class ClassroomVisionController:
                     results = self.model.predict(
                         source=frame,
                         conf=cur_conf,
+                        iou=cur_iou,
                         classes=[0],
                         imgsz=self.imgsz,
                         rect=True,
                         verbose=False,
                     )
-                except Exception:
-                    results = self.model.predict(
-                        source=frame,
-                        conf=cur_conf,
-                        imgsz=self.imgsz,
-                        verbose=False,
-                    )
+                except Exception as first_error:
+                    try:
+                        results = self.model.predict(
+                            source=frame,
+                            conf=cur_conf,
+                            iou=cur_iou,
+                            imgsz=self.imgsz,
+                            verbose=False,
+                        )
+                    except Exception as fallback_error:
+                        frame_ok = False
+                        LOG.warning(
+                            "Detector failed for frame; preserving occupancy state: "
+                            "primary=%s; fallback=%s",
+                            first_error,
+                            fallback_error,
+                        )
 
             dt_ai = now_mono - prev_ai_time
             if dt_ai > 0:
@@ -1373,9 +1218,10 @@ class ClassroomVisionController:
 
             h, w = frame.shape[:2]
             detections: List[Tuple[Tuple[float, float, float, float], float]] = []
-            for box in results[0].boxes:
-                cls_id = int(box.cls[0].item())
-                if cls_id == 0:
+            raw_detections: List[Tuple[Tuple[float, float, float, float], float, int]] = []
+            if frame_ok and results:
+                for box in results[0].boxes:
+                    cls_id = int(box.cls[0].item())
                     conf = float(box.conf[0].item())
                     xyxy = box.xyxy[0].tolist()
                     norm_box = (
@@ -1384,11 +1230,14 @@ class ClassroomVisionController:
                         min(1.0, xyxy[2] / w),
                         min(1.0, xyxy[3] / h),
                     )
-                    detections.append((norm_box, conf))
+                    raw_detections.append((norm_box, conf, cls_id))
+                    if cls_id == 0:
+                        detections.append((norm_box, conf))
 
             # 3. Update Multi-Zone Tracker
             tracked = self.tracker.update(detections, now_mono)
-            active_people = [p for p in tracked if p.confirmed and p.missed_frames <= 4]
+            tracker_counts = self.tracker.diagnostics()
+            active_people = self.tracker.observed_confirmed()
 
             total_count = len(active_people)
             moving_count = sum(1 for p in active_people if p.state == "MOVING")
@@ -1415,16 +1264,57 @@ class ClassroomVisionController:
 
             with self.frame_lock:
                 self.active_people_snapshot = list(active_people)
+                self.tracked_people_snapshot = list(tracked)
+                self.raw_detections_snapshot = list(raw_detections)
+                self.tracker_diagnostics_snapshot = tracker_counts
+                self.merged_detection_count_snapshot = len(detections)
                 self.zone_counts_snapshot = zone_counts
                 self.zone6_counts_snapshot = zone6_counts
                 self.moving_count_snapshot = moving_count
                 self.stationary_count_snapshot = stationary_count
 
             # 4. Multi-Zone Automated Decision Logic (Strict DRY_RUN isolation)
-            front_occupied = front_count > 0
-            back_occupied = back_count > 0
+            if frame_ok:
+                for zone_name, people in (
+                    ("front", [p for p in active_people if p.is_front]),
+                    ("back", [p for p in active_people if not p.is_front]),
+                ):
+                    if people:
+                        self.last_confirmed_zone_time[zone_name] = now_mono
+                for zone_id in SIX_ZONE_IDS:
+                    if zone6_counts[zone_id] > 0:
+                        self.last_confirmed_zone_time[zone_id] = now_mono
+            self.last_frame_ok = frame_ok
 
-            if self.prev_front_occupied != front_occupied:
+            def held_occupied(
+                zone_name: str,
+                current_count: int,
+                frame_ok: bool = frame_ok,
+                now_mono: float = now_mono,
+            ) -> bool:
+                if current_count > 0:
+                    return True
+                if not frame_ok:
+                    if zone_name in SIX_ZONE_IDS:
+                        return bool(self.prev_zone6_occupied.get(zone_name, False))
+                    return bool(getattr(self, f"prev_{zone_name}_occupied", False))
+                last_seen = self.last_confirmed_zone_time[zone_name]
+                return last_seen is not None and now_mono - last_seen <= self.occupancy_hold_seconds
+
+            front_occupied = held_occupied("front", front_count)
+            back_occupied = held_occupied("back", back_count)
+            front_transition = (
+                front_occupied
+                if self.prev_front_occupied is None
+                else self.prev_front_occupied != front_occupied
+            )
+            back_transition = (
+                back_occupied
+                if self.prev_back_occupied is None
+                else self.prev_back_occupied != back_occupied
+            )
+
+            if frame_ok and front_transition:
                 self.prev_front_occupied = front_occupied
                 target_front = "ON" if front_occupied else "OFF"
                 LOG.info(f"⚡ [FRONT ZONE TRANSITION] {front_count} people -> {target_front} ({self.front_board_id}, mode={self.mode})")
@@ -1440,7 +1330,7 @@ class ClassroomVisionController:
                 self.last_sent_state[self.front_board_id] = (target_front, now_wall)
                 self.last_state_pub = 0.0
 
-            if self.prev_back_occupied != back_occupied:
+            if frame_ok and back_transition:
                 self.prev_back_occupied = back_occupied
                 target_back = "ON" if back_occupied else "OFF"
                 LOG.info(f"⚡ [BACK ZONE TRANSITION] {back_count} people -> {target_back} ({self.back_board_id}, mode={self.mode})")
@@ -1466,8 +1356,8 @@ class ClassroomVisionController:
                 "right_far": (self.third_board_id, 2),
             }
             for z6_id, (b_id, ch_num) in six_zone_board_map.items():
-                z6_occ = zone6_counts.get(z6_id, 0) > 0
-                if self.prev_zone6_occupied.get(z6_id) != z6_occ:
+                z6_occ = held_occupied(z6_id, zone6_counts.get(z6_id, 0))
+                if frame_ok and self.prev_zone6_occupied.get(z6_id) != z6_occ:
                     self.prev_zone6_occupied[z6_id] = z6_occ
                     if b_id == self.third_board_id:
                         self._send_esp32_command(b_id, ch_num, "ON" if z6_occ else "OFF", lease_sec=60)
@@ -1500,8 +1390,15 @@ class ClassroomVisionController:
                     "freshness_seconds": 4.0,
                     "occupancy": {
                         "present": total_count > 0,
+                        "observation_valid": frame_ok,
+                        "observation_status": "OK" if frame_ok else "STALE",
                         "count": total_count,
                         "total_count": total_count,
+                        "raw_detection_count": len(raw_detections),
+                        "merged_detection_count": len(detections),
+                        "observed_confirmed_count": tracker_counts["observed_confirmed_count"],
+                        "tentative_track_count": tracker_counts["tentative_track_count"],
+                        "retained_track_count": tracker_counts["retained_track_count"],
                         "moving_count": moving_count,
                         "stationary_count": stationary_count,
                         "front_count": front_count,
@@ -1548,6 +1445,10 @@ class ClassroomVisionController:
 
         with self.frame_lock:
             active_people = list(self.active_people_snapshot)
+            tracked_people = list(self.tracked_people_snapshot)
+            raw_detections = list(self.raw_detections_snapshot)
+            tracker_diagnostics = dict(self.tracker_diagnostics_snapshot)
+            merged_detection_count = self.merged_detection_count_snapshot
             zone_counts = dict(self.zone_counts_snapshot)
             zone6_counts = dict(self.zone6_counts_snapshot)
 
@@ -1574,8 +1475,28 @@ class ClassroomVisionController:
         cv2.putText(annotated, top_label, (12, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.48, top_color, 2)
         cv2.putText(annotated, bot_label, (12, split_pixel_y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.48, bot_color, 2)
 
-        # Draw Tracked Persons & Upper-Body Seating Anchor
-        for p in active_people:
+        if self.diagnostic_overlay:
+            for raw_box, raw_conf, raw_class in raw_detections:
+                rx1, ry1, rx2, ry2 = (
+                    int(raw_box[0] * w),
+                    int(raw_box[1] * h),
+                    int(raw_box[2] * w),
+                    int(raw_box[3] * h),
+                )
+                cv2.rectangle(annotated, (rx1, ry1), (rx2, ry2), (0, 165, 255), 1)
+                cv2.putText(
+                    annotated,
+                    f"RAW c{raw_class} {raw_conf:.2f}",
+                    (rx1, min(h - 4, ry2 + 14)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.38,
+                    (0, 165, 255),
+                    1,
+                )
+
+        # Draw current confirmed observations; diagnostics expose other lifecycle states.
+        overlay_people = tracked_people if self.diagnostic_overlay else active_people
+        for p in overlay_people:
             x1 = int(p.bbox[0] * w)
             y1 = int(p.bbox[1] * h)
             x2 = int(p.bbox[2] * w)
@@ -1583,11 +1504,20 @@ class ClassroomVisionController:
             ax = int(p.anchor[0] * w)
             ay = int(p.anchor[1] * h)
 
-            box_color = (250, 190, 40) if p.is_front else (240, 120, 220)
+            if p.lifecycle == "TENTATIVE":
+                box_color = (0, 215, 255)
+            elif p.lifecycle == "RETAINED":
+                box_color = (150, 150, 150)
+            else:
+                box_color = (250, 190, 40) if p.is_front else (240, 120, 220)
             cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 2)
             cv2.circle(annotated, (ax, ay), 3, (0, 255, 0), -1)
 
             tag = f"#{p.track_id} {p.zone6.upper()} {int(p.confidence * 100)}%"
+            if self.diagnostic_overlay:
+                tag = f"#{p.track_id} {p.zone6.upper()} {p.lifecycle} {int(p.confidence * 100)}%"
+            if p.lifecycle == "RETAINED":
+                tag += f" {max(0.0, time.monotonic() - p.last_seen_time):.1f}s"
             (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
             cv2.rectangle(annotated, (x1, max(0, y1 - 18)), (x1 + tw + 6, max(18, y1)), (15, 25, 40), -1)
             cv2.putText(annotated, tag, (x1 + 3, max(13, y1 - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.42, box_color, 1)
@@ -1602,6 +1532,22 @@ class ClassroomVisionController:
             f"Total:{total_count} | {self.mode}"
         )
         cv2.putText(annotated, hud_str, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (240, 240, 240), 1)
+        if self.diagnostic_overlay:
+            diag_str = (
+                f"RAW {len(raw_detections)} (model NMS) | MERGED {merged_detection_count} | "
+                f"OBS {tracker_diagnostics['observed_confirmed_count']} | "
+                f"TENT {tracker_diagnostics['tentative_track_count']} | "
+                f"RETAIN {tracker_diagnostics['retained_track_count']}"
+            )
+            cv2.putText(
+                annotated,
+                diag_str,
+                (12, max(45, h - 14)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.45,
+                (0, 165, 255),
+                1,
+            )
         return annotated
 
     def run(self):
@@ -1673,7 +1619,11 @@ class ClassroomVisionController:
         LOG.info(f"  Front Zone Board: {self.front_board_id} (Zone 1)")
         LOG.info(f"  Back Zone Board:  {self.back_board_id} (Zone 2)")
         LOG.info(f"  Mode:             {self.mode} (Live Relays: {self.mode == 'LIVE'})")
-        LOG.info(f"  Resolution:       {self.cam_width}x{self.cam_height} (4:3) | Conf: {self.conf_thresh:.2f}")
+        LOG.info(
+            f"  Resolution:       {self.cam_width}x{self.cam_height} (4:3) | "
+            f"Conf: {self.conf_thresh:.2f} | NMS IoU: {self.iou_thresh:.2f} | "
+            f"Track IoU: {self.track_iou_thresh:.2f}"
+        )
         LOG.info("=" * 64)
 
         # Start decoupled AI inference worker thread
@@ -1745,6 +1695,28 @@ class ClassroomVisionController:
                                 "board2_relays": self.board_relays.get(self.back_board_id, {}),
                                 "resolution": f"{w}x{h}",
                                 "current_conf": round(self.conf_thresh, 2),
+                                "current_iou": round(self.iou_thresh, 2),
+                                "track_iou": round(self.track_iou_thresh, 2),
+                                "raw_detection_count": len(self.raw_detections_snapshot),
+                                "merged_detection_count": self.merged_detection_count_snapshot,
+                                "observed_confirmed_count": self.tracker_diagnostics_snapshot[
+                                    "observed_confirmed_count"
+                                ],
+                                "tentative_track_count": self.tracker_diagnostics_snapshot[
+                                    "tentative_track_count"
+                                ],
+                                "retained_track_count": self.tracker_diagnostics_snapshot[
+                                    "retained_track_count"
+                                ],
+                                "observation_valid": self.last_frame_ok,
+                                "detector_nms": "model_internal",
+                                "raw_detection_definition": (
+                                    "model output after Ultralytics NMS; before person filtering"
+                                ),
+                                "merged_detection_definition": (
+                                    "person boxes passed to tracker; no second NMS in single-pass runtime"
+                                ),
+                                "diagnostic_overlay": self.diagnostic_overlay,
                                 "zones": self.zone_counts_snapshot,
                                 "zones6": self.zone6_counts_snapshot,
                             }
@@ -1842,6 +1814,47 @@ if __name__ == "__main__":
     parser.add_argument("--source", default=0, help="Camera index, 'picam', image, or video file")
     parser.add_argument("--no-gui", action="store_true", help="Run headless without display window (recommended for Pi)")
     parser.add_argument("--conf", type=float, default=0.28, help="Confidence threshold (default 0.28)")
+    parser.add_argument(
+        "--iou",
+        type=float,
+        default=0.45,
+        help="YOLO model-internal NMS IoU threshold (default 0.45)",
+    )
+    parser.add_argument(
+        "--track-iou",
+        type=float,
+        default=0.18,
+        help="Tracker box-matching IoU threshold (default 0.18)",
+    )
+    parser.add_argument(
+        "--confirm-hits",
+        type=int,
+        default=2,
+        help="Matched observations required to confirm a track (default 2)",
+    )
+    parser.add_argument(
+        "--track-max-age",
+        type=float,
+        default=1.5,
+        help="Seconds to retain an unmatched confirmed track (default 1.5)",
+    )
+    parser.add_argument(
+        "--centroid-distance",
+        type=float,
+        default=0.06,
+        help="Maximum normalized centroid fallback distance (default 0.06)",
+    )
+    parser.add_argument(
+        "--occupancy-hold",
+        type=float,
+        default=1.5,
+        help="Seconds to hold zone occupancy after the last confirmed observation (default 1.5)",
+    )
+    parser.add_argument(
+        "--diagnostic-overlay",
+        action="store_true",
+        help="Show raw detector boxes and tracker lifecycle diagnostics",
+    )
     parser.add_argument("--width", type=int, default=640, help="Camera capture width (default: 640 4:3 native)")
     parser.add_argument("--height", type=int, default=480, help="Camera capture height (default: 480 4:3 native)")
     parser.add_argument("--fps", type=float, default=25.0, help="Target camera & stream frame rate (default: 25.0)")
@@ -1866,6 +1879,13 @@ if __name__ == "__main__":
         camera_source=source,
         show_window=not args.no_gui,
         conf_thresh=args.conf,
+        iou_thresh=args.iou,
+        track_iou_thresh=args.track_iou,
+        confirmation_hits=args.confirm_hits,
+        track_max_age=args.track_max_age,
+        centroid_distance_thresh=args.centroid_distance,
+        occupancy_hold_seconds=args.occupancy_hold,
+        diagnostic_overlay=args.diagnostic_overlay,
         preview_port=args.preview_port,
         width=args.width,
         height=args.height,

@@ -111,8 +111,10 @@ class ObjectMotionTracker:
             return 0.0
 
         inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
-        area_a = (xa2 - xa1) * (ya2 - ya1)
-        area_b = (xb2 - xb1) * (yb2 - yb1)
+        area_a = max(0.0, xa2 - xa1) * max(0.0, ya2 - ya1)
+        area_b = max(0.0, xb2 - xb1) * max(0.0, yb2 - yb1)
+        if area_a <= 0 or area_b <= 0:
+            return 0.0
         union_area = area_a + area_b - inter_area
         return inter_area / union_area if union_area > 0 else 0.0
 
