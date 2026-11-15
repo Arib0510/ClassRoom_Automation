@@ -1644,6 +1644,7 @@ class ClassroomVisionController:
                     time.sleep(0.04)
                 elif use_picam2 and self.picam2 is not None:
                     frame = self.picam2.capture_array()
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                     if self.flip_180:
                         frame = cv2.flip(frame, -1)
                 elif cap is not None:
