@@ -1,0 +1,10 @@
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+python-interpreter = "C:/Users/Ori-424/AppData/Local/Programs/Python/Python313/python.exe"
+search-path = [
+    "C:/Users/Ori-424/Desktop/app/Vision_Model",
+    "C:/Users/Ori-424/Desktop/app/Vision_Model/scripts",
+    "C:/Users/Ori-424/Desktop/app",
+]

@@ -59,10 +59,10 @@ class ACUnitState:
             "controller_id": self.board_id,
             "type": "ac",
             "state": "ON" if self.is_on else "OFF",
-            "temp": max(16, min(30, int(self.temperature))),
+            "temp": max(16, min(30, self.temperature)),
             "mode": self.mode.upper() if self.mode.upper() in VALID_AC_MODES else "COOL",
-            "fan": max(0, min(3, int(self.fan_speed))),
-            "swing": bool(self.swing),
+            "fan": max(0, min(3, self.fan_speed)),
+            "swing": self.swing,
             "gpio": self.gpio_pin,
             "protocol": self.protocol,
         }
@@ -105,12 +105,12 @@ class ClassroomACController:
         self.room_id = room_id
         self.front_board_id = front_board_id
         self.back_board_id = back_board_id
-        self.min_occupants_for_ac = max(1, int(min_occupants_for_ac))
-        self.enter_delay_sec = max(0.0, float(enter_delay_sec))
-        self.vacant_off_delay_sec = max(0.0, float(vacant_off_delay_sec))
-        self.min_command_interval_sec = max(0.0, float(min_command_interval_sec))
+        self.min_occupants_for_ac = max(1, min_occupants_for_ac)
+        self.enter_delay_sec = max(0.0, enter_delay_sec)
+        self.vacant_off_delay_sec = max(0.0, vacant_off_delay_sec)
+        self.min_command_interval_sec = max(0.0, min_command_interval_sec)
         self.adaptive_temp = adaptive_temp
-        self.default_temp = max(16, min(30, int(default_temp)))
+        self.default_temp = max(16, min(30, default_temp))
         self.default_mode = default_mode.upper() if default_mode.upper() in VALID_AC_MODES else "COOL"
 
         self.units: Dict[int, ACUnitState] = {
@@ -144,12 +144,12 @@ class ClassroomACController:
         unit = self.units.get(zone_id)
         if unit is None:
             return
-        unit.is_on = bool(is_on)
-        unit.temperature = max(16, min(30, int(temp)))
+        unit.is_on = is_on
+        unit.temperature = max(16, min(30, temp))
         if mode and mode.upper() in VALID_AC_MODES:
             unit.mode = mode.upper()
-        unit.fan_speed = max(0, min(3, int(fan)))
-        unit.swing = bool(swing)
+        unit.fan_speed = max(0, min(3, fan))
+        unit.swing = swing
 
     def handle_app_ac_request(
         self,
@@ -162,7 +162,7 @@ class ClassroomACController:
         swing: Optional[bool] = None,
         duration_seconds: float = 1800.0,
         now: Optional[float] = None,
-        publish_fn: Optional[Callable[[str, str], None]] = None,
+        publish_fn: Optional[Callable[[str, str], Any]] = None,
         operation_mode: str = "LIVE",
     ) -> Tuple[bool, str]:
         """
@@ -170,7 +170,7 @@ class ClassroomACController:
         Enforces Vision Gate: AC cannot be turned ON if occupant_count <= 0.
         Returns (accepted: bool, reason: str).
         """
-        now = time.monotonic() if now is None else float(now)
+        now = time.monotonic() if now is None else now
         unit = self.units.get(zone_id, self.units[1])
         req = desired_state.strip().upper()
 
@@ -187,15 +187,15 @@ class ClassroomACController:
             unit.is_on = True
             unit.manual_override = True
             unit.manual_override_state = "ON"
-            unit.override_expires_at = now + max(60.0, float(duration_seconds))
+            unit.override_expires_at = now + max(60.0, duration_seconds)
             if temp is not None:
-                unit.temperature = max(16, min(30, int(temp)))
+                unit.temperature = max(16, min(30, temp))
             if mode is not None and mode.upper() in VALID_AC_MODES:
                 unit.mode = mode.upper()
             if fan is not None:
-                unit.fan_speed = max(0, min(3, int(fan)))
+                unit.fan_speed = max(0, min(3, fan))
             if swing is not None:
-                unit.swing = bool(swing)
+                unit.swing = swing
 
             self._dispatch_ac_command(unit, publish_fn, operation_mode, now, force=True)
             return True, f"AC Zone {zone_id} ON ({unit.temperature}°C, {unit.mode})"
@@ -204,7 +204,7 @@ class ClassroomACController:
             unit.is_on = False
             unit.manual_override = True
             unit.manual_override_state = "OFF"
-            unit.override_expires_at = now + max(60.0, float(duration_seconds))
+            unit.override_expires_at = now + max(60.0, duration_seconds)
             self._dispatch_ac_command(unit, publish_fn, operation_mode, now, force=True)
             return True, f"AC Zone {zone_id} manually turned OFF"
 
@@ -219,13 +219,13 @@ class ClassroomACController:
         zone_id: int,
         occupant_count: int,
         now: Optional[float] = None,
-        publish_fn: Optional[Callable[[str, str], None]] = None,
+        publish_fn: Optional[Callable[[str, str], Any]] = None,
         operation_mode: str = "LIVE",
     ) -> ACUnitState:
         """
         Evaluates vision occupancy for a zone and triggers ESP32 IR AC transitions when needed.
         """
-        now = time.monotonic() if now is None else float(now)
+        now = time.monotonic() if now is None else now
         unit = self.units.get(zone_id, self.units[1])
 
         # Expire manual override if lease ended
@@ -286,17 +286,17 @@ class ClassroomACController:
         front_count: int,
         back_count: int,
         now: Optional[float] = None,
-        publish_fn: Optional[Callable[[str, str], None]] = None,
+        publish_fn: Optional[Callable[[str, str], Any]] = None,
         operation_mode: str = "LIVE",
     ) -> Dict[int, ACUnitState]:
-        now = time.monotonic() if now is None else float(now)
+        now = time.monotonic() if now is None else now
         self.evaluate_zone(1, front_count, now=now, publish_fn=publish_fn, operation_mode=operation_mode)
         self.evaluate_zone(2, back_count, now=now, publish_fn=publish_fn, operation_mode=operation_mode)
         return self.units
 
     def shutdown_all(
         self,
-        publish_fn: Optional[Callable[[str, str], None]] = None,
+        publish_fn: Optional[Callable[[str, str], Any]] = None,
         operation_mode: str = "LIVE",
     ) -> None:
         """Turns off all classroom AC units on shutdown (only transmits IR in LIVE mode)."""
@@ -308,7 +308,7 @@ class ClassroomACController:
     def _dispatch_ac_command(
         self,
         unit: ACUnitState,
-        publish_fn: Optional[Callable[[str, str], None]],
+        publish_fn: Optional[Callable[[str, str], Any]],
         operation_mode: str,
         now: float,
         force: bool = False,

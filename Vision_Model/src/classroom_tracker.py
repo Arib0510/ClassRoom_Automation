@@ -66,17 +66,17 @@ class ClassroomMotionTracker:
         if not 0 <= col_left_x < col_right_x <= 1:
             raise ValueError("zone column boundaries must satisfy 0 <= left < right <= 1")
 
-        self.iou_threshold = float(iou_threshold)
-        self.dist_thresh = float(centroid_distance_thresh)
-        self.max_missed_frames = int(max_missed_frames)  # Kept as a diagnostic setting.
-        self.max_age_seconds = float(max_age_seconds)
-        self.confirmation_hits_required = int(confirmation_hits)
-        self.motion_speed_threshold = float(motion_speed_threshold)
-        self.smoothing = float(smoothing_factor)
-        self.split_y = float(split_y)
-        self.col_left_x = float(col_left_x)
-        self.col_right_x = float(col_right_x)
-        self.invert_zones = bool(invert_zones)
+        self.iou_threshold = iou_threshold
+        self.dist_thresh = centroid_distance_thresh
+        self.max_missed_frames = max_missed_frames  # Kept as a diagnostic setting.
+        self.max_age_seconds = max_age_seconds
+        self.confirmation_hits_required = confirmation_hits
+        self.motion_speed_threshold = motion_speed_threshold
+        self.smoothing = smoothing_factor
+        self.split_y = split_y
+        self.col_left_x = col_left_x
+        self.col_right_x = col_right_x
+        self.invert_zones = invert_zones
 
         self.tracks: dict[int, TrackedPerson] = {}
         self.next_track_id = 1
@@ -147,7 +147,7 @@ class ClassroomMotionTracker:
         self, detections: list[Detection], now: float | None = None
     ) -> list[TrackedPerson]:
         """Associate one frame of detections and return retained track objects."""
-        now = time.monotonic() if now is None else float(now)
+        now = time.monotonic() if now is None else now
         if not math.isfinite(now):
             raise ValueError("now must be finite")
         if self.last_update_time is not None and now < self.last_update_time:
@@ -223,9 +223,11 @@ class ClassroomMotionTracker:
 
             if speed <= self.motion_speed_threshold:
                 old_box = person.bbox
-                person.bbox = tuple(
-                    0.4 * old + 0.6 * new
-                    for old, new in zip(old_box, det_box, strict=True)
+                person.bbox = (
+                    0.4 * old_box[0] + 0.6 * det_box[0],
+                    0.4 * old_box[1] + 0.6 * det_box[1],
+                    0.4 * old_box[2] + 0.6 * det_box[2],
+                    0.4 * old_box[3] + 0.6 * det_box[3],
                 )
             else:
                 person.bbox = det_box

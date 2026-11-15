@@ -533,7 +533,7 @@ class PreviewHTTPHandler(BaseHTTPRequestHandler):
                     raw_f = None
                     frame_bytes = state.latest_jpeg
             if is_raw and raw_f is not None:
-                ok, buf = cv2.imencode(".jpg", raw_f, [int(cv2.IMWRITE_JPEG_QUALITY), 96])
+                ok, buf = cv2.imencode(".jpg", raw_f, [cv2.IMWRITE_JPEG_QUALITY, 96])
                 if ok:
                     frame_bytes = buf.tobytes()
             if frame_bytes is None:
@@ -624,7 +624,7 @@ class PreviewHTTPHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def log_message(self, *args):
+    def log_message(self, format: str, *args: object) -> None:
         pass
 
 
@@ -680,7 +680,7 @@ class ClassroomVisionController:
         self.third_board_id = third_board
         self.mode = mode.upper()
         self.channels_str = channels
-        self.active_channels = [int(x.strip()) for x in str(channels).split(",") if x.strip().isdigit()] or [1, 2]
+        self.active_channels = [int(x.strip()) for x in channels.split(",") if x.strip().isdigit()] or [1, 2]
         self.camera_source = camera_source
         self.show_window = show_window
         self.conf_thresh = conf_thresh
@@ -838,7 +838,7 @@ class ClassroomVisionController:
         if self.picam2 is None:
             return
         try:
-            from libcamera import controls
+            from libcamera import controls  # type: ignore[import-not-found]
             awb_map = {
                 "fluorescent": controls.AwbModeEnum.Fluorescent,
                 "indoor": controls.AwbModeEnum.Incandescent,
@@ -1219,8 +1219,10 @@ class ClassroomVisionController:
             h, w = frame.shape[:2]
             detections: List[Tuple[Tuple[float, float, float, float], float]] = []
             raw_detections: List[Tuple[Tuple[float, float, float, float], float, int]] = []
-            if frame_ok and results:
-                for box in results[0].boxes:
+            first_result = next(iter(results), None) if results else None
+            boxes = getattr(first_result, "boxes", None)
+            if frame_ok and boxes is not None:
+                for box in boxes:
                     cls_id = int(box.cls[0].item())
                     conf = float(box.conf[0].item())
                     xyxy = box.xyxy[0].tolist()
@@ -1561,7 +1563,7 @@ class ClassroomVisionController:
             ext = Path(self.camera_source).suffix.lower()
             if ext in (".png", ".jpg", ".jpeg", ".bmp"):
                 is_image = True
-                static_frame = cv2.imread(str(self.camera_source))
+                static_frame = cv2.imread(self.camera_source)
                 if static_frame is None:
                     LOG.error(f"Cannot read image: {self.camera_source}. Exiting.")
                     return
@@ -1572,7 +1574,7 @@ class ClassroomVisionController:
             else:
                 # Prefer Picamera2 automatically on Raspberry Pi 5 when source is 0
                 try:
-                    from picamera2 import Picamera2
+                    from picamera2 import Picamera2  # type: ignore[import-not-found]
                     use_picam2 = True
                     LOG.info("[INFO] Detected Picamera2 on Raspberry Pi 5; using native low-latency ISP pipeline...")
                 except ImportError:
@@ -1583,7 +1585,7 @@ class ClassroomVisionController:
 
             if use_picam2:
                 try:
-                    from picamera2 import Picamera2
+                    from picamera2 import Picamera2  # type: ignore[import-not-found]
                     self.picam2 = Picamera2()
                     # CRITICAL COLOR & LATENCY FIX FOR RASPBERRY PI 5:
                     # 1. format="RGB888" in Picamera2 outputs [B, G, R] bytes in memory (native OpenCV BGR).
@@ -1593,7 +1595,7 @@ class ClassroomVisionController:
                         main={"size": (self.cam_width, self.cam_height), "format": "RGB888"},
                         buffer_count=2,
                         queue=False,
-                        controls={"FrameRate": float(self.target_fps)},
+                        controls={"FrameRate": self.target_fps},
                     )
                     self.picam2.configure(picam2_config)
                     self.set_camera_awb("fluorescent")
@@ -1606,7 +1608,7 @@ class ClassroomVisionController:
                 except Exception as e:
                     LOG.error(f"Picamera2 initialization failed: {e}")
                     return
-            else:
+            elif cap is not None:
                 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
@@ -1631,26 +1633,29 @@ class ClassroomVisionController:
         ai_thread.start()
 
         prev_stream_time = time.monotonic()
-        target_frame_interval = 1.0 / max(5.0, float(self.target_fps))
+        target_frame_interval = 1.0 / max(5.0, self.target_fps)
 
         try:
             while self.running:
                 loop_start = time.monotonic()
 
-                if is_image:
+                if is_image and static_frame is not None:
                     frame = static_frame.copy()
                     time.sleep(0.04)
                 elif use_picam2 and self.picam2 is not None:
                     frame = self.picam2.capture_array()
                     if self.flip_180:
                         frame = cv2.flip(frame, -1)
-                else:
+                elif cap is not None:
                     ret, frame = cap.read()
                     if not ret:
                         time.sleep(0.03)
                         continue
                     if self.flip_180:
                         frame = cv2.flip(frame, -1)
+                else:
+                    time.sleep(0.03)
+                    continue
 
                 now_mono = time.monotonic()
                 dt_s = now_mono - prev_stream_time
@@ -1671,7 +1676,7 @@ class ClassroomVisionController:
                 annotated = self._draw_overlay(frame)
 
                 if self.preview_server is not None:
-                    success, jpeg_buf = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 78])
+                    success, jpeg_buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 78])
                     if success:
                         h, w = frame.shape[:2]
                         with self.preview_state.lock:
