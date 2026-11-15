@@ -45,6 +45,8 @@ except Exception:
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from src.ac_control import ClassroomACController
+
 try:
     import paho.mqtt.client as mqtt
 except ImportError:
@@ -967,6 +969,17 @@ class ClassroomVisionController:
             invert_zones=invert_zones,
         )
 
+        # Smart Classroom Optical IR Air Conditioner Controller (Gree AC on GPIO 4)
+        self.ac_controller = ClassroomACController(
+            room_id=self.room_id,
+            front_board_id=self.front_board_id,
+            back_board_id=self.back_board_id,
+            min_occupants_for_ac=1,
+            enter_delay_sec=2.0,
+            vacant_off_delay_sec=30.0,
+            adaptive_temp=True,
+        )
+
         # Shared state between Camera Capture/Preview Thread and AI Inference Thread
         self.frame_lock = threading.Lock()
         self.latest_capture_frame: Optional[np.ndarray] = None
@@ -1146,6 +1159,18 @@ class ClassroomVisionController:
         if "/status" in topic or topic.endswith("/status"):
             try:
                 data = json.loads(payload_str)
+                if data.get("type") == "ac" or topic.endswith("/ac/status") or topic.endswith("/status/ac"):
+                    z_id = int(data.get("zone") or data.get("board") or 1)
+                    is_on = str(data.get("state", "OFF")).upper() in ("ON", "1", "TRUE")
+                    self.ac_controller.update_from_esp32_telemetry(
+                        zone_id=z_id,
+                        is_on=is_on,
+                        temp=int(data.get("temp", 24)),
+                        mode=str(data.get("mode", "COOL")),
+                        fan=int(data.get("fan", 0)),
+                        swing=bool(data.get("swing", False)),
+                    )
+                    return
                 parts = topic.split("/")
                 board_id = data.get("controller_id") or (parts[-2] if len(parts) >= 2 else "")
                 relays = data.get("relays", {})
@@ -1447,10 +1472,25 @@ class ClassroomVisionController:
                     if b_id == self.third_board_id:
                         self._send_esp32_command(b_id, ch_num, "ON" if z6_occ else "OFF", lease_sec=60)
 
+            # 4B. Optical IR Air Conditioner Automation (Gree AC on GPIO 4)
+            pub_fn = (
+                (lambda t, p: self.mqtt_client.publish(t, p, qos=0))
+                if hasattr(self, "mqtt_client")
+                else None
+            )
+            self.ac_controller.evaluate_all(
+                front_count=front_count,
+                back_count=back_count,
+                now=now_mono,
+                publish_fn=pub_fn,
+                operation_mode=self.mode,
+            )
+
             # 5. Broadcast Multi-Zone App State Snapshot to Flutter App (1 Hz)
             if hasattr(self, "mqtt_client") and (now_wall - self.last_state_pub >= 1.0):
                 self.last_state_pub = now_wall
                 col3_count = zone6_counts["right_near"] + zone6_counts["right_far"]
+                ac_appliances = self.ac_controller.get_app_state_appliances()
                 app_state_doc = {
                     "schema_version": 1,
                     "kind": "app_state",
@@ -1496,6 +1536,7 @@ class ClassroomVisionController:
                             "reported": "ON" if back_occupied else "OFF",
                             "desired": "ON" if back_occupied else "OFF",
                         },
+                        **ac_appliances,
                     },
                 }
                 self.mqtt_client.publish(self.app_state_topic, json.dumps(app_state_doc), qos=0)

@@ -505,7 +505,26 @@ void handlePhase5Command(String msg, bool isDryRunTopic) {
   String actualState = "UNKNOWN";
   String resultState = "SIMULATED";
 
-  if (relayIndex >= 0 && relayIndex < NUM_RELAYS) {
+  bool isAcChannel = (channel.indexOf("AC") != -1 || channel.indexOf("ac") != -1 || appid.indexOf("ac") != -1);
+
+  if (isAcChannel) {
+    bool turnOn = desired.equalsIgnoreCase("ON");
+    if (isDryRun) {
+      actualState = acState.isOn ? "ON" : "OFF";
+      resultState = "SIMULATED";
+      Serial.printf("🔒 [PHASE 5 AC DRY-RUN] AC desired %s. IR TRANSMISSION SUPPRESSED.\n", desired.c_str());
+    } else {
+      if (!doc["ac"].isNull()) {
+        String acSub;
+        serializeJson(doc["ac"], acSub);
+        handleAcCommand(acSub);
+      } else {
+        executeAcControl(turnOn, acState.temperature, acState.mode, acState.fanSpeed, acState.swing, true);
+      }
+      actualState = acState.isOn ? "ON" : "OFF";
+      resultState = "APPLIED";
+    }
+  } else if (relayIndex >= 0 && relayIndex < NUM_RELAYS) {
     if (isDryRun) {
       actualState = relayStates[relayIndex] ? "ON" : "OFF";
       resultState = "SIMULATED";
