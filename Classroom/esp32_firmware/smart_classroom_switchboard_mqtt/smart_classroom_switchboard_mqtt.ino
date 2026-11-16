@@ -27,8 +27,8 @@
       Pair 7: Relay In2 [L] on D19 (GPIO 19) <-> Switch SW7 on D33 (GPIO 33)
       Pair 8: Relay In1 [L] on D21 (GPIO 21) <-> Switch SW8 on D32 (GPIO 32)
 
-  • Standalone AC Controller runs on a separate ESP32 board (GPIO 33 Relay,
-    GPIO 13 Manual Button) — see esp32_ac_ir_controller.ino.
+  • Standalone Dual-Gree AC Controller runs on a separate ESP32 board
+    (AC #1 IR on GPIO 33, AC #2 IR on GPIO 12) — see esp32_ac_ir_controller.ino.
 
   2. Firmware Behavior:
   -----------------------------------------------------------------------------
@@ -601,7 +601,7 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
   }
 
   // 5. Classroom Master Power (All Switchboards in Room)
-  if (strTopic == getBaseTopic() + "/command/all") {
+  if (strTopic == getBaseTopic() + "/command/all" || strTopic == "home/command/all") {
     bool turnOn = (msg.equalsIgnoreCase("ALL_ON") || msg.equalsIgnoreCase("ON") || msg == "1");
     for (int i = 0; i < NUM_RELAYS; i++) {
       setRelay(i, turnOn, true);
@@ -611,7 +611,7 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
   }
 
   // 6. Classroom Emergency Cutoff
-  if (strTopic == getBaseTopic() + "/command/emergency") {
+  if (strTopic == getBaseTopic() + "/command/emergency" || strTopic == "home/command/emergency") {
     emergencyLocked = (msg.equalsIgnoreCase("CUTOFF") || msg.equalsIgnoreCase("LOCK") || msg == "1");
     for (int i = 0; i < NUM_RELAYS; i++) {
       digitalWrite(pairConfigs[i].relayPin, relayLevel(relayStates[i]));
@@ -666,6 +666,7 @@ void connectMqtt() {
     mqtt.subscribe((getZoneTopic() + "/#").c_str(), 1);
     mqtt.subscribe((getBoardTopic() + "/#").c_str(), 1);
     mqtt.subscribe(("home/" + String(ZONE_ID_STR) + "/#").c_str(), 1);
+    mqtt.subscribe("home/command/#", 1);
     mqtt.subscribe((getBaseTopic() + "/command/#").c_str(), 1);
     mqtt.subscribe("home/discovery/query", 1);
     mqtt.subscribe("ruet/classroom/all/command/query", 1);

@@ -1,34 +1,52 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import 'pulsing_beacon.dart';
 
 enum ToastType { success, error, info }
 
+/// A brief, non-blocking message that drops in from the top of the screen.
+/// A thin bar along the bottom edge drains to show how long it will stay;
+/// swipe up or tap the close icon to dismiss it early.
 class CyberToast {
+  static OverlayEntry? _current;
+
   static void show(
     BuildContext context, {
     required String message,
     ToastType type = ToastType.info,
-    Duration duration = const Duration(milliseconds: 2600),
+    Duration duration = const Duration(milliseconds: 2800),
   }) {
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) return;
+
     HapticFeedback.lightImpact();
 
-    final overlay = Overlay.of(context);
-    late OverlayEntry entry;
+    // One toast at a time: a newer message replaces the one on screen
+    // instead of stacking on top of it.
+    _removeCurrent();
 
+    late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (context) => _CyberToastWidget(
         message: message,
         type: type,
-        onDismiss: () => entry.remove(),
         duration: duration,
+        onDismiss: () {
+          if (_current == entry) _current = null;
+          if (entry.mounted) entry.remove();
+        },
       ),
     );
 
+    _current = entry;
     overlay.insert(entry);
+  }
+
+  static void _removeCurrent() {
+    final entry = _current;
+    _current = null;
+    if (entry != null && entry.mounted) entry.remove();
   }
 }
 
@@ -50,161 +68,173 @@ class _CyberToastWidget extends StatefulWidget {
 }
 
 class _CyberToastWidgetState extends State<_CyberToastWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _slideAnimation;
-  late Animation<double> _fadeAnimation;
+    with TickerProviderStateMixin {
+  late final AnimationController _entrance;
+  late final AnimationController _life;
+  bool _closing = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _entrance = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
+      duration: const Duration(milliseconds: 420),
+      reverseDuration: const Duration(milliseconds: 220),
+    )..forward();
 
-    _slideAnimation = Tween<double>(begin: -30.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _life = AnimationController(vsync: this, duration: widget.duration)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) _close();
+      })
+      ..forward();
+  }
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-
-    _controller.forward();
-
-    Future.delayed(widget.duration, () async {
-      if (mounted) {
-        await _controller.reverse();
-        widget.onDismiss();
-      }
-    });
+  Future<void> _close() async {
+    if (_closing) return;
+    _closing = true;
+    _life.stop();
+    try {
+      await _entrance.reverse();
+    } on TickerCanceled {
+      // Disposed mid-animation; nothing left to do.
+      return;
+    }
+    if (mounted) widget.onDismiss();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _entrance.dispose();
+    _life.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    Color accentColor;
-    IconData icon;
-    String prefix;
+    final Color accent;
+    final IconData icon;
 
     switch (widget.type) {
       case ToastType.success:
-        accentColor = AppColors.onlineMint;
-        icon = Icons.check_circle_outline;
-        prefix = 'SUCCESS //';
+        accent = AppColors.onlineMint;
+        icon = Icons.check_circle_rounded;
         break;
       case ToastType.error:
-        accentColor = AppColors.error;
-        icon = Icons.error_outline;
-        prefix = 'ALERT //';
+        accent = AppColors.error;
+        icon = Icons.error_rounded;
         break;
       case ToastType.info:
-        accentColor = AppColors.primary;
-        icon = Icons.sensors;
-        prefix = 'TELEMETRY //';
+        accent = AppColors.primary;
+        icon = Icons.info_rounded;
         break;
     }
 
     final topPadding = MediaQuery.of(context).padding.top;
+    final slide = CurvedAnimation(
+      parent: _entrance,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeIn,
+    );
 
     return Positioned(
-      top: topPadding + 12,
-      left: 18,
-      right: 18,
+      top: topPadding + 10,
+      left: 16,
+      right: 16,
       child: AnimatedBuilder(
-        animation: _controller,
+        animation: _entrance,
         builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(0, _slideAnimation.value),
-            child: Opacity(
-              opacity: _fadeAnimation.value,
-              child: child,
+          return Opacity(
+            opacity: _entrance.value.clamp(0.0, 1.0),
+            child: Transform.translate(
+              offset: Offset(0, -28 * (1 - slide.value)),
+              child: Transform.scale(
+                scale: 0.96 + 0.04 * slide.value,
+                child: child,
+              ),
             ),
           );
         },
-        child: Material(
-          color: Colors.transparent,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Dismissible(
+          key: const ValueKey('cyber_toast'),
+          direction: DismissDirection.up,
+          onDismissed: (_) => widget.onDismiss(),
+          child: Material(
+            color: Colors.transparent,
+            child: Semantics(
+              liveRegion: true,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: const Color(0xFF0C1322).withValues(alpha: 0.92),
-                  border: Border.all(
-                    color: accentColor.withValues(alpha: 0.45),
-                    width: 1.2,
-                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  color: AppColors.sheet,
+                  border: Border.all(color: accent.withValues(alpha: 0.35)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: accentColor.withValues(alpha: 0.18),
-                      blurRadius: 18,
-                      spreadRadius: -2,
+                      color: AppColors.shadow(0.55),
+                      blurRadius: 28,
+                      spreadRadius: -6,
+                      offset: const Offset(0, 12),
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: accentColor.withValues(alpha: 0.16),
-                        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
-                      ),
-                      child: Icon(icon, size: 16, color: accentColor),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 11, 6, 9),
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              PulsingBeacon(size: 5, color: accentColor),
-                              const SizedBox(width: 6),
-                              Text(
-                                prefix,
-                                style: AppTypography.labelSm(
-                                  color: accentColor,
-                                ).copyWith(fontSize: 8.5, letterSpacing: 1.2, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.message,
-                            style: AppTypography.bodySm(color: Colors.white).copyWith(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: accent.withValues(alpha: 0.14),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            child: Icon(icon, size: 18, color: accent),
+                          ),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Text(
+                              widget.message,
+                              style: AppTypography.bodySm(
+                                color: AppColors.onSurface,
+                              ).copyWith(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _close,
+                            tooltip: 'Dismiss',
+                            visualDensity: VisualDensity.compact,
+                            icon: Icon(
+                              Icons.close_rounded,
+                              size: 17,
+                              color: AppColors.outline,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () async {
-                        await _controller.reverse();
-                        widget.onDismiss();
+                    // Time-remaining bar.
+                    AnimatedBuilder(
+                      animation: _life,
+                      builder: (context, _) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: FractionallySizedBox(
+                            widthFactor: (1 - _life.value).clamp(0.0, 1.0),
+                            child: Container(
+                              height: 2.5,
+                              color: accent.withValues(alpha: 0.75),
+                            ),
+                          ),
+                        );
                       },
-                      child: const Icon(Icons.close, size: 14, color: AppColors.outline),
                     ),
                   ],
                 ),

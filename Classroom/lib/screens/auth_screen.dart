@@ -35,7 +35,7 @@ class _AuthScreenState extends State<AuthScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (AuthState().isLoggedIn || FirebaseAuth.instance.currentUser != null) {
+      if (AuthState().isLoggedIn || AuthState.firebaseUserOrNull != null) {
         Navigator.of(context).pushReplacement(
           Cube3DPageRoute(page: const DashboardScreen()),
         );
@@ -199,7 +199,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       height: 4,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(2),
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: AppColors.overlay(0.15),
                       ),
                     ),
                   ),
@@ -211,7 +211,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
                           color: AppColors.surfaceContainerLowest,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                          border: Border.all(color: AppColors.overlay(0.1)),
                         ),
                         child: _buildGoogleIcon(),
                       ),
@@ -238,7 +238,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   // Email from Google Account (Locked / Read-Only)
                   Text(
                     'GOOGLE ACCOUNT EMAIL',
-                    style: AppTypography.labelSm(color: AppColors.outline).copyWith(fontSize: 9),
+                    style: AppTypography.labelSm(color: AppColors.outline).copyWith(fontSize: 10),
                   ),
                   const SizedBox(height: 6),
                   Container(
@@ -250,7 +250,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.check_circle, size: 16, color: AppColors.onlineMint),
+                        Icon(Icons.check_circle, size: 16, color: AppColors.onlineMint),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -268,7 +268,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                           child: Text(
                             'VERIFIED',
-                            style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(fontSize: 8.5),
+                            style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(fontSize: 9.5),
                           ),
                         ),
                       ],
@@ -280,7 +280,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   // Custom Operator Name Field (Editable)
                   Text(
                     'OPERATOR FULL NAME',
-                    style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontSize: 9),
+                    style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontSize: 10),
                   ),
                   const SizedBox(height: 6),
                   Container(
@@ -293,7 +293,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       controller: nameController,
                       autofocus: true,
                       style: AppTypography.bodyMd(color: AppColors.onSurface),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         prefixIcon: Icon(Icons.badge_outlined, size: 18, color: AppColors.primary),
                         hintText: 'Enter your preferred display name',
                         hintStyle: TextStyle(color: AppColors.outline),
@@ -308,7 +308,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   // Academic Department in Google Modal
                   Text(
                     'CAMPUS / ACADEMIC DEPARTMENT',
-                    style: AppTypography.labelSm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 9),
+                    style: AppTypography.labelSm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 10),
                   ),
                   const SizedBox(height: 6),
                   _buildDepartmentSelector(
@@ -363,7 +363,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             ).copyWith(fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward, size: 16, color: AppColors.surfaceContainerLowest),
+                          Icon(Icons.arrow_forward, size: 16, color: AppColors.surfaceContainerLowest),
                         ],
                       ),
                     ),
@@ -382,7 +382,7 @@ class _AuthScreenState extends State<AuthScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
@@ -442,19 +442,19 @@ class _AuthScreenState extends State<AuthScreen> {
                           borderRadius: BorderRadius.circular(20),
                           color: AppColors.surfaceContainerLow,
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08),
+                            color: AppColors.overlay(0.08),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const PulsingBeacon(size: 6, color: AppColors.primary),
+                            PulsingBeacon(size: 6, color: AppColors.primary),
                             const SizedBox(width: 8),
                             Text(
                               'NODE 01 // GATE ONLINE',
                               style: AppTypography.labelSm(
                                 color: AppColors.primary,
-                              ).copyWith(fontSize: 9, letterSpacing: 1.2),
+                              ).copyWith(fontSize: 10, letterSpacing: 1.2),
                             ),
                           ],
                         ),
@@ -493,7 +493,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           borderRadius: BorderRadius.circular(12),
                           color: const Color(0xFF070B14),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08),
+                            color: AppColors.overlay(0.08),
                           ),
                         ),
                         padding: const EdgeInsets.all(3),
@@ -648,7 +648,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                       'Forgot Password?',
                                       style: AppTypography.labelSm(
                                         color: AppColors.primaryFixedDim,
-                                      ).copyWith(fontSize: 9),
+                                      ).copyWith(fontSize: 10),
                                     ),
                                   ),
                                 ],
@@ -703,19 +703,21 @@ class _AuthScreenState extends State<AuthScreen> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
-                                      _isLogin
-                                          ? 'Sign In to Campus Console'
-                                          : 'Create Account & Join Campus',
-                                      style: AppTypography.headlineSm(
-                                        color: AppColors.surfaceContainerLowest,
-                                      ).copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
+                                    Flexible(
+                                      child: Text(
+                                        _isLogin ? 'Sign in' : 'Create account',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTypography.headlineSm(
+                                          color: AppColors.onPrimary,
+                                        ).copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    const Icon(
+                                    Icon(
                                       Icons.arrow_forward,
                                       size: 16,
                                       color: AppColors.surfaceContainerLowest,
@@ -732,7 +734,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               children: [
                                 Expanded(
                                   child: Divider(
-                                    color: Colors.white.withValues(alpha: 0.08),
+                                    color: AppColors.overlay(0.08),
                                   ),
                                 ),
                                 Padding(
@@ -741,12 +743,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                     'OR SIGN IN WITH',
                                     style: AppTypography.labelSm(
                                       color: AppColors.outline,
-                                    ).copyWith(fontSize: 9),
+                                    ).copyWith(fontSize: 10),
                                   ),
                                 ),
                                 Expanded(
                                   child: Divider(
-                                    color: Colors.white.withValues(alpha: 0.08),
+                                    color: AppColors.overlay(0.08),
                                   ),
                                 ),
                               ],
@@ -763,7 +765,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   backgroundColor: AppColors.surfaceContainerLow,
                                   foregroundColor: AppColors.onSurface,
                                   side: BorderSide(
-                                    color: Colors.white.withValues(alpha: 0.12),
+                                    color: AppColors.overlay(0.12),
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -828,7 +830,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.lock_outline,
                             size: 11,
                             color: AppColors.outline,
@@ -838,7 +840,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             'Classroom IoT Access System • v2.4',
                             style: AppTypography.labelSm(
                               color: AppColors.outline,
-                            ).copyWith(fontSize: 9),
+                            ).copyWith(fontSize: 10),
                           ),
                         ],
                       ),
@@ -877,7 +879,7 @@ class _AuthScreenState extends State<AuthScreen> {
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: AppColors.overlay(0.1),
         ),
       ),
       child: TextField(
@@ -928,12 +930,12 @@ class _AuthScreenState extends State<AuthScreen> {
           color: AppColors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: AppColors.overlay(0.1),
           ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.domain_rounded, size: 16, color: AppColors.primary),
+            Icon(Icons.domain_rounded, size: 16, color: AppColors.primary),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -942,7 +944,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Icon(Icons.arrow_drop_down_rounded, size: 22, color: AppColors.outline),
+            Icon(Icons.arrow_drop_down_rounded, size: 22, color: AppColors.outline),
           ],
         ),
       ),
@@ -976,14 +978,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   height: 4,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(2),
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: AppColors.overlay(0.2),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
                   child: Row(
                     children: [
-                      const Icon(Icons.domain_rounded, color: AppColors.primary, size: 20),
+                      Icon(Icons.domain_rounded, color: AppColors.primary, size: 20),
                       const SizedBox(width: 10),
                       Text(
                         'Select Academic Department',
@@ -992,13 +994,13 @@ class _AuthScreenState extends State<AuthScreen> {
                     ],
                   ),
                 ),
-                const Divider(color: Colors.white12, height: 1),
+                Divider(color: AppColors.overlay(0.12), height: 1),
                 Expanded(
                   child: ListView.separated(
                     controller: scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     itemCount: kCampusDepartments.length,
-                    separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 1),
+                    separatorBuilder: (_, __) => Divider(color: AppColors.overlay(0.10), height: 1),
                     itemBuilder: (context, index) {
                       final dept = kCampusDepartments[index];
                       final isSelected = dept == currentDept;

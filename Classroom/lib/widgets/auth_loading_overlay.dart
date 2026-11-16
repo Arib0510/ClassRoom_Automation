@@ -81,7 +81,7 @@ class _AuthLoadingOverlayState extends State<AuthLoadingOverlay>
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
               child: Container(
-                color: Colors.black.withValues(alpha: 0.75),
+                color: AppColors.shadow(0.75),
               ),
             ),
           ),
@@ -153,7 +153,7 @@ class _AuthLoadingOverlayState extends State<AuthLoadingOverlay>
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: AppColors.primary,
                           ),

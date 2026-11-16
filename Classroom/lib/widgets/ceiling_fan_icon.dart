@@ -4,13 +4,13 @@ import '../theme/app_colors.dart';
 
 class CeilingFanIcon extends StatelessWidget {
   final double size;
-  final Color color;
+  final Color? color;
   final double angle; // in radians
 
   const CeilingFanIcon({
     super.key,
     this.size = 24.0,
-    this.color = AppColors.primary,
+    this.color,
     this.angle = 0.0,
   });
 
@@ -21,7 +21,7 @@ class CeilingFanIcon extends StatelessWidget {
       height: size,
       child: CustomPaint(
         painter: _CeilingFanPainter(
-          color: color,
+          color: color ?? AppColors.primary,
           angle: angle,
         ),
       ),

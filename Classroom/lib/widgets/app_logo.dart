@@ -2,6 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
+/// The ClassPulse mark: a hub with four satellite nodes on a gradient tile.
+/// When [animated], the nodes breathe outward and a pulse travels along each
+/// spoke from the hub — the "pulse" in the name.
 class ClassPulseLogo extends StatefulWidget {
   final double size;
   final bool animated;
@@ -27,10 +30,20 @@ class _ClassPulseLogoState extends State<ClassPulseLogo>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(milliseconds: 3200),
     );
     if (widget.animated) {
       _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ClassPulseLogo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animated && !_controller.isAnimating) {
+      _controller.repeat();
+    } else if (!widget.animated && _controller.isAnimating) {
+      _controller.stop();
     }
   }
 
@@ -42,99 +55,112 @@ class _ClassPulseLogoState extends State<ClassPulseLogo>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.size * 0.24),
-            color: AppColors.surfaceContainer,
-            border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              width: 1.5,
-            ),
-            boxShadow: widget.showGlow
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.25),
-                      blurRadius: widget.size * 0.4,
-                      spreadRadius: widget.size * -0.05,
-                    ),
-                  ]
-                : null,
-          ),
-          child: CustomPaint(
+    final size = widget.size;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.28),
+        gradient: LinearGradient(
+          colors: [
+            BrandColors.logoStart,
+            BrandColors.logoEnd,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: widget.showGlow
+            ? [
+                BoxShadow(
+                  color: BrandColors.logoEnd.withValues(
+                    alpha: AppColors.isDark ? 0.35 : 0.28,
+                  ),
+                  blurRadius: size * 0.42,
+                  spreadRadius: size * -0.08,
+                  offset: Offset(0, size * 0.12),
+                ),
+              ]
+            : null,
+      ),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return CustomPaint(
             painter: _LogoPainter(
               progress: widget.animated ? _controller.value : 0.0,
+              animated: widget.animated,
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
 
+/// Brand colours for the logo tile. These stay the same in both themes so
+/// the mark is always recognisable.
+class BrandColors {
+  BrandColors._();
+
+  static const Color logoStart = Color(0xFF2F5BDB);
+  static const Color logoEnd = Color(0xFF16B8D9);
+}
+
 class _LogoPainter extends CustomPainter {
   final double progress;
+  final bool animated;
 
-  _LogoPainter({required this.progress});
+  _LogoPainter({required this.progress, required this.animated});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width * 0.30;
+    final breathe =
+        animated ? 1.0 + 0.05 * math.sin(progress * 2 * math.pi) : 1.0;
+    final radius = size.width * 0.27 * breathe;
+    final nodeRadius = size.width * 0.068;
 
     final linePaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.6)
-      ..strokeWidth = size.width * 0.04
+      ..color = AppColors.overlay(0.55)
+      ..strokeWidth = size.width * 0.045
       ..strokeCap = StrokeCap.round;
+    final nodePaint = Paint()..color = Colors.white;
 
-    final nodePaint = Paint()
-      ..color = AppColors.primary
-      ..style = PaintingStyle.fill;
-
-    final corePaint = Paint()
-      ..color = AppColors.primary
-      ..style = PaintingStyle.fill;
-
-    final innerCorePaint = Paint()
-      ..color = AppColors.surfaceContainerLowest
-      ..style = PaintingStyle.fill;
-
-    // Draw connecting hub lines & 4 satellite nodes
     const nodeCount = 4;
-    final pulseScale = 1.0 + 0.08 * math.sin(progress * 2 * math.pi);
-    final nodeRadius = size.width * 0.065;
-
     for (int i = 0; i < nodeCount; i++) {
       final angle = i * (2 * math.pi / nodeCount) + (math.pi / 4);
-      final nx = center.dx + (radius * pulseScale) * math.cos(angle);
-      final ny = center.dy + (radius * pulseScale) * math.sin(angle);
-      final nodePos = Offset(nx, ny);
+      final dir = Offset(math.cos(angle), math.sin(angle));
+      final nodePos = center + dir * radius;
 
-      // Branch lines
       canvas.drawLine(center, nodePos, linePaint);
-
-      // Satellite node with outer highlight
       canvas.drawCircle(nodePos, nodeRadius, nodePaint);
-      canvas.drawCircle(
-        nodePos,
-        nodeRadius * 0.45,
-        innerCorePaint,
-      );
+
+      if (animated) {
+        // A pulse leaving the hub, staggered per spoke.
+        final t = (progress * 2 + i / nodeCount) % 1.0;
+        canvas.drawCircle(
+          center + dir * (radius * t),
+          size.width * 0.032,
+          Paint()
+            ..color = Colors.white
+                .withValues(alpha: math.sin(t * math.pi).clamp(0.0, 1.0)),
+        );
+      }
     }
 
-    // Central Core Node
-    final coreRadius = size.width * 0.12 * pulseScale;
-    canvas.drawCircle(center, coreRadius, corePaint);
-    canvas.drawCircle(center, coreRadius * 0.5, innerCorePaint);
+    // Hub with a hollow centre.
+    final coreRadius = size.width * 0.115;
+    canvas.drawCircle(center, coreRadius, nodePaint);
+    canvas.drawCircle(
+      center,
+      coreRadius * 0.46,
+      Paint()..color = BrandColors.logoStart,
+    );
   }
 
   @override
   bool shouldRepaint(covariant _LogoPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+    return oldDelegate.progress != progress ||
+        oldDelegate.animated != animated;
   }
 }
-

@@ -1,9 +1,7 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import 'pulsing_beacon.dart';
 
 class CyberDropdownItem<T> {
   final T value;
@@ -21,6 +19,8 @@ class CyberDropdownItem<T> {
   });
 }
 
+/// A select field that opens its options in a bottom sheet — easier to hit
+/// and to read on a phone than an inline dropdown menu.
 class CyberDropdown<T> extends StatelessWidget {
   final T? value;
   final List<CyberDropdownItem<T>> items;
@@ -47,183 +47,162 @@ class CyberDropdown<T> extends StatelessWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(ctx).size.height * 0.65,
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0C1322).withValues(alpha: 0.96),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.4),
-                  width: 1.5,
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.sheet,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: AppColors.overlay(0.08))),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.overlay(0.18),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.8),
-                    blurRadius: 36,
-                    offset: const Offset(0, -8),
-                  ),
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    blurRadius: 28,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const PulsingBeacon(size: 6, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            Text(
-                              (sheetTitle ?? hint).toUpperCase(),
-                              style: AppTypography.labelSm(
-                                color: AppColors.primary,
-                              ).copyWith(fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          sheetTitle ?? hint,
+                          style: AppTypography.headlineSm(
+                            color: AppColors.onSurface,
+                          ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            color: AppColors.primary.withValues(alpha: 0.12),
-                          ),
-                          child: Text(
-                            '${items.length} OPTIONS',
-                            style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontSize: 9),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '${items.length} options',
+                        style: AppTypography.labelSm(color: AppColors.outline),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Divider(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                Divider(color: AppColors.overlay(0.08), height: 1),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: items.length,
+                    itemBuilder: (ctx, idx) {
+                      final item = items[idx];
+                      final isSelected = item.value == value;
 
-                  // Options list
-                  Flexible(
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: items.length,
-                      itemBuilder: (ctx, idx) {
-                        final item = items[idx];
-                        final isSelected = item.value == value;
-
-                        return Material(
-                          color: Colors.transparent,
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 2,
+                        ),
+                        child: Material(
+                          color: isSelected
+                              ? AppColors.primary.withValues(alpha: 0.10)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
                           child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
                             onTap: () {
                               HapticFeedback.selectionClick();
                               Navigator.pop(ctx);
                               onChanged(item.value);
                             },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.primary.withValues(alpha: 0.12)
-                                    : Colors.transparent,
-                                border: Border(
-                                  left: BorderSide(
-                                    color: isSelected ? AppColors.primary : Colors.transparent,
-                                    width: 3.5,
-                                  ),
-                                ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 11,
                               ),
                               child: Row(
                                 children: [
                                   if (item.icon != null) ...[
                                     Container(
-                                      padding: const EdgeInsets.all(7),
+                                      width: 34,
+                                      height: 34,
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(10),
                                         color: isSelected
-                                            ? AppColors.primary.withValues(alpha: 0.18)
-                                            : AppColors.surfaceContainerLowest,
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? AppColors.primary.withValues(alpha: 0.4)
-                                              : Colors.white.withValues(alpha: 0.06),
-                                        ),
+                                            ? AppColors.primary
+                                                .withValues(alpha: 0.16)
+                                            : AppColors.surfaceContainerHigh,
                                       ),
                                       child: Icon(
                                         item.icon,
-                                        size: 16,
+                                        size: 17,
                                         color: isSelected
                                             ? AppColors.primary
-                                            : (item.iconColor ?? AppColors.outline),
+                                            : (item.iconColor ??
+                                                AppColors.onSurfaceVariant),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                   ],
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           item.label,
                                           style: AppTypography.bodyMd(
-                                            color: isSelected ? AppColors.primary : AppColors.onSurface,
+                                            color: isSelected
+                                                ? AppColors.primary
+                                                : AppColors.onSurface,
                                           ).copyWith(
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.w500,
                                             fontSize: 13.5,
                                           ),
+                                          maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         if (item.subtitle != null) ...[
                                           const SizedBox(height: 2),
                                           Text(
                                             item.subtitle!,
-                                            style: AppTypography.labelSm(
-                                              color: AppColors.onSurfaceVariant,
-                                            ).copyWith(fontSize: 10),
+                                            style: AppTypography.bodySm(
+                                              color: AppColors.outline,
+                                            ).copyWith(fontSize: 11.5),
+                                            maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ],
                                     ),
                                   ),
-                                  if (isSelected)
-                                    const Icon(
-                                      Icons.check_circle,
-                                      size: 18,
+                                  const SizedBox(width: 8),
+                                  AnimatedOpacity(
+                                    opacity: isSelected ? 1 : 0,
+                                    duration:
+                                        const Duration(milliseconds: 150),
+                                    child: Icon(
+                                      Icons.check_circle_rounded,
+                                      size: 20,
                                       color: AppColors.primary,
                                     ),
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -234,63 +213,58 @@ class CyberDropdown<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     CyberDropdownItem<T>? selectedItem;
-    try {
-      selectedItem = items.firstWhere((i) => i.value == value);
-    } catch (_) {}
+    for (final item in items) {
+      if (item.value == value) {
+        selectedItem = item;
+        break;
+      }
+    }
 
-    return GestureDetector(
-      onTap: () => _openSelectionSheet(context),
-      child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: AppColors.surfaceContainerLowest,
-          border: Border.all(
-            color: selectedItem != null
-                ? AppColors.primary.withValues(alpha: 0.4)
-                : Colors.white.withValues(alpha: 0.1),
+    return Material(
+      color: AppColors.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _openSelectionSheet(context),
+        child: Container(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.overlay(0.12)),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            if (prefixIcon != null || selectedItem?.icon != null) ...[
+          child: Row(
+            children: [
+              if (prefixIcon != null || selectedItem?.icon != null) ...[
+                Icon(
+                  selectedItem?.icon ?? prefixIcon,
+                  size: 18,
+                  color: selectedItem != null
+                      ? AppColors.primary
+                      : AppColors.outline,
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  selectedItem?.label ?? hint,
+                  style: AppTypography.bodyMd(
+                    color: selectedItem != null
+                        ? AppColors.onSurface
+                        : AppColors.outline,
+                  ).copyWith(fontSize: 13.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               Icon(
-                selectedItem?.icon ?? prefixIcon,
-                size: 18,
-                color: selectedItem != null ? AppColors.primary : AppColors.outline,
+                Icons.expand_more_rounded,
+                size: 20,
+                color: AppColors.onSurfaceVariant,
               ),
-              const SizedBox(width: 10),
             ],
-            Expanded(
-              child: Text(
-                selectedItem?.label ?? hint,
-                style: selectedItem != null
-                    ? AppTypography.bodyMd(color: AppColors.onSurface).copyWith(fontSize: 13.5)
-                    : AppTypography.bodyMd(color: AppColors.outline).copyWith(fontSize: 13.5),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                color: AppColors.surfaceContainerLow,
-              ),
-              child: const Icon(
-                Icons.unfold_more,
-                size: 16,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

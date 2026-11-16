@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_controller.dart';
+import 'widgets/theme_reveal.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,15 +42,9 @@ void main() async {
     debugPrint('Firebase initialization: $e');
   }
 
-  // Dark navigation & status bar
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: AppColors.surfaceContainerLowest,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  // Restore the saved appearance (system / light / dark) before the first
+  // frame so the app never flashes the wrong theme.
+  await ThemeController().load();
 
   runApp(const ClassPulseApp());
 }
@@ -59,11 +54,26 @@ class ClassPulseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ClassPulse IoT',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: const SplashScreen(),
+    final controller = ThemeController();
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        // Keep the colour roles in step with the theme Material resolves.
+        AppColors.apply(controller.effectiveBrightness);
+        return MaterialApp(
+          title: 'ClassPulse IoT',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: controller.mode,
+          // The switch is animated by ThemeReveal; a second cross-fade
+          // underneath it would only muddy the wipe.
+          themeAnimationDuration: Duration.zero,
+          builder: (context, child) =>
+              ThemeReveal(child: child ?? const SizedBox.shrink()),
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }

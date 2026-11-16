@@ -93,6 +93,18 @@ class AuthState extends ChangeNotifier {
   }
 
   String _userName = 'Console Administrator';
+  /// The signed-in Firebase user, or null when signed out or when Firebase
+  /// itself is unavailable (offline first launch, missing configuration).
+  /// Screens use this instead of touching `FirebaseAuth.instance` directly,
+  /// which throws if Firebase never initialised.
+  static User? get firebaseUserOrNull {
+    try {
+      return FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
+
   String get userName => _userName;
 
   String _userEmail = 'admin@classpulse.local';

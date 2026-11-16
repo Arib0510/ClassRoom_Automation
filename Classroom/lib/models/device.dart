@@ -28,14 +28,14 @@ class ClassroomDevice {
   bool manualOverrideOff;
 
   // Hardware & ESP32 Relay / Switch mapping
-  String relayChannel; // e.g. "RELAY 1 [In4 R] (D15) ↔ S1 (D13)" or "AC RELAY (GPIO 33) ↔ BTN (GPIO 13)"
+  String relayChannel; // e.g. "RELAY 1 [In4 R] (D15) ↔ S1 (D13)" or "GREE AC #1 IR (GPIO 33)"
   String hardwareModel;
   String ipAddress;
   int pingMs;
   String zigbeeOrBleNode;
   String firmwareVersion;
 
-  // HVAC / Standalone AC specific (GPIO 33 Relay <-> GPIO 13 Manual Button)
+  // HVAC / Standalone Dual-Gree AC specific (GPIO 33 -> AC #1, GPIO 12 -> AC #2)
   int temperature;
   String hvacMode; // AUTO, QUIET, BOOST, COOL, DRY, FAN, HEAT
   bool acSwing;

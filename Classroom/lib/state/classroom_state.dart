@@ -15,6 +15,10 @@ class ClassroomState extends ChangeNotifier {
 
   static const String _storageKeyClassrooms = 'classpulse_saved_classrooms_v2';
   static const String _storageKeySelectedRoom = 'classpulse_selected_room_id_v2';
+  static const String _storageKeyVisionControl = 'classpulse_vision_control_enabled';
+
+  bool _visionControlEnabled = true;
+  bool get visionControlEnabled => _visionControlEnabled;
 
   Timer? _localSaveDebounce;
   StreamSubscription<List<Classroom>>? _classroomsStreamSub;
@@ -159,6 +163,7 @@ class ClassroomState extends ChangeNotifier {
   Future<void> _initLocalStorage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _visionControlEnabled = prefs.getBool(_storageKeyVisionControl) ?? true;
       final isWiped = prefs.getBool('classpulse_explicitly_cleared') ?? false;
       if (isWiped) {
         _classrooms = [];
@@ -192,7 +197,7 @@ class ClassroomState extends ChangeNotifier {
             r.movingOccupancy = 0;
             r.stationaryOccupancy = 0;
             r.isOccupied = false;
-            r.visionMode = 'OFFLINE';
+            r.visionMode = _visionControlEnabled ? 'OFFLINE' : 'MANUAL';
             r.lastVisionTelemetry = null;
             _lastKnownFrontOcc[r.id] = 0;
             _lastKnownBackOcc[r.id] = 0;
@@ -213,7 +218,7 @@ class ClassroomState extends ChangeNotifier {
               final isZoneDev = d.boardId == 1 || d.boardId == 2 ||
                   d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') ||
                   d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back');
-              if (isZoneDev) {
+              if (_visionControlEnabled && isZoneDev) {
                 // Autonomous zone devices boot in standby OFF when cold-starting without active camera
                 d.isOn = false;
                 d.statusDescription = 'Standby · Vacant Zone';
@@ -399,11 +404,11 @@ class ClassroomState extends ChangeNotifier {
 
       bool changed = false;
       room.lastVisionTelemetry = DateTime.now();
-      room.visionMode = 'LIVE';
+      room.visionMode = _visionControlEnabled ? 'LIVE' : 'MANUAL';
 
       final isOfflinePkt = occupancy['status'] == 'OFFLINE' || occupancy['online'] == false;
       if (isOfflinePkt) {
-        room.visionMode = 'OFFLINE';
+        room.visionMode = _visionControlEnabled ? 'OFFLINE' : 'MANUAL';
         room.currentOccupancy = 0;
         room.frontOccupancy = 0;
         room.backOccupancy = 0;
@@ -412,13 +417,15 @@ class ClassroomState extends ChangeNotifier {
         room.isOccupied = false;
         _lastKnownFrontOcc[room.id] = 0;
         _lastKnownBackOcc[room.id] = 0;
-        for (var d in room.devices) {
-          if (d.boardId == 1 || d.boardId == 2 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back')) {
-            d.isOn = false;
-            d.manualOverrideOff = false;
-            d.statusDescription = 'Standby · Vacant Zone';
-            _persistDevicePower(d, roomId: room.id);
-            changed = true;
+        if (_visionControlEnabled) {
+          for (var d in room.devices) {
+            if (d.boardId == 1 || d.boardId == 2 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back')) {
+              d.isOn = false;
+              d.manualOverrideOff = false;
+              d.statusDescription = 'Standby · Vacant Zone';
+              _persistDevicePower(d, roomId: room.id);
+              changed = true;
+            }
           }
         }
         notifyListeners();
@@ -459,76 +466,78 @@ class ClassroomState extends ChangeNotifier {
           changed = true;
         }
 
-        // Automatic Multi-Zone Occupancy Relay Synchronization:
+        // Automatic Multi-Zone Occupancy Relay Synchronization (active only when Vision Control is ON):
         final prevFront = _lastKnownFrontOcc[room.id] ?? -1;
         final prevBack = _lastKnownBackOcc[room.id] ?? -1;
         final newFront = room.frontOccupancy;
         final newBack = room.backOccupancy;
 
-        // --- ZONE 1 (Front Zone) ---
-        // A. Initial detection or transition from Vacant (0) to Occupied (> 0):
-        if ((prevFront <= 0 && newFront > 0) || (prevFront == -1 && newFront > 0)) {
-          debugPrint('[ClassroomState] Front Zone OCCUPIED ($newFront students). Turning ON Zone 1 devices.');
-          for (var d in room.devices) {
-            if (d.boardId == 1 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('front')) {
-              d.manualOverrideOff = false; // Reset any previous manual override
-              d.isOn = true;
-              if (d.type == DeviceType.fan && d.fanSpeed == 0) d.fanSpeed = 3;
-              if (d.type == DeviceType.lighting && d.brightness == 0) d.brightness = 85;
-              d.statusDescription = d.type == DeviceType.fan
-                  ? 'Speed ${d.fanSpeed} · Active (Zone 1 Occupied)'
-                  : (d.type == DeviceType.lighting ? 'Active · Relay Closed' : 'Active');
-              _persistDevicePower(d, roomId: room.id);
-              changed = true;
+        if (_visionControlEnabled) {
+          // --- ZONE 1 (Front Zone) ---
+          // A. Initial detection or transition from Vacant (0) to Occupied (> 0):
+          if ((prevFront <= 0 && newFront > 0) || (prevFront == -1 && newFront > 0)) {
+            debugPrint('[ClassroomState] Front Zone OCCUPIED ($newFront students). Turning ON Zone 1 devices.');
+            for (var d in room.devices) {
+              if (d.boardId == 1 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('front')) {
+                d.manualOverrideOff = false; // Reset any previous manual override
+                d.isOn = true;
+                if (d.type == DeviceType.fan && d.fanSpeed == 0) d.fanSpeed = 3;
+                if (d.type == DeviceType.lighting && d.brightness == 0) d.brightness = 85;
+                d.statusDescription = d.type == DeviceType.fan
+                    ? 'Speed ${d.fanSpeed} · Active (Zone 1 Occupied)'
+                    : (d.type == DeviceType.lighting ? 'Active · Relay Closed' : 'Active');
+                _persistDevicePower(d, roomId: room.id);
+                changed = true;
+              }
             }
           }
-        }
-        // B. Transition from Occupied (> 0) to Vacant (0):
-        else if (prevFront > 0 && newFront == 0) {
-          debugPrint('[ClassroomState] Front Zone VACANT. Turning OFF Zone 1 devices.');
-          for (var d in room.devices) {
-            if (d.boardId == 1 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('front')) {
-              d.manualOverrideOff = false;
-              d.isOn = false;
-              d.statusDescription = 'Standby · Vacant Zone';
-              _persistDevicePower(d, roomId: room.id);
-              changed = true;
+          // B. Transition from Occupied (> 0) to Vacant (0):
+          else if (prevFront > 0 && newFront == 0) {
+            debugPrint('[ClassroomState] Front Zone VACANT. Turning OFF Zone 1 devices.');
+            for (var d in room.devices) {
+              if (d.boardId == 1 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('front')) {
+                d.manualOverrideOff = false;
+                d.isOn = false;
+                d.statusDescription = 'Standby · Vacant Zone';
+                _persistDevicePower(d, roomId: room.id);
+                changed = true;
+              }
+            }
+          }
+
+          // --- ZONE 2 (Back Zone) ---
+          // A. Initial detection or transition from Vacant (0) to Occupied (> 0):
+          if ((prevBack <= 0 && newBack > 0) || (prevBack == -1 && newBack > 0)) {
+            debugPrint('[ClassroomState] Back Zone OCCUPIED ($newBack students). Turning ON Zone 2 devices.');
+            for (var d in room.devices) {
+              if (d.boardId == 2 || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('back')) {
+                d.manualOverrideOff = false;
+                d.isOn = true;
+                if (d.type == DeviceType.fan && d.fanSpeed == 0) d.fanSpeed = 3;
+                if (d.type == DeviceType.lighting && d.brightness == 0) d.brightness = 85;
+                d.statusDescription = d.type == DeviceType.fan
+                    ? 'Speed ${d.fanSpeed} · Active (Zone 2 Occupied)'
+                    : (d.type == DeviceType.lighting ? 'Active · Relay Closed' : 'Active');
+                _persistDevicePower(d, roomId: room.id);
+                changed = true;
+              }
+            }
+          }
+          // B. Transition from Occupied (> 0) to Vacant (0):
+          else if (prevBack > 0 && newBack == 0) {
+            debugPrint('[ClassroomState] Back Zone VACANT. Turning OFF Zone 2 devices.');
+            for (var d in room.devices) {
+              if (d.boardId == 2 || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('back')) {
+                d.manualOverrideOff = false;
+                d.isOn = false;
+                d.statusDescription = 'Standby · Vacant Zone';
+                _persistDevicePower(d, roomId: room.id);
+                changed = true;
+              }
             }
           }
         }
         _lastKnownFrontOcc[room.id] = newFront;
-
-        // --- ZONE 2 (Back Zone) ---
-        // A. Initial detection or transition from Vacant (0) to Occupied (> 0):
-        if ((prevBack <= 0 && newBack > 0) || (prevBack == -1 && newBack > 0)) {
-          debugPrint('[ClassroomState] Back Zone OCCUPIED ($newBack students). Turning ON Zone 2 devices.');
-          for (var d in room.devices) {
-            if (d.boardId == 2 || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('back')) {
-              d.manualOverrideOff = false;
-              d.isOn = true;
-              if (d.type == DeviceType.fan && d.fanSpeed == 0) d.fanSpeed = 3;
-              if (d.type == DeviceType.lighting && d.brightness == 0) d.brightness = 85;
-              d.statusDescription = d.type == DeviceType.fan
-                  ? 'Speed ${d.fanSpeed} · Active (Zone 2 Occupied)'
-                  : (d.type == DeviceType.lighting ? 'Active · Relay Closed' : 'Active');
-              _persistDevicePower(d, roomId: room.id);
-              changed = true;
-            }
-          }
-        }
-        // B. Transition from Occupied (> 0) to Vacant (0):
-        else if (prevBack > 0 && newBack == 0) {
-          debugPrint('[ClassroomState] Back Zone VACANT. Turning OFF Zone 2 devices.');
-          for (var d in room.devices) {
-            if (d.boardId == 2 || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('back')) {
-              d.manualOverrideOff = false;
-              d.isOn = false;
-              d.statusDescription = 'Standby · Vacant Zone';
-              _persistDevicePower(d, roomId: room.id);
-              changed = true;
-            }
-          }
-        }
         _lastKnownBackOcc[room.id] = newBack;
       }
 
@@ -722,6 +731,13 @@ class ClassroomState extends ChangeNotifier {
       final now = DateTime.now();
       bool changed = false;
       for (final room in _classrooms) {
+        if (!_visionControlEnabled) {
+          if (room.visionMode != 'MANUAL') {
+            room.visionMode = 'MANUAL';
+            changed = true;
+          }
+          continue;
+        }
         final isTimedOut = room.lastVisionTelemetry == null ||
             now.difference(room.lastVisionTelemetry!) > const Duration(seconds: 6);
         if (isTimedOut) {
@@ -762,6 +778,29 @@ class ClassroomState extends ChangeNotifier {
         _scheduleLocalStorageSave();
       }
     });
+  }
+
+  Future<void> setVisionControlEnabled(bool enabled) async {
+    _visionControlEnabled = enabled;
+    for (final room in _classrooms) {
+      if (!enabled) {
+        room.visionMode = 'MANUAL';
+      } else {
+        final hasRecentTelemetry = room.lastVisionTelemetry != null &&
+            DateTime.now().difference(room.lastVisionTelemetry!) <= const Duration(seconds: 6);
+        room.visionMode = hasRecentTelemetry ? 'LIVE' : 'OFFLINE';
+      }
+    }
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_storageKeyVisionControl, enabled);
+    } catch (_) {}
+    final targetRoomId = selectedRoom?.scopedRoomId ?? 'reb_room_301';
+    MqttService().publishVisionControl(targetRoomId, enabled);
+    if (targetRoomId != 'reb_room_301') {
+      MqttService().publishVisionControl('reb_room_301', enabled);
+    }
   }
 
   void _startClassIntervalSyncTimer() {
@@ -1315,15 +1354,17 @@ class ClassroomState extends ChangeNotifier {
 
     final willTurnOn = !device.isOn;
 
-    // Strict Vision Gate Check:
+    // Strict Vision Gate Check (active only when Vision Control is enabled):
     // If turning ON, ensure someone is actually sitting or moving in this zone!
     if (willTurnOn) {
-      final occ = getZoneOccupancy(room, device.zone, boardId: device.boardId);
-      if (occ <= 0) {
-        debugPrint('[Vision Gate] BLOCKED toggle ON for ${device.name} in ${device.zone}: 0 occupants.');
-        device.isOn = false;
-        notifyListeners();
-        return 'Vision Gate: ${device.zone} is empty (0 occupants). Relay cannot turn ON.';
+      if (_visionControlEnabled) {
+        final occ = getZoneOccupancy(room, device.zone, boardId: device.boardId);
+        if (occ <= 0) {
+          debugPrint('[Vision Gate] BLOCKED toggle ON for ${device.name} in ${device.zone}: 0 occupants.');
+          device.isOn = false;
+          notifyListeners();
+          return 'Vision Gate: ${device.zone} is empty (0 occupants). Turn off Vision Control for direct control.';
+        }
       }
       // User is manually turning device ON -> Clear manual override off!
       device.manualOverrideOff = false;
@@ -1375,7 +1416,7 @@ class ClassroomState extends ChangeNotifier {
     if (room == null) return;
     final device = findDevice(room, deviceId);
     if (device == null) return;
-    if (speed > 0) {
+    if (speed > 0 && _visionControlEnabled) {
       final occ = getZoneOccupancy(room, device.zone, boardId: device.boardId);
       if (occ <= 0) {
         debugPrint('[Vision Gate] BLOCKED fan speed on empty zone: ${device.zone}');
@@ -1393,6 +1434,7 @@ class ClassroomState extends ChangeNotifier {
       device.isOn = true;
       device.statusDescription = 'Speed $speed · Active';
     }
+    _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
     _scheduleLocalStorageSave(immediate: true);
@@ -1484,6 +1526,7 @@ class ClassroomState extends ChangeNotifier {
     } else if (brightness == 0) {
       device.isOn = false;
     }
+    _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
     _scheduleLocalStorageSave(immediate: true);
@@ -1640,7 +1683,11 @@ class ClassroomState extends ChangeNotifier {
       }
     }
     notifyListeners();
-    _saveToLocalStorage();
+    _persistMultipleDevicesPower(room.devices, roomId: room.id);
+    _scheduleLocalStorageSave(immediate: true);
+    for (final d in room.devices) {
+      MqttService().publishDeviceCommand(room.scopedRoomId, d, d.isOn);
+    }
   }
 
   void triggerEmergencyCutoff(String roomId) {
@@ -1888,10 +1935,12 @@ class ClassroomState extends ChangeNotifier {
     final willTurnOn = !zoneDevs.any((d) => d.isOn);
 
     if (willTurnOn) {
-      final occ = getZoneOccupancy(room, zoneName);
-      if (occ <= 0) {
-        debugPrint('[Vision Gate] BLOCKED toggleZone ON for $zoneName: 0 occupants.');
-        return 'Vision Gate: $zoneName is empty (0 occupants). Relays remain OFF.';
+      if (_visionControlEnabled) {
+        final occ = getZoneOccupancy(room, zoneName);
+        if (occ <= 0) {
+          debugPrint('[Vision Gate] BLOCKED toggleZone ON for $zoneName: 0 occupants.');
+          return 'Vision Gate: $zoneName is empty (0 occupants). Turn off Vision Control for direct control.';
+        }
       }
       for (var d in zoneDevs) {
         d.manualOverrideOff = false;

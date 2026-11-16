@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 
+/// A pressable surface card. It leans a few degrees toward the finger while
+/// held and springs back on release. When [isActive] it picks up the accent
+/// border and a soft glow.
 class TactileCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -26,28 +29,19 @@ class TactileCard extends StatefulWidget {
   State<TactileCard> createState() => _TactileCardState();
 }
 
-class _TactileCardState extends State<TactileCard>
-    with SingleTickerProviderStateMixin {
+class _TactileCardState extends State<TactileCard> {
   double _tiltX = 0.0;
   double _tiltY = 0.0;
   bool _isPressed = false;
 
   void _onPointerDown(PointerDownEvent event) {
     if (widget.onTap == null) return;
-    setState(() {
-      _isPressed = true;
-    });
+    setState(() => _isPressed = true);
+    _updateTilt(event.localPosition);
   }
 
-  void _onPointerUp(PointerUpEvent event) {
-    setState(() {
-      _isPressed = false;
-      _tiltX = 0.0;
-      _tiltY = 0.0;
-    });
-  }
-
-  void _onPointerCancel(PointerCancelEvent event) {
+  void _release() {
+    if (!_isPressed && _tiltX == 0 && _tiltY == 0) return;
     setState(() {
       _isPressed = false;
       _tiltX = 0.0;
@@ -55,76 +49,90 @@ class _TactileCardState extends State<TactileCard>
     });
   }
 
-  void _onPointerMove(PointerMoveEvent event) {
-    if (!widget.enableTilt) return;
+  void _updateTilt(Offset localPos) {
+    if (!widget.enableTilt || !_isPressed) return;
     final size = context.size;
-    if (size == null) return;
+    if (size == null || size.isEmpty) return;
 
-    final localPos = event.localPosition;
     final dx = (localPos.dx - size.width / 2) / (size.width / 2);
     final dy = (localPos.dy - size.height / 2) / (size.height / 2);
 
     setState(() {
-      _tiltX = -dy.clamp(-1.0, 1.0) * 0.08;
-      _tiltY = dx.clamp(-1.0, 1.0) * 0.08;
+      _tiltX = -dy.clamp(-1.0, 1.0) * 0.045;
+      _tiltY = dx.clamp(-1.0, 1.0) * 0.045;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final matrix = Matrix4.identity()
-      ..setEntry(3, 2, 0.0012)
-      ..rotateX(_tiltX)
-      ..rotateY(_tiltY);
+    final active = widget.isActive;
 
     return Padding(
       padding: widget.margin,
       child: Listener(
         onPointerDown: _onPointerDown,
-        onPointerUp: _onPointerUp,
-        onPointerCancel: _onPointerCancel,
-        onPointerMove: _onPointerMove,
+        onPointerUp: (_) => _release(),
+        onPointerCancel: (_) => _release(),
+        onPointerMove: (e) => _updateTilt(e.localPosition),
         child: GestureDetector(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            widget.onTap?.call();
-          },
-          child: AnimatedScale(
-            scale: _isPressed ? 0.97 : 1.0,
-            duration: const Duration(milliseconds: 140),
-            curve: Curves.easeOutCubic,
-            child: Transform(
-              transform: matrix,
-              alignment: FractionalOffset.center,
+          onTap: widget.onTap == null
+              ? null
+              : () {
+                  HapticFeedback.lightImpact();
+                  widget.onTap!.call();
+                },
+          child: TweenAnimationBuilder<Offset>(
+            tween: Tween<Offset>(end: Offset(_tiltX, _tiltY)),
+            duration: Duration(milliseconds: _isPressed ? 90 : 420),
+            curve: _isPressed ? Curves.easeOut : Curves.elasticOut,
+            builder: (context, tilt, child) {
+              return Transform(
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.0012)
+                  ..rotateX(tilt.dx)
+                  ..rotateY(tilt.dy),
+                alignment: FractionalOffset.center,
+                child: child,
+              );
+            },
+            child: AnimatedScale(
+              scale: _isPressed ? 0.975 : 1.0,
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
                 padding: widget.padding,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(widget.borderRadius),
-                  color: widget.isActive
-                      ? const Color(0xDA131E36)
-                      : const Color(0xCC171B28),
+                  color: active
+                      ? Color.alphaBlend(
+                          AppColors.primary.withValues(
+                            alpha: AppColors.isDark ? 0.10 : 0.08,
+                          ),
+                          AppColors.surfaceContainerLow,
+                        )
+                      : AppColors.surfaceContainerLow,
                   border: Border.all(
-                    color: widget.isActive
-                        ? AppColors.primary.withValues(alpha: 0.38)
-                        : Colors.white.withValues(alpha: 0.07),
-                    width: 1.2,
+                    color: active
+                        ? AppColors.primary.withValues(
+                            alpha: AppColors.isDark ? 0.50 : 0.68,
+                          )
+                        : AppColors.overlay(AppColors.isDark ? 0.08 : 0.10),
+                    width: active ? 1.5 : 1.0,
                   ),
-                  boxShadow: widget.isActive
+                  boxShadow: active
                       ? [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.16),
-                            blurRadius: 24,
+                            color: AppColors.primary.withValues(
+                              alpha: AppColors.isDark ? 0.18 : 0.15,
+                            ),
+                            blurRadius: 18,
                             spreadRadius: -4,
+                            offset: const Offset(0, 5),
                           ),
                         ]
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                      : AppColors.cardShadow(),
                 ),
                 child: widget.child,
               ),
@@ -135,4 +143,3 @@ class _TactileCardState extends State<TactileCard>
     );
   }
 }
-

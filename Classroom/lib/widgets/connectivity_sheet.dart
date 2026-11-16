@@ -86,7 +86,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
               height: 4,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(2),
-                color: Colors.white.withValues(alpha: 0.2),
+                color: AppColors.overlay(0.2),
               ),
             ),
           ),
@@ -96,18 +96,18 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
+              Expanded(child: Row(
                 children: [
-                  const Icon(Icons.hub, size: 20, color: AppColors.primary),
+                  Icon(Icons.hub, size: 20, color: AppColors.primary),
                   const SizedBox(width: 8),
-                  Text(
+                  Flexible(child: Text(
                     'Hardware Connectivity',
-                    style: AppTypography.headlineSm(color: AppColors.onSurface),
-                  ),
+                    style: AppTypography.headlineSm(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                  )),
                 ],
-              ),
+              )),
               IconButton(
-                icon: const Icon(Icons.close, size: 20, color: AppColors.outline),
+                icon: Icon(Icons.close, size: 20, color: AppColors.outline),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -124,7 +124,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               color: AppColors.surfaceContainerLowest,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppColors.overlay(0.08)),
             ),
             padding: const EdgeInsets.all(3),
             child: Row(
@@ -320,7 +320,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.telemetryAmber,
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.onAccent,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -353,7 +353,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
         ),
         child: Row(
           children: [
-            const Icon(Icons.gps_fixed, size: 18, color: AppColors.primary),
+            Icon(Icons.gps_fixed, size: 18, color: AppColors.primary),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -403,7 +403,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               color: AppColors.surfaceContainerLowest,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppColors.overlay(0.08)),
             ),
             child: Column(
               children: [
@@ -467,7 +467,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                             borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: () => _connState.toggleWifi(true),
-                      icon: const Icon(Icons.wifi, size: 16, color: AppColors.primary),
+                      icon: Icon(Icons.wifi, size: 16, color: AppColors.primary),
                       label: Text(
                         'TURN ON PHONE WI-FI',
                         style: AppTypography.labelSm(color: AppColors.primary),
@@ -499,7 +499,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                       Expanded(
                         child: Row(
                           children: [
-                            const PulsingBeacon(
+                            PulsingBeacon(
                                 size: 6, color: AppColors.onlineMint),
                             const SizedBox(width: 8),
                             Expanded(
@@ -529,7 +529,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Divider(color: Colors.white.withValues(alpha: 0.06)),
+                  Divider(color: AppColors.overlay(0.06)),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -561,10 +561,10 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                Expanded(child: Text(
                   'NEARBY WI-FI NETWORKS (${_connState.wifiNetworks.length})',
-                  style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
-                ),
+                  style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,
+                )),
                 GestureDetector(
                   onTap: _connState.isScanningWifi
                       ? null
@@ -572,7 +572,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                   child: Row(
                     children: [
                       if (_connState.isScanningWifi) ...[
-                        const SizedBox(
+                        SizedBox(
                           width: 10,
                           height: 10,
                           child: CircularProgressIndicator(
@@ -613,11 +613,11 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  Expanded(child: Text(
                     'LOCAL NETWORK IOT NODES (${_connState.discoveredIpNodes.length})',
                     style:
-                        AppTypography.labelSm(color: AppColors.onSurfaceVariant),
-                  ),
+                        AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,
+                  )),
                   Text(
                     'PORT 80 / ESP32',
                     style: AppTypography.labelSm(color: AppColors.onlineMint),
@@ -645,7 +645,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
         border: Border.all(
           color: net.isConnected
               ? AppColors.primary.withValues(alpha: 0.4)
-              : Colors.white.withValues(alpha: 0.06),
+              : AppColors.overlay(0.06),
         ),
       ),
       child: Row(
@@ -731,7 +731,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
           Expanded(
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.developer_board,
                   size: 16,
                   color: AppColors.onlineMint,
@@ -799,7 +799,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                Expanded(child: Row(
                   children: [
                     PulsingBeacon(
                       size: 8,
@@ -823,7 +823,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                       ],
                     ),
                   ],
-                ),
+                )),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.surfaceContainerHigh,
@@ -856,7 +856,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               color: AppColors.surfaceContainer,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppColors.overlay(0.08)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -864,13 +864,13 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
+                    Expanded(child: Row(
                       children: [
-                        const Icon(Icons.dns, size: 16, color: AppColors.primary),
+                        Icon(Icons.dns, size: 16, color: AppColors.primary),
                         const SizedBox(width: 8),
-                        Text('BROKER SERVER PARAMETERS', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
+                        Flexible(child: Text('BROKER SERVER PARAMETERS', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,)),
                       ],
-                    ),
+                    )),
                     InkWell(
                       onTap: _showConfigureBrokerDialog,
                       borderRadius: BorderRadius.circular(6),
@@ -878,7 +878,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         child: Row(
                           children: [
-                            const Icon(Icons.edit, size: 12, color: AppColors.primary),
+                            Icon(Icons.edit, size: 12, color: AppColors.primary),
                             const SizedBox(width: 4),
                             Text('EDIT', style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontSize: 10, fontWeight: FontWeight.bold)),
                           ],
@@ -905,14 +905,14 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               color: AppColors.surfaceContainer,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppColors.overlay(0.08)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.alt_route, size: 16, color: AppColors.secondary),
+                    Icon(Icons.alt_route, size: 16, color: AppColors.secondary),
                     const SizedBox(width: 8),
                     Text('MQTT TOPIC PROTOCOL HIERARCHY', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
                   ],
@@ -935,7 +935,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTypography.bodySm(color: AppColors.outline)),
+          Expanded(child: Text(label, style: AppTypography.bodySm(color: AppColors.outline), overflow: TextOverflow.ellipsis,)),
           Text(value, style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.w500)),
         ],
       ),
@@ -968,14 +968,14 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
           ),
           title: Row(
             children: [
-              const Icon(Icons.dns, color: AppColors.primary, size: 20),
+              Icon(Icons.dns, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text('Configure MQTT Broker', style: AppTypography.headlineSm(fontSize: 16)),
             ],
@@ -1085,7 +1085,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                     borderRadius: BorderRadius.circular(8),
                     color: AppColors.primary.withValues(alpha: 0.15),
                   ),
-                  child: const Icon(Icons.flash_on, color: AppColors.primary, size: 20),
+                  child: Icon(Icons.flash_on, color: AppColors.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1111,7 +1111,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('ESP32 HARDWARE CONTROLLERS', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
+              Expanded(child: Text('ESP32 HARDWARE CONTROLLERS', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,)),
               Text(
                 liveBoards.isNotEmpty ? '${liveBoards.length} BOARDS ACTIVE' : '0 BOARDS ACTIVE',
                 style: AppTypography.labelSm(
@@ -1129,7 +1129,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 color: AppColors.surfaceContainerLowest,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                border: Border.all(color: AppColors.overlay(0.06)),
               ),
               child: Column(
                 children: [
@@ -1139,7 +1139,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                       shape: BoxShape.circle,
                       color: AppColors.surfaceContainerHigh,
                     ),
-                    child: const Icon(Icons.developer_board_off, size: 28, color: AppColors.outline),
+                    child: Icon(Icons.developer_board_off, size: 28, color: AppColors.outline),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -1170,23 +1170,23 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
+                      Expanded(child: Row(
                         children: [
-                          const Icon(Icons.memory, size: 16, color: AppColors.primary),
+                          Icon(Icons.memory, size: 16, color: AppColors.primary),
                           const SizedBox(width: 8),
-                          Text(
+                          Flexible(child: Text(
                             board.name,
-                            style: AppTypography.bodyMd().copyWith(fontWeight: FontWeight.bold),
-                          ),
+                            style: AppTypography.bodyMd().copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis,
+                          )),
                         ],
-                      ),
+                      )),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(4),
                           color: AppColors.onlineMint.withValues(alpha: 0.15),
                         ),
-                        child: Text(board.status, style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(fontSize: 9)),
+                        child: Text(board.status, style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(fontSize: 10)),
                       ),
                     ],
                   ),

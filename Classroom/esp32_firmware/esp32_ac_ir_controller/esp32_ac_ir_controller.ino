@@ -64,7 +64,7 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  // 2. Emergency Cutoff (Turns OFF both Gree ACs via IR on GPIO 33 & GPIO 13)
+  // 2. Emergency Cutoff (Turns OFF both Gree ACs via IR on GPIO 33 & GPIO 12)
   if (strTopic.endsWith("/command/emergency")) {
     acController.emergencyLocked = (msg.equalsIgnoreCase("CUTOFF") || msg.equalsIgnoreCase("LOCK") || msg == "1");
     acController.executeUnitControl(1, false, acController.units[0].temperature, acController.units[0].mode, acController.units[0].fanSpeed, acController.units[0].swing, &mqtt, CLASSROOM_ID, true);
@@ -86,7 +86,7 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  // 4. Dedicated AC Control Commands (AC #1 on GPIO 33, AC #2 on GPIO 13, or Both)
+  // 4. Dedicated AC Control Commands (AC #1 on GPIO 33, AC #2 on GPIO 12, or Both)
   int topicUnit = 0;
   if (strTopic.indexOf("/ac/1") != -1 || strTopic.indexOf("/zone/1/ac") != -1 || strTopic.indexOf("/board/1/ac") != -1) {
     topicUnit = 1;
@@ -124,6 +124,7 @@ void connectMqtt() {
   if (mqtt.connect(clientId.c_str(), lwtTopic.c_str(), 1, true, lwtMsg.c_str())) {
     mqtt.subscribe("home/discovery/query", 1);
     mqtt.subscribe("home/zone_ac/#", 1);
+    mqtt.subscribe("home/command/#", 1);
     mqtt.subscribe((getBaseTopic() + "/ac/#").c_str(), 1);
     mqtt.subscribe((getBaseTopic() + "/zone/ac/#").c_str(), 1);
     mqtt.subscribe((getBaseTopic() + "/zone/1/ac/#").c_str(), 1);

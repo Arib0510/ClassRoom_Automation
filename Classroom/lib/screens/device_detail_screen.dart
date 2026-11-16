@@ -109,7 +109,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           backgroundColor: AppColors.surfaceContainerHigh,
           content: Row(
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
@@ -118,9 +118,11 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                'Transmitting optical Gree IR pulse to ${dev?.name}...',
-                style: AppTypography.bodySm(color: AppColors.primary),
+              Expanded(
+                child: Text(
+                  'Transmitting optical Gree IR pulse (GPIO ${dev?.gpioPinNumber ?? 33}) to ${dev?.name}...',
+                  style: AppTypography.bodySm(color: AppColors.primary),
+                ),
               ),
             ],
           ),
@@ -132,13 +134,14 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       if (!mounted) return;
 
       MqttService().publishAcCommand(
-        widget.roomId,
-        dev?.boardId ?? 1,
+        _room?.scopedRoomId ?? widget.roomId,
+        dev?.relayNumber ?? 1,
         isOn: dev?.isOn ?? true,
         temp: dev?.temperature ?? 24,
         mode: dev?.hvacMode ?? 'COOL',
         fanSpeed: dev?.fanSpeed ?? 0,
         swing: dev?.acSwing ?? false,
+        irGpio: dev?.gpioPinNumber,
       );
       setState(() => _isTestingRelay = false);
 
@@ -147,7 +150,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           backgroundColor: AppColors.surfaceContainerHigh,
           content: Row(
             children: [
-              const Icon(Icons.check_circle, color: AppColors.onlineMint, size: 18),
+              Icon(Icons.check_circle, color: AppColors.onlineMint, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -168,7 +171,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         backgroundColor: AppColors.surfaceContainerHigh,
         content: Row(
           children: [
-            const SizedBox(
+            SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(
@@ -198,7 +201,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         backgroundColor: AppColors.surfaceContainerHigh,
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: AppColors.onlineMint, size: 18),
+            Icon(Icons.check_circle, color: AppColors.onlineMint, size: 18),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -221,7 +224,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         backgroundColor: AppColors.surfaceContainerHigh,
         content: Row(
           children: [
-            const Icon(Icons.restart_alt, color: AppColors.secondary, size: 18),
+            Icon(Icons.restart_alt, color: AppColors.secondary, size: 18),
             const SizedBox(width: 10),
             Text(
               'ESP32 restart signal sent via MQTT.',
@@ -243,7 +246,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         backgroundColor: AppColors.surfaceContainerHigh,
         content: Row(
           children: [
-            const Icon(Icons.sync, color: AppColors.primary, size: 18),
+            Icon(Icons.sync, color: AppColors.primary, size: 18),
             const SizedBox(width: 10),
             Text(
               isAc
@@ -268,7 +271,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.criticalRed.withValues(alpha: 0.35)),
@@ -281,7 +284,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   shape: BoxShape.circle,
                   color: AppColors.criticalRed.withValues(alpha: 0.15),
                 ),
-                child: const Icon(Icons.delete_forever, color: AppColors.criticalRed, size: 22),
+                child: Icon(Icons.delete_forever, color: AppColors.criticalRed, size: 22),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -307,7 +310,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: AppColors.surfaceContainerLowest,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(color: AppColors.overlay(0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,7 +347,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.criticalRed,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.onError,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () {
@@ -358,7 +361,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 );
               },
               icon: const Icon(Icons.delete, size: 16),
-              label: Text('DELETE', style: AppTypography.labelMd(color: Colors.white)),
+              label: Text('DELETE', style: AppTypography.labelMd(color: AppColors.onError)),
             ),
           ],
         );
@@ -374,14 +377,14 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
           ),
           title: Row(
             children: [
-              const Icon(Icons.developer_board, color: AppColors.primary),
+              Icon(Icons.developer_board, color: AppColors.primary),
               const SizedBox(width: 10),
               Text(
                 'ESP32 Hardware Pinout',
@@ -445,14 +448,14 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             final currentPin = int.tryParse(controller.text) ?? dev.gpioPinNumber;
 
             return AlertDialog(
-              backgroundColor: AppColors.surfaceContainerHigh,
+              backgroundColor: AppColors.sheet,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
               title: Row(
                 children: [
-                  const Icon(Icons.settings_input_component, color: AppColors.primary),
+                  Icon(Icons.settings_input_component, color: AppColors.primary),
                   const SizedBox(width: 10),
                   Text(
                     'Remap ESP32 GPIO',
@@ -484,7 +487,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: AppColors.primary),
+                        borderSide: BorderSide(color: AppColors.primary),
                       ),
                     ),
                     onChanged: (val) => setDialogState(() {}),
@@ -508,7 +511,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                         side: BorderSide(
-                          color: isSelected ? AppColors.primary : Colors.white12,
+                          color: isSelected ? AppColors.primary : AppColors.overlay(0.12),
                         ),
                         onSelected: (_) {
                           setDialogState(() {
@@ -546,7 +549,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                         backgroundColor: AppColors.surfaceContainerHigh,
                         content: Row(
                           children: [
-                            const Icon(Icons.check_circle, color: AppColors.onlineMint, size: 18),
+                            Icon(Icons.check_circle, color: AppColors.onlineMint, size: 18),
                             const SizedBox(width: 8),
                             Text(
                               'Remapped to GPIO $newPin · Broadcast via MQTT',
@@ -620,10 +623,10 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 borderRadius: BorderRadius.circular(8),
                 color: AppColors.surfaceContainerLow,
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: AppColors.overlay(0.08),
                 ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back,
                 size: 20,
                 color: AppColors.onSurfaceVariant,
@@ -674,10 +677,10 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 borderRadius: BorderRadius.circular(8),
                 color: AppColors.surfaceContainerLow,
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: AppColors.overlay(0.08),
                 ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.more_vert,
                 size: 20,
                 color: AppColors.onSurfaceVariant,
@@ -702,7 +705,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   value: 'pinout',
                   child: Row(
                     children: [
-                      const Icon(Icons.developer_board, size: 16, color: AppColors.primary),
+                      Icon(Icons.developer_board, size: 16, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text('ESP32 Pinout', style: AppTypography.bodySm()),
                     ],
@@ -713,7 +716,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   value: 'gpio',
                   child: Row(
                     children: [
-                      const Icon(Icons.settings_input_component, size: 16, color: AppColors.secondary),
+                      Icon(Icons.settings_input_component, size: 16, color: AppColors.secondary),
                       const SizedBox(width: 8),
                       Text('Customize GPIO Pin', style: AppTypography.bodySm()),
                     ],
@@ -740,7 +743,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 value: 'sync',
                 child: Row(
                   children: [
-                    const Icon(Icons.sync, size: 16, color: AppColors.secondary),
+                    Icon(Icons.sync, size: 16, color: AppColors.secondary),
                     const SizedBox(width: 8),
                     Text(
                       device.type == DeviceType.hvac ? 'Resync AC Status' : 'Sync Relay States',
@@ -755,7 +758,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   value: 'reboot',
                   child: Row(
                     children: [
-                      const Icon(Icons.restart_alt, size: 16, color: AppColors.outline),
+                      Icon(Icons.restart_alt, size: 16, color: AppColors.outline),
                       const SizedBox(width: 8),
                       Text(
                         'Restart Device',
@@ -769,7 +772,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   value: 'delete',
                   child: Row(
                     children: [
-                      const Icon(Icons.delete_outline, size: 16, color: AppColors.criticalRed),
+                      Icon(Icons.delete_outline, size: 16, color: AppColors.criticalRed),
                       const SizedBox(width: 8),
                       Text(
                         'Delete Device',
@@ -859,11 +862,11 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                Expanded(child: Text(
                   'Hardware Controls',
                   style: AppTypography.headlineSm(color: AppColors.primaryLight)
-                      .copyWith(fontSize: 17, fontWeight: FontWeight.w600),
-                ),
+                      .copyWith(fontSize: 17, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis,
+                )),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -895,11 +898,11 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                Expanded(child: Text(
                   'Telemetry & Logs',
                   style: AppTypography.headlineSm(color: AppColors.primaryLight)
-                      .copyWith(fontSize: 17, fontWeight: FontWeight.w600),
-                ),
+                      .copyWith(fontSize: 17, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis,
+                )),
                 Text(
                   'LIVE BUS',
                   style: AppTypography.labelSm(color: AppColors.outline)
@@ -926,17 +929,37 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
 
   // --- HARDWARE HERO CARD ---
   Widget _buildHardwareHeroCard(ClassroomDevice device) {
-    return Container(
+    final isOn = device.isOn;
+    final accent = device.type == DeviceType.hvac
+        ? AppColors.secondary
+        : AppColors.primary;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: AppColors.surfaceContainerLow,
+        color: isOn
+            ? Color.alphaBlend(
+                accent.withValues(alpha: AppColors.isDark ? 0.12 : 0.10),
+                AppColors.surfaceContainerLow,
+              )
+            : AppColors.surfaceContainerLow,
         border: Border.all(
-          color: device.isOn
-              ? AppColors.primary.withValues(alpha: 0.35)
-              : Colors.white.withValues(alpha: 0.08),
+          color: isOn
+              ? accent.withValues(alpha: AppColors.isDark ? 0.50 : 0.72)
+              : AppColors.overlay(AppColors.isDark ? 0.08 : 0.10),
+          width: isOn ? 1.5 : 1.0,
         ),
-        boxShadow: device.isOn ? [AppColors.cyanGlow(radius: 20, opacity: 0.15)] : null,
+        boxShadow: isOn
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: AppColors.isDark ? 0.22 : 0.16),
+                  blurRadius: 16,
+                  spreadRadius: -3,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -945,19 +968,26 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Icon Box
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: AppColors.surfaceContainerHigh,
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.25),
-                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  color: isOn ? accent : AppColors.surfaceContainerHigh,
+                  boxShadow: isOn
+                      ? [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Icon(
                   _getDeviceIcon(device.type),
-                  color: device.isOn ? AppColors.primary : AppColors.outline,
+                  color: isOn ? AppColors.onPrimary : AppColors.outline,
                   size: 24,
                 ),
               ),
@@ -1160,11 +1190,11 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              Expanded(child: Text(
                 title,
                 style: AppTypography.labelSm(color: AppColors.outline)
-                    .copyWith(fontSize: 9, letterSpacing: 0.5),
-              ),
+                    .copyWith(fontSize: 10, letterSpacing: 0.5), overflow: TextOverflow.ellipsis,
+              )),
               Icon(icon, size: 14, color: AppColors.primary),
             ],
           ),
@@ -1183,7 +1213,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 child: Text(
                   sub,
                   style: AppTypography.labelSm(color: AppColors.primary)
-                      .copyWith(fontSize: 9),
+                      .copyWith(fontSize: 10),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -1230,16 +1260,16 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(child: Row(
                     children: [
-                      const Icon(Icons.speed, size: 18, color: AppColors.primary),
+                      Icon(Icons.speed, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Text(
+                      Flexible(child: Text(
                         'Fan Speed Control',
-                        style: AppTypography.labelLg(color: AppColors.onSurface),
-                      ),
+                        style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                      )),
                     ],
-                  ),
+                  )),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -1340,17 +1370,17 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.timer_outlined, size: 18, color: AppColors.primary),
+                      Icon(Icons.timer_outlined, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Text(
                         'Auto-Off Timer',
                         style: AppTypography.labelLg(color: AppColors.onSurface),
                       ),
                     ],
-                  ),
+                  )),
                   Text(
                     device.fanTimerMinutes == 0
                         ? 'CONTINUOUS'
@@ -1426,16 +1456,16 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(child: Row(
                     children: [
-                      const Icon(Icons.brightness_6, size: 18, color: AppColors.primary),
+                      Icon(Icons.brightness_6, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Text(
+                      Flexible(child: Text(
                         'Lighting Intensity (Triac PWM)',
-                        style: AppTypography.labelLg(color: AppColors.onSurface),
-                      ),
+                        style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                      )),
                     ],
-                  ),
+                  )),
                   Text(
                     '${device.brightness.round()}% (${device.lumens} lm)',
                     style: AppTypography.labelLg(color: AppColors.primary)
@@ -1457,7 +1487,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('MIN (10%)', style: AppTypography.labelSm(color: AppColors.outline)),
+                  Expanded(child: Text('MIN (10%)', style: AppTypography.labelSm(color: AppColors.outline), overflow: TextOverflow.ellipsis,)),
                   Text(
                     'OPTIMAL (85%)',
                     style: AppTypography.labelSm(color: AppColors.primaryLight),
@@ -1593,7 +1623,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.settings_remote,
                   size: 20,
                   color: AppColors.primary,
@@ -1605,18 +1635,18 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'OPTICAL INFRARED TRANSMITTER (GPIO 4)',
+                      'OPTICAL INFRARED TRANSMITTER (GPIO ${device.gpioPinNumber})',
                       style: AppTypography.labelSm(color: AppColors.primary)
-                          .copyWith(fontSize: 9, letterSpacing: 0.8, fontWeight: FontWeight.bold),
+                          .copyWith(fontSize: 10, letterSpacing: 0.8, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Gree AC Optical Controller (GPIO 4)',
+                      'Gree AC #${device.relayNumber} Optical Controller (GPIO ${device.gpioPinNumber})',
                       style: AppTypography.headlineSm(color: AppColors.onSurface)
                           .copyWith(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      'Modulated 38 kHz optical pulses on GPIO 4 directly to AC unit.',
+                      'Modulated 38 kHz optical pulses on GPIO ${device.gpioPinNumber} directly to AC #${device.relayNumber}.',
                       style: AppTypography.labelSm(color: AppColors.outline)
                           .copyWith(fontSize: 10),
                     ),
@@ -1630,11 +1660,11 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   borderRadius: BorderRadius.circular(6),
                   color: device.isOn
                       ? AppColors.onlineMint.withValues(alpha: 0.15)
-                      : Colors.white.withValues(alpha: 0.05),
+                      : AppColors.overlay(0.05),
                   border: Border.all(
                     color: device.isOn
                         ? AppColors.onlineMint.withValues(alpha: 0.4)
-                        : Colors.white.withValues(alpha: 0.1),
+                        : AppColors.overlay(0.1),
                   ),
                 ),
                 child: Row(
@@ -1677,16 +1707,16 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(child: Row(
                     children: [
-                      const Icon(Icons.thermostat, size: 18, color: AppColors.primary),
+                      Icon(Icons.thermostat, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Text(
+                      Flexible(child: Text(
                         'Target Temperature',
-                        style: AppTypography.labelLg(color: AppColors.onSurface),
-                      ),
+                        style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                      )),
                     ],
-                  ),
+                  )),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -1721,7 +1751,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                           color: AppColors.outlineVariant.withValues(alpha: 0.4),
                         ),
                       ),
-                      child: const Icon(Icons.remove, color: AppColors.onSurface),
+                      child: Icon(Icons.remove, color: AppColors.onSurface),
                     ),
                   ),
                   const SizedBox(width: 24),
@@ -1746,7 +1776,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                           color: AppColors.outlineVariant.withValues(alpha: 0.4),
                         ),
                       ),
-                      child: const Icon(Icons.add, color: AppColors.onSurface),
+                      child: Icon(Icons.add, color: AppColors.onSurface),
                     ),
                   ),
                 ],
@@ -1841,16 +1871,16 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(child: Row(
                     children: [
-                      const Icon(Icons.speed, size: 18, color: AppColors.primary),
+                      Icon(Icons.speed, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Text(
+                      Flexible(child: Text(
                         'Blower Fan Speed',
-                        style: AppTypography.labelLg(color: AppColors.onSurface),
-                      ),
+                        style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                      )),
                     ],
-                  ),
+                  )),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
@@ -1864,7 +1894,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                           : (device.fanSpeed == 1
                               ? 'LOW (1)'
                               : (device.fanSpeed == 2 ? 'MED (2)' : 'HIGH (3)')),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.bold,
                         color: AppColors.onlineMint,
@@ -1950,7 +1980,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   border: Border.all(
                     color: device.acSwing
                         ? AppColors.onlineMint.withValues(alpha: 0.4)
-                        : Colors.white.withValues(alpha: 0.08),
+                        : AppColors.overlay(0.08),
                   ),
                 ),
                 child: Icon(
@@ -1998,7 +2028,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     border: Border.all(
                       color: device.acSwing
                           ? AppColors.onlineMint
-                          : Colors.white.withValues(alpha: 0.15),
+                          : AppColors.overlay(0.15),
                       width: 1.2,
                     ),
                   ),
@@ -2048,16 +2078,16 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(child: Row(
                     children: [
-                      const Icon(Icons.input, size: 18, color: AppColors.primary),
+                      Icon(Icons.input, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Text(
+                      Flexible(child: Text(
                         'Active Input Source',
-                        style: AppTypography.labelLg(color: AppColors.onSurface),
-                      ),
+                        style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                      )),
                     ],
-                  ),
+                  )),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -2131,16 +2161,16 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(child: Row(
                     children: [
-                      const Icon(Icons.brightness_6, size: 18, color: AppColors.primary),
+                      Icon(Icons.brightness_6, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Text(
+                      Flexible(child: Text(
                         'Laser Brightness',
-                        style: AppTypography.labelLg(color: AppColors.onSurface),
-                      ),
+                        style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                      )),
                     ],
-                  ),
+                  )),
                   Text(
                     '${device.brightness.round()}% (5100 lm)',
                     style: AppTypography.labelLg(color: AppColors.primary)
@@ -2162,7 +2192,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('MIN (30%)', style: AppTypography.labelSm(color: AppColors.outline)),
+                  Expanded(child: Text('MIN (30%)', style: AppTypography.labelSm(color: AppColors.outline), overflow: TextOverflow.ellipsis,)),
                   Text(
                     'OPTIMAL (85%)',
                     style: AppTypography.labelSm(color: AppColors.primaryLight),
@@ -2190,16 +2220,16 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
+                  Expanded(child: Row(
                     children: [
-                      const Icon(Icons.vertical_align_bottom, size: 18, color: AppColors.primary),
+                      Icon(Icons.vertical_align_bottom, size: 18, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Text(
+                      Flexible(child: Text(
                         'Motorized Screen Relay',
-                        style: AppTypography.labelLg(color: AppColors.onSurface),
-                      ),
+                        style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                      )),
                     ],
-                  ),
+                  )),
                   Text(
                     'DA-LITE 120"',
                     style: AppTypography.labelSm(color: AppColors.primary),
@@ -2236,10 +2266,10 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  Expanded(child: Text(
                     'Picture Profile & Aspect',
-                    style: AppTypography.labelLg(color: AppColors.onSurface),
-                  ),
+                    style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                  )),
                   Text(
                     '16:9 DYNAMIC',
                     style: AppTypography.labelSm(color: AppColors.outline),
@@ -2430,10 +2460,10 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              Expanded(child: Text(
                 'Environmental Sensors (I2C Bus)',
-                style: AppTypography.labelLg(color: AppColors.onSurface),
-              ),
+                style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+              )),
               Text(
                 'SDA 21 • SCL 22',
                 style: AppTypography.labelSm(color: AppColors.primary),
@@ -2493,10 +2523,10 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              Expanded(child: Text(
                 'Relay Channels (GPIO 25–30)',
-                style: AppTypography.labelLg(color: AppColors.onSurface),
-              ),
+                style: AppTypography.labelLg(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+              )),
               Text(
                 '${device.activeSockets} / ${device.totalSockets} Active',
                 style: AppTypography.labelSm(color: AppColors.primary),
@@ -2523,8 +2553,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Ch $sockNum', style: AppTypography.labelSm()),
-                    const Icon(Icons.check_circle, size: 14, color: AppColors.onlineMint),
+                    Expanded(child: Text('Ch $sockNum', style: AppTypography.labelSm(), overflow: TextOverflow.ellipsis,)),
+                    Icon(Icons.check_circle, size: 14, color: AppColors.onlineMint),
                   ],
                 ),
               );
@@ -2582,7 +2612,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           Text(
             title,
             style: AppTypography.labelSm(color: AppColors.outline)
-                .copyWith(fontSize: 9),
+                .copyWith(fontSize: 10),
           ),
           const SizedBox(height: 2),
           Row(
@@ -2600,7 +2630,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 Text(
                   badge,
                   style: AppTypography.labelSm(color: AppColors.primary)
-                      .copyWith(fontSize: 9),
+                      .copyWith(fontSize: 10),
                 ),
               ],
             ],
@@ -2635,12 +2665,17 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               children: [
                 Icon(isAc ? Icons.settings_remote : Icons.build, size: 18),
                 const SizedBox(width: 8),
-                Text(
-                  _isTestingRelay
-                      ? (isAc ? 'TRANSMITTING IR PULSE...' : 'PULSING RELAY SEQUENCE...')
-                      : (isAc ? 'Test Optical IR Pulse (GPIO 4)' : 'Run ESP32 Relay Self-Test'),
-                  style: AppTypography.labelLg(color: AppColors.surfaceContainerLowest)
-                      .copyWith(fontWeight: FontWeight.bold),
+                Flexible(
+                  child: Text(
+                    _isTestingRelay
+                        ? (isAc ? 'TRANSMITTING IR PULSE...' : 'PULSING RELAY SEQUENCE...')
+                        : (isAc
+                            ? 'Test Optical IR Pulse (GPIO ${device.gpioPinNumber})'
+                            : 'Run ESP32 Relay Self-Test'),
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelLg(color: AppColors.surfaceContainerLowest)
+                        .copyWith(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
@@ -2720,7 +2755,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.criticalRed),
+                    Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.criticalRed),
                     const SizedBox(width: 6),
                     Text(
                       'DANGER ZONE',
@@ -2748,7 +2783,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: _confirmDeleteDevice,
-                    icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.criticalRed),
+                    icon: Icon(Icons.delete_outline, size: 16, color: AppColors.criticalRed),
                     label: Text(
                       'DELETE DEVICE',
                       style: AppTypography.labelMd(color: AppColors.criticalRed).copyWith(fontWeight: FontWeight.bold),

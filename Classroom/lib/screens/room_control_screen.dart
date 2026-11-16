@@ -15,6 +15,9 @@ import '../widgets/route_transitions.dart';
 import '../widgets/cyber_toast.dart';
 import 'add_device_screen.dart';
 import 'device_detail_screen.dart';
+import '../widgets/app_sheet.dart';
+import '../widgets/motion.dart';
+import '../widgets/segmented_picker.dart';
 
 class RoomControlScreen extends StatefulWidget {
   final String roomId;
@@ -113,7 +116,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
@@ -184,14 +187,14 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
           ),
           title: Row(
             children: [
-              const Icon(Icons.delete_forever, color: AppColors.error),
+              Icon(Icons.delete_forever, color: AppColors.error),
               const SizedBox(width: 8),
               Text(
                 'Delete Classroom',
@@ -211,7 +214,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.onError,
               ),
               onPressed: () {
                 _state.deleteClassroom(widget.roomId);
@@ -235,14 +238,14 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
           ),
           title: Row(
             children: [
-              const Icon(Icons.drive_file_rename_outline, color: AppColors.primary, size: 20),
+              Icon(Icons.drive_file_rename_outline, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Rename Zone',
@@ -259,11 +262,11 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: AppColors.surfaceContainerLowest,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                  border: Border.all(color: AppColors.overlay(0.06)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.developer_board, size: 14, color: AppColors.onlineMint),
+                    Icon(Icons.developer_board, size: 14, color: AppColors.onlineMint),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -348,30 +351,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
     HapticFeedback.mediumImpact();
     final error = _state.toggleDevice(widget.roomId, device.id);
     if (error != null && mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.shield_outlined, color: Colors.amberAccent, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  error,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF1E293B),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: Colors.amberAccent.withValues(alpha: 0.4)),
-          ),
-        ),
-      );
+      CyberToast.show(context, message: error, type: ToastType.error);
     }
   }
 
@@ -379,30 +359,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
     HapticFeedback.mediumImpact();
     final error = _state.toggleZone(widget.roomId, zoneName);
     if (error != null && mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.shield_outlined, color: Colors.amberAccent, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  error,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF1E293B),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: Colors.amberAccent.withValues(alpha: 0.4)),
-          ),
-        ),
-      );
+      CyberToast.show(context, message: error, type: ToastType.error);
     }
   }
 
@@ -415,7 +372,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.criticalRed.withValues(alpha: 0.35)),
@@ -428,7 +385,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                   shape: BoxShape.circle,
                   color: AppColors.criticalRed.withValues(alpha: 0.15),
                 ),
-                child: const Icon(Icons.delete_sweep, color: AppColors.criticalRed, size: 22),
+                child: Icon(Icons.delete_sweep, color: AppColors.criticalRed, size: 22),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -464,7 +421,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.criticalRed,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.onError,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () {
@@ -477,7 +434,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                 );
               },
               icon: const Icon(Icons.delete, size: 16),
-              label: Text('DELETE', style: AppTypography.labelMd(color: Colors.white)),
+              label: Text('DELETE', style: AppTypography.labelMd(color: AppColors.onError)),
             ),
           ],
         );
@@ -521,77 +478,97 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
     return num;
   }
 
-  Color _getRoomTypeColor(String roomType) {
-    final lower = roomType.toLowerCase();
-    if (lower.contains('lab')) return const Color(0xFF00E5FF);
-    if (lower.contains('seminar')) return const Color(0xFFFFB300);
-    if (lower.contains('lecture')) return const Color(0xFF10B981);
-    if (lower.contains('auditorium')) return const Color(0xFFA855F7);
-    return AppColors.primary;
-  }
 
   void _showRoomHardwareInfo(Classroom room) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerHigh,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-          ),
+        return AppSheet(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
               Row(
                 children: [
-                  const Icon(Icons.developer_board, color: AppColors.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Text('ESP32 Hardware & Mesh Info', style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(fontSize: 16)),
+                  Icon(Icons.memory_rounded, color: AppColors.primary, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Hardware details',
+                      style: AppTypography.headlineSm(color: AppColors.onSurface)
+                          .copyWith(fontSize: 17, fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
+              Text(
+                'Use this ID when flashing the ESP32 firmware for this room.',
+                style: AppTypography.bodySm(color: AppColors.onSurfaceVariant)
+                    .copyWith(fontSize: 13),
+              ),
+              const SizedBox(height: 14),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(14, 6, 6, 12),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(14),
                   color: AppColors.surfaceContainerLowest,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(color: AppColors.overlay(0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('ROOM ID: ${room.id}', style: AppTypography.labelMd(color: AppColors.primary)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Room ID',
+                                style: AppTypography.labelSm(
+                                  color: AppColors.outline,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                room.id,
+                                style: AppTypography.labelLg(
+                                  color: AppColors.primary,
+                                ).copyWith(fontSize: 15),
+                              ),
+                            ],
+                          ),
+                        ),
                         IconButton(
-                          icon: const Icon(Icons.copy, size: 16, color: AppColors.primary),
+                          tooltip: 'Copy room ID',
+                          icon: Icon(Icons.copy_rounded,
+                              size: 18, color: AppColors.primary),
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: room.id));
-                            CyberToast.show(ctx, message: 'Copied "${room.id}" to clipboard', type: ToastType.success);
+                            CyberToast.show(
+                              ctx,
+                              message: 'Copied "${room.id}".',
+                              type: ToastType.success,
+                            );
                           },
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text('#define CLASSROOM_ID "${room.id}"', style: AppTypography.labelSm(color: AppColors.outline)),
-                    const SizedBox(height: 8),
-                    Text('Zones: ${room.zoneCount} · Devices: ${room.devices.length}', style: AppTypography.bodySm(color: AppColors.onSurfaceVariant)),
+                    const SizedBox(height: 6),
+                    Text(
+                      '#define CLASSROOM_ID "${room.id}"',
+                      style: AppTypography.bodySm(color: AppColors.onSurfaceVariant)
+                          .copyWith(fontSize: 12.5),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${room.zoneCount} zones · ${room.devices.length} devices',
+                      style: AppTypography.bodySm(color: AppColors.outline)
+                          .copyWith(fontSize: 12.5),
+                    ),
                   ],
                 ),
               ),
@@ -608,46 +585,42 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
     if (room == null) {
       return Scaffold(
         backgroundColor: AppColors.surfaceContainerLowest,
+        appBar: AppBar(),
         body: Center(
-          child: Text('Classroom node not found.', style: AppTypography.bodyLg()),
+          child: Text('This classroom no longer exists.',
+              style: AppTypography.bodyLg()),
         ),
       );
     }
 
+    final typeColor = AppColors.roomType(room.roomType);
+    final activeCount = room.activeDeviceCount;
+    final zones =
+        room.zones.where((z) => !z.toLowerCase().contains('ac')).toList();
+    final hasAc = room.devices
+        .any((d) => d.type == DeviceType.hvac || d.zone == 'Standalone AC');
+
     return Scaffold(
       backgroundColor: AppColors.surfaceContainerLowest,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceContainerLowest.withValues(alpha: 0.90),
+        backgroundColor: AppColors.surfaceContainerLowest,
+        titleSpacing: 0,
         leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: AppColors.surfaceContainerHigh.withValues(alpha: 0.8),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              size: 18,
-              color: AppColors.primary,
-            ),
-          ),
+          tooltip: 'Back',
+          icon: Icon(Icons.arrow_back_rounded, color: AppColors.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: _getRoomTypeColor(room.roomType).withValues(alpha: 0.15),
-                border: Border.all(color: _getRoomTypeColor(room.roomType).withValues(alpha: 0.4)),
+                borderRadius: BorderRadius.circular(12),
+                color: typeColor.withValues(alpha: 0.14),
               ),
-              child: Icon(
-                _getRoomTypeIcon(room.roomType),
-                size: 18,
-                color: _getRoomTypeColor(room.roomType),
-              ),
+              child: Icon(_getRoomTypeIcon(room.roomType),
+                  size: 20, color: typeColor),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -656,28 +629,21 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                 children: [
                   Text(
                     _getRoomHeaderTitle(room),
-                    style: AppTypography.headlineSm(color: AppColors.onSurface)
-                        .copyWith(fontSize: 15, fontWeight: FontWeight.bold),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: AppTypography.headlineSm(color: AppColors.onSurface)
+                        .copyWith(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      PulsingBeacon(
-                        size: 6,
-                        color: room.isMasterOn
-                            ? AppColors.primary
-                            : AppColors.outline,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          '${room.activeDeviceCount} ON · ${_normalizeRoomType(room.roomType)}',
-                          style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontSize: 11),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 1),
+                  Text(
+                    '$activeCount on · ${_normalizeRoomType(room.roomType)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodySm(
+                      color: activeCount > 0
+                          ? AppColors.primary
+                          : AppColors.outline,
+                    ).copyWith(fontSize: 12, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -686,127 +652,78 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Hardware & ESP32 Info',
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: AppColors.surfaceContainerHigh.withValues(alpha: 0.8),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-              ),
-              child: const Icon(Icons.memory, size: 18, color: AppColors.primary),
-            ),
+            tooltip: 'Hardware details',
+            icon: Icon(Icons.memory_rounded,
+                size: 22, color: AppColors.onSurfaceVariant),
             onPressed: () => _showRoomHardwareInfo(room),
           ),
           Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                _state.toggleRoomMaster(room.id);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: room.isMasterOn ? AppColors.primary : AppColors.surfaceContainerHigh,
-                ),
-                child: Icon(
-                  Icons.power_settings_new,
-                  size: 18,
-                  color: room.isMasterOn ? AppColors.surfaceContainerLowest : AppColors.outline,
-                ),
+            padding: const EdgeInsets.only(right: 14, left: 2),
+            child: Center(
+              child: PowerButton(
+                isOn: room.isMasterOn,
+                size: 38,
+                radius: 12,
+                semanticLabel: 'Power for the whole room',
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _state.toggleRoomMaster(room.id);
+                },
               ),
             ),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildVisionTelemetryBanner(room),
-            // Action Buttons (Admin Only: Teachers view & control only)
+
             if (AuthState().isAdmin) ...[
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.onPrimaryFixed,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          Cube3DPageRoute(
-                            page: AddDeviceScreen(preselectedRoomId: room.id),
-                          ),
-                        );
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.add,
-                            size: 16,
-                            color: AppColors.surfaceContainerLowest,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Add Device',
-                            style: AppTypography.headlineSm(
-                              color: AppColors.surfaceContainerLowest,
-                            ).copyWith(fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                    child: SizedBox(
+                      height: 44,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            Cube3DPageRoute(
+                              page:
+                                  AddDeviceScreen(preselectedRoomId: room.id),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add_rounded, size: 19),
+                        label: const Text('Add Device', maxLines: 1),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: 'Rename Classroom',
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.surfaceContainer,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: AppColors.secondary.withValues(alpha: 0.3),
-                        ),
-                      ),
-                    ),
-                    icon: const Icon(Icons.edit_note, size: 18, color: AppColors.secondary),
-                    onPressed: _showRenameDialog,
+                  _squareAction(
+                    icon: Icons.edit_outlined,
+                    color: AppColors.secondary,
+                    tooltip: 'Rename classroom',
+                    onTap: _showRenameDialog,
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.surfaceContainer,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: AppColors.error.withValues(alpha: 0.3),
-                        ),
-                      ),
-                    ),
-                    icon: const Icon(Icons.delete, size: 16, color: AppColors.error),
-                    onPressed: _showDeleteDialog,
+                  _squareAction(
+                    icon: Icons.delete_outline_rounded,
+                    color: AppColors.error,
+                    tooltip: 'Delete classroom',
+                    onTap: _showDeleteDialog,
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
             ],
 
-            // Device Filter Chips (ONLY Ceiling Fan, Light, AC)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
               child: Row(
                 children: [
                   _buildCategoryChip('All'),
@@ -819,79 +736,58 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
 
             const SizedBox(height: 18),
 
-            // Conditional UI Rendering:
-            // When user selects 'AC', hide the Zone 1, 2, and 3 switchboard panels
-            // and display ONLY the Standalone AC control panel!
+            // Choosing "AC" shows only the standalone AC panel; the zone
+            // switchboards carry no AC units.
             if (_selectedCategory == 'AC') ...[
               _buildStandaloneAcSection(room),
             ] else ...[
-              // Show Standalone AC Card at top if present and filter is 'All'
-              if (_selectedCategory == 'All' &&
-                  room.devices.any((d) => d.type == DeviceType.hvac || d.zone == 'Standalone AC'))
+              if (_selectedCategory == 'All' && hasAc)
                 _buildStandaloneAcSection(room),
 
-              // Separated Zones Section Header with View Toggle
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'CONTROL ZONES',
-                            style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${room.zoneCount} ZONES',
-                            style: AppTypography.labelSm(color: AppColors.primary)
-                                .copyWith(fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
+                  Text(
+                    'Zones',
+                    style:
+                        AppTypography.headlineSm(color: AppColors.onSurface)
+                            .copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // View Mode Toggle (List vs Grid)
+                  StatusChip(
+                    label: '${room.zoneCount}',
+                    color: AppColors.primary,
+                  ),
+                  const Spacer(),
                   Container(
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      borderRadius: BorderRadius.circular(11),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildViewModeToggle(Icons.view_agenda_rounded, false, 'List View'),
-                        _buildViewModeToggle(Icons.grid_view_rounded, true, 'Grid View'),
+                        _buildViewModeToggle(
+                            Icons.view_agenda_outlined, false, 'List view'),
+                        _buildViewModeToggle(
+                            Icons.grid_view_rounded, true, 'Grid view'),
                       ],
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              // Display each separated 8-Switch Zone (Zone 1, Zone 2, Zone 3)
               if (room.zones.isEmpty)
                 _buildEmptyDevicesState(room)
               else
-                ...room.zones
-                    .where((z) => !z.toLowerCase().contains('ac'))
-                    .map((zoneName) => _buildZoneCard(room, zoneName)),
+                for (var i = 0; i < zones.length; i++)
+                  _buildZoneCard(room, zones[i]),
             ],
-
-            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -902,52 +798,56 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
     final acDevices = room.devices
         .where((d) => d.type == DeviceType.hvac || d.zone == 'Standalone AC')
         .toList();
+    final anyOn = acDevices.any((d) => d.isOn);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: AppColors.surfaceContainerLow.withValues(alpha: 0.92),
-        border: Border.all(
-          color: acDevices.any((d) => d.isOn)
-              ? AppColors.secondary.withValues(alpha: 0.45)
-              : Colors.white.withValues(alpha: 0.1),
-        ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: _panelDecoration(
+        borderColor:
+            anyOn ? AppColors.secondary.withValues(alpha: 0.40) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              color: AppColors.surfaceContainerHigh.withValues(alpha: 0.55),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 240),
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: AppColors.secondary.withValues(alpha: 0.15),
-                    border: Border.all(color: AppColors.secondary.withValues(alpha: 0.35)),
+                    borderRadius: BorderRadius.circular(12),
+                    color: anyOn
+                        ? AppColors.secondary
+                        : AppColors.secondary.withValues(alpha: 0.14),
                   ),
-                  child: const Icon(Icons.ac_unit, size: 16, color: AppColors.secondary),
+                  child: Icon(
+                    Icons.ac_unit_rounded,
+                    size: 20,
+                    color: anyOn ? Colors.white : AppColors.secondary,
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'STANDALONE DUAL-GREE AC (zone_ac)',
-                        style: AppTypography.headlineSm(color: AppColors.onSurface)
-                            .copyWith(fontSize: 13, fontWeight: FontWeight.bold),
+                        'Air conditioning',
+                        style: AppTypography.headlineSm(
+                          color: AppColors.onSurface,
+                        ).copyWith(fontSize: 15, fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 1),
                       Text(
-                        'Isolated ESP32 • Gree AC #1: IR GPIO 33 | Gree AC #2: IR GPIO 12',
-                        style: AppTypography.labelSm(color: AppColors.secondary).copyWith(fontSize: 10),
+                        'Standalone IR controller · zone_ac',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodySm(color: AppColors.outline)
+                            .copyWith(fontSize: 12),
                       ),
                     ],
                   ),
@@ -956,14 +856,20 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: acDevices.isEmpty
-                ? Text(
-                    'No Standalone AC paired yet. Tap "+ Add Device" and select Standalone AC.',
-                    style: AppTypography.bodySm(color: AppColors.onSurfaceVariant),
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
+                    child: Text(
+                      'No AC paired yet. Tap "Add Device" and choose Standalone AC.',
+                      style: AppTypography.bodySm(
+                        color: AppColors.onSurfaceVariant,
+                      ).copyWith(fontSize: 13),
+                    ),
                   )
                 : Column(
-                    children: acDevices.map((dev) => _buildDeviceCard(dev)).toList(),
+                    children:
+                        acDevices.map((dev) => _buildDeviceCard(dev)).toList(),
                   ),
           ),
         ],
@@ -976,17 +882,20 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () => _setGridView(isGrid),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 38,
+          height: 30,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
             color: isSelected ? AppColors.primary : Colors.transparent,
           ),
           child: Icon(
             icon,
-            size: 15,
-            color: isSelected ? AppColors.surfaceContainerLowest : AppColors.onSurfaceVariant,
+            size: 17,
+            color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
           ),
         ),
       ),
@@ -1001,150 +910,138 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
     final displayName = room.getZoneDisplayName(zoneName);
     final hasAlias = displayName.toLowerCase() != zoneName.toLowerCase();
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: AppColors.surfaceContainerLow.withValues(alpha: 0.9),
-        border: Border.all(
-          color: isZoneActive
-              ? AppColors.primary.withValues(alpha: 0.35)
-              : Colors.white.withValues(alpha: 0.08),
-        ),
+      decoration: _panelDecoration(
+        borderColor:
+            isZoneActive ? AppColors.primary.withValues(alpha: 0.38) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Zone Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              color: AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 240),
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     color: isZoneActive
-                        ? AppColors.primary.withValues(alpha: 0.15)
-                        : AppColors.surfaceContainerLowest,
-                    border: Border.all(
-                      color: isZoneActive
-                          ? AppColors.primary.withValues(alpha: 0.4)
-                          : Colors.white.withValues(alpha: 0.08),
-                    ),
+                        ? AppColors.primary
+                        : AppColors.surfaceContainerHigh,
                   ),
                   child: Icon(
-                    Icons.grid_view,
-                    size: 16,
-                    color: isZoneActive ? AppColors.primary : AppColors.outline,
+                    Icons.grid_view_rounded,
+                    size: 19,
+                    color: isZoneActive
+                        ? AppColors.onPrimary
+                        : AppColors.outline,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              displayName.toUpperCase(),
-                              style: AppTypography.headlineSm(color: AppColors.onSurface)
-                                  .copyWith(fontSize: 13, fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          // Rename Zone Icon
-                          GestureDetector(
-                            onTap: () => _showRenameZoneDialog(room, zoneName),
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(5),
-                                color: AppColors.primary.withValues(alpha: 0.12),
-                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
-                              ),
-                              child: const Icon(
-                                Icons.edit_outlined,
-                                size: 12,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                          if (AuthState().isAdmin) ...[
-                            const SizedBox(width: 5),
-                            // Delete Zone Icon
-                            GestureDetector(
-                              onTap: () => _showDeleteZoneDialog(room, zoneName),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(5),
-                                  color: AppColors.criticalRed.withValues(alpha: 0.12),
-                                  border: Border.all(color: AppColors.criticalRed.withValues(alpha: 0.25)),
-                                ),
-                                child: const Icon(
-                                  Icons.delete_outline,
-                                  size: 12,
-                                  color: AppColors.criticalRed,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
+                      Text(
+                        displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.headlineSm(
+                          color: AppColors.onSurface,
+                        ).copyWith(fontSize: 15, fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 1),
                       Text(
                         hasAlias
-                            ? '$zoneName · $activeInZone of $totalInZone Active'
-                            : '$activeInZone of $totalInZone Active',
-                        style: AppTypography.labelSm(
-                          color: isZoneActive ? AppColors.primary : AppColors.onSurfaceVariant,
-                        ).copyWith(fontSize: 10),
+                            ? '$zoneName · $activeInZone of $totalInZone on'
+                            : '$activeInZone of $totalInZone on',
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodySm(
+                          color: isZoneActive
+                              ? AppColors.primary
+                              : AppColors.outline,
+                        ).copyWith(fontSize: 12, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      isZoneActive ? 'ZONE ON' : 'ZONE OFF',
-                      style: AppTypography.labelSm(
-                        color: isZoneActive ? AppColors.primary : AppColors.outline,
-                      ).copyWith(fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(width: 8),
-                    CyberSwitch(
-                      value: isZoneActive,
-                      onChanged: (val) {
-                        _safeToggleZone(zoneName);
-                      },
-                    ),
-                  ],
+                if (AuthState().isAdmin) ...[
+                  IconButton(
+                    tooltip: 'Add device to $zoneName',
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.add_circle_outline_rounded,
+                        size: 19, color: AppColors.primary),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        Cube3DPageRoute(
+                          page: AddDeviceScreen(
+                            preselectedRoomId: room.id,
+                            preselectedZone: zoneName,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Rename zone',
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.edit_outlined,
+                        size: 18, color: AppColors.onSurfaceVariant),
+                    onPressed: () => _showRenameZoneDialog(room, zoneName),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete zone',
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.delete_outline_rounded,
+                        size: 18, color: AppColors.criticalRed),
+                    onPressed: () => _showDeleteZoneDialog(room, zoneName),
+                  ),
+                ] else
+                  IconButton(
+                    tooltip: 'Rename zone',
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.edit_outlined,
+                        size: 18, color: AppColors.onSurfaceVariant),
+                    onPressed: () => _showRenameZoneDialog(room, zoneName),
+                  ),
+                const SizedBox(width: 4),
+                CyberSwitch(
+                  value: isZoneActive,
+                  onChanged: (val) => _safeToggleZone(zoneName),
                 ),
               ],
             ),
           ),
-
-          // Zone Device Cards
+          Divider(color: AppColors.overlay(0.07), height: 1),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
             child: filteredDevices.isEmpty
-                ? _buildEmptyZoneState(room, zoneName, totalInZone)
-                : (_isGridView
-                    ? _buildZoneGridView(filteredDevices)
-                    : _buildZoneCategorizedListView(filteredDevices)),
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _buildEmptyZoneState(room, zoneName, totalInZone),
+                  )
+                : AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    child: _isGridView
+                        ? Padding(
+                            key: const ValueKey('grid'),
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _buildZoneGridView(filteredDevices),
+                          )
+                        : KeyedSubtree(
+                            key: const ValueKey('list'),
+                            child:
+                                _buildZoneCategorizedListView(filteredDevices),
+                          ),
+                  ),
           ),
         ],
       ),
@@ -1158,7 +1055,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         color: AppColors.surfaceContainerLowest,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.overlay(0.05)),
       ),
       child: Column(
         children: [
@@ -1187,7 +1084,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                   ),
                 );
               },
-              icon: const Icon(Icons.add, size: 14, color: AppColors.primary),
+              icon: Icon(Icons.add, size: 14, color: AppColors.primary),
               label: Text(
                 'Add Device to $zoneName',
                 style: AppTypography.labelSm(color: AppColors.primary),
@@ -1255,88 +1152,79 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
     );
   }
 
-  Widget _buildDeviceGroupHeader(String title, IconData icon, List<ClassroomDevice> devices) {
+  Widget _buildDeviceGroupHeader(
+      String title, IconData icon, List<ClassroomDevice> devices) {
     final activeCount = devices.where((d) => d.isOn).length;
     final totalCount = devices.length;
 
-    return Container(
-      margin: const EdgeInsets.only(top: 4, bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerHigh.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 2, 2, 8),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: activeCount > 0 ? AppColors.primary : AppColors.outline),
-          const SizedBox(width: 8),
-          Text(
-            title.toUpperCase(),
-            style: AppTypography.labelSm(
-              color: activeCount > 0 ? AppColors.onSurface : AppColors.onSurfaceVariant,
-            ).copyWith(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: activeCount > 0
-                  ? AppColors.primary.withValues(alpha: 0.15)
-                  : Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(4),
-            ),
+          Icon(icon,
+              size: 15,
+              color: activeCount > 0 ? AppColors.primary : AppColors.outline),
+          const SizedBox(width: 7),
+          Expanded(
             child: Text(
-              activeCount > 0 ? '$activeCount of $totalCount ON' : '$totalCount Units · OFF',
-              style: AppTypography.labelSm(
-                color: activeCount > 0 ? AppColors.primary : AppColors.outline,
-              ).copyWith(fontSize: 10, fontWeight: FontWeight.bold),
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.labelMd(
+                color: AppColors.onSurfaceVariant,
+              ).copyWith(fontSize: 12.5),
             ),
+          ),
+          Text(
+            '$activeCount of $totalCount on',
+            style: AppTypography.labelSm(
+              color: activeCount > 0 ? AppColors.primary : AppColors.outline,
+            ).copyWith(fontSize: 11.5, fontWeight: FontWeight.w500),
           ),
         ],
       ),
     );
   }
 
+  BoxDecoration _deviceTileDecoration({required bool isOn, bool isAc = false}) {
+    final accent = isAc ? AppColors.secondary : AppColors.primary;
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(14),
+      color: isOn
+          ? Color.alphaBlend(
+              accent.withValues(alpha: AppColors.isDark ? 0.14 : 0.12),
+              AppColors.surfaceContainerLow,
+            )
+          : AppColors.surfaceContainerLowest,
+      border: Border.all(
+        color: isOn
+            ? accent.withValues(alpha: AppColors.isDark ? 0.52 : 0.72)
+            : AppColors.overlay(AppColors.isDark ? 0.08 : 0.11),
+        width: isOn ? 1.5 : 1.0,
+      ),
+      boxShadow: isOn
+          ? [
+              BoxShadow(
+                color: accent.withValues(alpha: AppColors.isDark ? 0.22 : 0.16),
+                blurRadius: 10,
+                spreadRadius: -2,
+                offset: const Offset(0, 3),
+              ),
+            ]
+          : null,
+    );
+  }
+
   Widget _buildDeviceGridTile(ClassroomDevice device) {
+    final isOn = device.isOn;
+    final isAc = device.type == DeviceType.hvac;
+    final accent = isAc ? AppColors.secondary : AppColors.primary;
     return RepaintBoundary(
       key: ValueKey('grid_${device.id}'),
-      child: Container(
-        decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(13),
-        gradient: LinearGradient(
-          colors: device.isOn
-              ? [
-                  AppColors.primary,
-                  AppColors.onlineMint.withValues(alpha: 0.85),
-                ]
-              : [
-                  Colors.white.withValues(alpha: 0.18),
-                  AppColors.primary.withValues(alpha: 0.08),
-                  Colors.white.withValues(alpha: 0.03),
-                ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: device.isOn
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  spreadRadius: 0.5,
-                ),
-              ]
-            : null,
-      ),
-      child: Container(
-        margin: const EdgeInsets.all(1.2), // Gradient border thickness
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(11.8),
-          color: device.isOn
-              ? AppColors.surfaceContainerHigh.withValues(alpha: 0.95)
-              : AppColors.surfaceContainerLowest,
-        ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        decoration: _deviceTileDecoration(isOn: isOn, isAc: isAc),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -1346,57 +1234,51 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
               children: [
                 GestureDetector(
                   onTap: () => _safeToggleDevice(device),
-                  child: _buildDeviceIconBox(device, size: 32),
+                  child: _buildDeviceIconBox(device, size: 36),
                 ),
                 CyberSwitch(
-                  value: device.isOn,
+                  value: isOn,
                   onChanged: (val) => _safeToggleDevice(device),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => _openDeviceDetail(device),
-              onLongPress: AuthState().isAdmin ? () => _confirmDeleteDevice(device) : null,
+              onLongPress: AuthState().isAdmin
+                  ? () => _confirmDeleteDevice(device)
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    device.name,
-                    style: AppTypography.headlineSm(
-                      color: device.isOn ? AppColors.onSurface : AppColors.onSurfaceVariant,
-                    ).copyWith(fontSize: 12, fontWeight: FontWeight.bold),
+                    _deviceLabel(device),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyMd(color: AppColors.onSurface)
+                        .copyWith(fontSize: 13.5, fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          color: device.isOn
-                              ? AppColors.onlineMint.withValues(alpha: 0.15)
-                              : Colors.white.withValues(alpha: 0.05),
-                        ),
+                      Expanded(
                         child: Text(
-                          device.isOn
-                              ? (device.type == DeviceType.fan
-                                  ? 'SPD ${device.fanSpeed}'
-                                  : (device.type == DeviceType.hvac
-                                      ? '${device.temperature}°C'
-                                      : 'ON'))
-                              : 'OFF',
-                          style: AppTypography.labelSm(
-                            color: device.isOn ? AppColors.onlineMint : AppColors.outline,
-                          ).copyWith(fontSize: 9, fontWeight: FontWeight.bold),
+                          _deviceStatusText(device),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodySm(
+                            color: isOn ? accent : AppColors.outline,
+                          ).copyWith(
+                            fontSize: 12,
+                            fontWeight:
+                                isOn ? FontWeight.w600 : FontWeight.normal,
+                          ),
                         ),
                       ),
-                      const Spacer(),
-                      Icon(Icons.tune, size: 12, color: AppColors.outline.withValues(alpha: 0.6)),
+                      Icon(Icons.tune_rounded,
+                          size: 14, color: AppColors.outline),
                     ],
                   ),
                 ],
@@ -1405,41 +1287,60 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
           ],
         ),
       ),
-    ),
     );
   }
 
   Widget _buildCategoryChip(String title) {
     final isSelected = _selectedCategory == title;
+    final fg = isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant;
+    final IconData icon;
+    switch (title) {
+      case 'Ceiling Fan':
+        icon = Icons.mode_fan_off_outlined;
+        break;
+      case 'Light':
+        icon = Icons.lightbulb_outline_rounded;
+        break;
+      case 'AC':
+        icon = Icons.ac_unit_rounded;
+        break;
+      default:
+        icon = Icons.apps_rounded;
+    }
 
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: GestureDetector(
+      padding: const EdgeInsets.only(right: 8),
+      child: PressScale(
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() => _selectedCategory = title);
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            color: isSelected
-                ? AppColors.primary
-                : AppColors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(18),
+            color:
+                isSelected ? AppColors.primary : AppColors.surfaceContainerLow,
             border: Border.all(
-              color: isSelected
-                  ? AppColors.primary
-                  : Colors.white.withValues(alpha: 0.08),
+              color: isSelected ? AppColors.primary : AppColors.overlay(0.10),
             ),
           ),
-          child: Text(
-            title,
-            style: AppTypography.labelSm(
-              color: isSelected
-                  ? AppColors.surfaceContainerLowest
-                  : AppColors.onSurfaceVariant,
-            ).copyWith(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: fg),
+              const SizedBox(width: 6),
+              Text(
+                _categoryLabel(title),
+                style: AppTypography.labelMd(color: fg).copyWith(
+                  fontSize: 12.5,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1468,7 +1369,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.criticalRed.withValues(alpha: 0.35)),
@@ -1481,7 +1382,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                   shape: BoxShape.circle,
                   color: AppColors.criticalRed.withValues(alpha: 0.15),
                 ),
-                child: const Icon(Icons.delete_forever, color: AppColors.criticalRed, size: 22),
+                child: Icon(Icons.delete_forever, color: AppColors.criticalRed, size: 22),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1507,7 +1408,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: AppColors.surfaceContainerLowest,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(color: AppColors.overlay(0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1546,7 +1447,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.criticalRed,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.onError,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () {
@@ -1559,7 +1460,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                 );
               },
               icon: const Icon(Icons.delete, size: 16),
-              label: Text('DELETE', style: AppTypography.labelMd(color: Colors.white)),
+              label: Text('DELETE', style: AppTypography.labelMd(color: AppColors.onError)),
             ),
           ],
         );
@@ -1576,7 +1477,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
         borderRadius: BorderRadius.circular(14),
         color: AppColors.surfaceContainer,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: AppColors.overlay(0.08),
         ),
       ),
       child: Column(
@@ -1589,7 +1490,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
               color: AppColors.surfaceContainerHigh,
               border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.electrical_services,
               size: 24,
               color: AppColors.primary,
@@ -1644,49 +1545,20 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
   }
 
   Widget _buildDeviceCard(ClassroomDevice device) {
+    final isOn = device.isOn;
+    final isAc = device.type == DeviceType.hvac;
+    final accent = isAc ? AppColors.secondary : AppColors.primary;
+
     return RepaintBoundary(
       key: ValueKey('card_${device.id}'),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 9),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(13),
-        gradient: LinearGradient(
-          colors: device.isOn
-              ? [
-                  AppColors.primary,
-                  AppColors.onlineMint.withValues(alpha: 0.85),
-                ]
-              : [
-                  Colors.white.withValues(alpha: 0.18),
-                  AppColors.primary.withValues(alpha: 0.08),
-                  Colors.white.withValues(alpha: 0.03),
-                ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: device.isOn
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.14),
-                  blurRadius: 10,
-                  spreadRadius: 0.5,
-                ),
-              ]
-            : null,
-      ),
-      child: Container(
-        margin: const EdgeInsets.all(1.2), // Gradient border thickness
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(11.8),
-          color: device.isOn
-              ? AppColors.surfaceContainerHigh.withValues(alpha: 0.95)
-              : AppColors.surfaceContainerLowest,
-        ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        decoration: _deviceTileDecoration(isOn: isOn, isAc: isAc),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Device Header: Icon, Name, Status chip, Tune icon, Switch
             Row(
               children: [
                 GestureDetector(
@@ -1694,88 +1566,53 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                   onTap: () => _safeToggleDevice(device),
                   child: _buildDeviceIconBox(device),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 11),
                 Expanded(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _openDeviceDetail(device),
-                    onLongPress: AuthState().isAdmin ? () => _confirmDeleteDevice(device) : null,
+                    onLongPress: AuthState().isAdmin
+                        ? () => _confirmDeleteDevice(device)
+                        : null,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                device.name,
-                                style: AppTypography.headlineSm(
-                                  color: device.isOn ? AppColors.onSurface : AppColors.onSurfaceVariant,
-                                ).copyWith(fontSize: 13, fontWeight: FontWeight.w600),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            PulsingBeacon(
-                              size: 5,
-                              color: device.isOn ? AppColors.onlineMint : AppColors.outline,
-                              isPulsing: device.isOn,
-                            ),
-                          ],
+                        Text(
+                          _deviceLabel(device),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodyMd(
+                            color: AppColors.onSurface,
+                          ).copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: device.isOn
-                                    ? AppColors.onlineMint.withValues(alpha: 0.15)
-                                    : Colors.white.withValues(alpha: 0.05),
-                              ),
-                              child: Text(
-                                device.isOn
-                                    ? (device.type == DeviceType.fan
-                                        ? 'SPEED ${device.fanSpeed}'
-                                        : (device.type == DeviceType.lighting
-                                            ? '${device.brightness.round()}%'
-                                            : (device.type == DeviceType.hvac
-                                                ? '${device.temperature}°C • ${device.hvacMode}'
-                                                : 'ACTIVE')))
-                                    : 'OFF',
-                                style: AppTypography.labelSm(
-                                  color: device.isOn ? AppColors.onlineMint : AppColors.outline,
-                                ).copyWith(fontSize: 9, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            if (device.isOn) ...[
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  device.statusDescription.replaceFirst(RegExp(r'^Zone \d+ • '), ''),
-                                  style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)
-                                      .copyWith(fontSize: 10),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ],
+                        Text(
+                          device.type == DeviceType.hvac && !isOn
+                              ? 'Off · IR GPIO ${device.gpioPinNumber}'
+                              : _deviceStatusText(device),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodySm(
+                            color: isOn ? accent : AppColors.outline,
+                          ).copyWith(
+                            fontSize: 12,
+                            fontWeight:
+                                isOn ? FontWeight.w600 : FontWeight.normal,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 2),
                 PopupMenuButton<String>(
+                  tooltip: 'More',
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: Icon(Icons.more_vert, size: 18, color: AppColors.outline.withValues(alpha: 0.8)),
-                  color: AppColors.surfaceContainerHigh,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
-                  ),
+                  icon: Icon(Icons.more_vert_rounded,
+                      size: 20, color: AppColors.outline),
                   onSelected: (val) {
                     if (val == 'settings') _openDeviceDetail(device);
                     if (val == 'delete') _confirmDeleteDevice(device);
@@ -1785,9 +1622,10 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                       value: 'settings',
                       child: Row(
                         children: [
-                          const Icon(Icons.tune, size: 16, color: AppColors.primary),
-                          const SizedBox(width: 8),
-                          Text('Diagnostics & Settings', style: AppTypography.bodySm()),
+                          Icon(Icons.tune_rounded,
+                              size: 18, color: AppColors.primary),
+                          const SizedBox(width: 12),
+                          const Text('Details & settings'),
                         ],
                       ),
                     ),
@@ -1797,300 +1635,67 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                         value: 'delete',
                         child: Row(
                           children: [
-                            const Icon(Icons.delete_outline, size: 16, color: AppColors.criticalRed),
-                            const SizedBox(width: 8),
-                            Text('Delete Device', style: AppTypography.bodySm(color: AppColors.criticalRed)),
+                            Icon(Icons.delete_outline_rounded,
+                                size: 18, color: AppColors.criticalRed),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Delete device',
+                              style: TextStyle(color: AppColors.criticalRed),
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(width: 4),
                 CyberSwitch(
-                  value: device.isOn,
+                  value: isOn,
                   onChanged: (val) => _safeToggleDevice(device),
                 ),
               ],
             ),
 
-            // Custom Controls ONLY when device is ON!
-            if (device.isOn) ...[
-              if (device.type == DeviceType.fan) ...[
-                const SizedBox(height: 8),
-                Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text(
-                      'SPEED:',
-                      style: AppTypography.labelSm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 10),
+            // Inline controls appear only while the device is on.
+            AnimatedSize(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: !isOn
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _buildInlineControls(device),
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        color: AppColors.surfaceContainerLowest,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [1, 2, 3, 4, 5].map((spd) {
-                          final isSelected = device.fanSpeed == spd;
-                          return GestureDetector(
-                            onTap: () => _state.setFanSpeed(widget.roomId, device.id, spd),
-                            child: Container(
-                              width: 26,
-                              height: 22,
-                              margin: const EdgeInsets.symmetric(horizontal: 1),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: isSelected ? AppColors.primary : Colors.transparent,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '$spd',
-                                  style: AppTypography.labelSm(
-                                    color: isSelected
-                                        ? AppColors.surfaceContainerLowest
-                                        : AppColors.onSurfaceVariant,
-                                  ).copyWith(fontSize: 11, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-
-              if (device.type == DeviceType.lighting) ...[
-                const SizedBox(height: 8),
-                Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
-                const SizedBox(height: 6),
-                CyberSlider(
-                  value: device.brightness,
-                  label: 'BRIGHTNESS:',
-                  unit: '%',
-                  maxMetric: 100,
-                  onChanged: (val) {
-                    _state.setBrightness(widget.roomId, device.id, val);
-                  },
-                ),
-              ],
-
-              if (device.type == DeviceType.hvac) ...[
-                const SizedBox(height: 8),
-                Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
-                const SizedBox(height: 6),
-                // Temperature Stepper & Mode Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => _state.setTemperature(widget.roomId, device.id, -1),
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(6),
-                              color: AppColors.surfaceContainerHigh,
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                            ),
-                            child: const Icon(Icons.remove, size: 14, color: AppColors.onSurface),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            '${device.temperature}°C',
-                            style: AppTypography.labelLg(color: AppColors.primary)
-                                .copyWith(fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => _state.setTemperature(widget.roomId, device.id, 1),
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(6),
-                              color: AppColors.surfaceContainerHigh,
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                            ),
-                            child: const Icon(Icons.add, size: 14, color: AppColors.onSurface),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        color: AppColors.surfaceContainerLowest,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: ['AUTO', 'COOL', 'DRY', 'FAN', 'HEAT'].map((mode) {
-                          final isSelected = device.hvacMode == mode;
-                          return GestureDetector(
-                            onTap: () => _state.setHvacMode(widget.roomId, device.id, mode),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: isSelected ? AppColors.primary : Colors.transparent,
-                              ),
-                              child: Text(
-                                mode,
-                                style: AppTypography.labelSm(
-                                  color: isSelected
-                                      ? AppColors.surfaceContainerLowest
-                                      : AppColors.onSurfaceVariant,
-                                ).copyWith(fontSize: 9, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                // Fan Speed & Vertical Swing Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // AC Fan Speeds: 0 = Auto, 1 = Low, 2 = Med, 3 = High
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        color: AppColors.surfaceContainerLowest,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          {'label': 'A', 'val': 0},
-                          {'label': '1', 'val': 1},
-                          {'label': '2', 'val': 2},
-                          {'label': '3', 'val': 3},
-                        ].map((fanOpt) {
-                          final val = fanOpt['val'] as int;
-                          final isSelected = (device.fanSpeed == val);
-                          return GestureDetector(
-                            onTap: () => _state.setAcFanSpeed(widget.roomId, device.id, val),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: isSelected ? AppColors.onlineMint.withValues(alpha: 0.25) : Colors.transparent,
-                              ),
-                              child: Text(
-                                fanOpt['label'] as String,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? AppColors.onlineMint : AppColors.outline,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    // Louver Swing Button
-                    GestureDetector(
-                      onTap: () => _state.toggleAcSwing(widget.roomId, device.id),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(5),
-                          color: device.acSwing
-                              ? AppColors.onlineMint.withValues(alpha: 0.2)
-                              : AppColors.surfaceContainerLowest,
-                          border: Border.all(
-                            color: device.acSwing
-                                ? AppColors.onlineMint
-                                : Colors.white.withValues(alpha: 0.08),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.swap_vert,
-                              size: 11,
-                              color: device.acSwing ? AppColors.onlineMint : AppColors.outline,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              device.acSwing ? 'SWING' : 'FIXED',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: device.acSwing ? AppColors.onlineMint : AppColors.outline,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Standalone AC IR Circuit Badge (GPIO 33 for AC #1, GPIO 13 for AC #2)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-                      ),
-                      child: Text(
-                        'GREE IR: GPIO ${device.gpioPinNumber}',
-                        style: const TextStyle(
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
+            ),
           ],
         ),
       ),
-    ),
     );
   }
 
-  Widget _buildDeviceIconBox(ClassroomDevice device, {double size = 36}) {
+  Widget _buildDeviceIconBox(ClassroomDevice device, {double size = 40}) {
+    final isOn = device.isOn;
+    final isAc = device.type == DeviceType.hvac;
+    final accent = isAc ? AppColors.secondary : AppColors.primary;
     Widget iconWidget;
-    final iconSize = size * 0.5;
+    final iconSize = size * 0.52;
 
     if (device.type == DeviceType.fan) {
       iconWidget = FanSpinner(
-        isSpinning: device.isOn,
+        isSpinning: isOn,
         speed: device.fanSpeed,
         reverse: device.fanReverse,
         size: iconSize,
-        color: AppColors.primary,
+        color: isOn ? AppColors.onPrimary : AppColors.outline,
       );
     } else {
       IconData iconData;
       switch (device.type) {
         case DeviceType.hvac:
-          iconData = Icons.ac_unit;
+          iconData = Icons.ac_unit_rounded;
           break;
         case DeviceType.lighting:
-          iconData = Icons.lightbulb_outline;
+          iconData = isOn ? Icons.lightbulb_rounded : Icons.lightbulb_outline_rounded;
           break;
         default:
           iconData = Icons.developer_board;
@@ -2099,62 +1704,113 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
       iconWidget = Icon(
         iconData,
         size: iconSize,
-        color: device.isOn ? AppColors.primary : AppColors.outline,
+        color: isOn ? AppColors.onPrimary : AppColors.outline,
       );
     }
 
-    return Container(
+    // A lit tile glows cleanly when energized in both Light & Dark themes.
+    final glow = !isOn
+        ? 0.0
+        : (device.type == DeviceType.lighting
+            ? (device.brightness / 100).clamp(0.45, 1.0)
+            : 0.75);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
       width: size,
       height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: device.isOn
-            ? AppColors.primary.withValues(alpha: 0.12)
-            : AppColors.surfaceContainerLowest,
-        border: Border.all(
-          color: device.isOn
-              ? AppColors.primary.withValues(alpha: 0.3)
-              : Colors.white.withValues(alpha: 0.08),
-        ),
+        borderRadius: BorderRadius.circular(size * 0.3),
+        color: isOn ? accent : AppColors.surfaceContainerHigh,
+        boxShadow: isOn
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.35 * glow),
+                  blurRadius: 10 * glow + 2,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Center(child: iconWidget),
     );
   }
 
   Widget _buildVisionTelemetryBanner(Classroom room) {
+    final bool visionEnabled = _state.visionControlEnabled;
+    final bool isOffline = room.visionMode == 'OFFLINE';
     final bool isOcc = room.isOccupied || room.currentOccupancy > 0;
     final int total = room.currentOccupancy;
     final int moving = room.movingOccupancy;
-    final int seated = room.stationaryOccupancy > 0 ? room.stationaryOccupancy : (total - moving > 0 ? total - moving : 0);
+    final int seated = room.stationaryOccupancy > 0
+        ? room.stationaryOccupancy
+        : (total - moving > 0 ? total - moving : 0);
+    final bool isLive =
+        room.visionMode == 'LIVE_APPLIANCE' || room.visionMode == 'AUTO' || room.visionMode == 'LIVE';
 
-    return Container(
+    final Color accent = !visionEnabled
+        ? AppColors.primary
+        : (isOffline
+            ? AppColors.outline
+            : (isOcc ? AppColors.primary : AppColors.onSurfaceVariant));
+
+    final String headline;
+    final String detail;
+    if (!visionEnabled) {
+      headline = 'Direct App Control';
+      detail = 'Vision auto-control disabled · Turn devices ON/OFF freely from app.';
+    } else if (isOffline) {
+      headline = 'Camera offline';
+      detail = 'Occupancy automation paused. Turn off Vision Control for manual override.';
+    } else if (isOcc) {
+      headline = total == 1 ? '1 person in the room' : '$total people in the room';
+      detail =
+          'Front ${room.frontOccupancy} · Back ${room.backOccupancy} · $moving moving · $seated seated';
+    } else {
+      headline = 'Room is empty';
+      detail = 'Vision Gate active · Turn off Vision Control to switch devices directly.';
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: BoxDecoration(
-        color: isOcc
-            ? AppColors.primary.withValues(alpha: 0.08)
-            : AppColors.surfaceContainerHigh.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
+        color: (!visionEnabled || (isOcc && !isOffline))
+            ? Color.alphaBlend(
+                accent.withValues(alpha: AppColors.isDark ? 0.10 : 0.08),
+                AppColors.surfaceContainerLow,
+              )
+            : AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isOcc
-              ? AppColors.primary.withValues(alpha: 0.35)
-              : Colors.white.withValues(alpha: 0.06),
+          color: (!visionEnabled || (isOcc && !isOffline))
+              ? accent.withValues(alpha: 0.40)
+              : AppColors.overlay(0.08),
+          width: !visionEnabled ? 1.3 : 1.0,
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 240),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: isOcc
-                  ? AppColors.primary.withValues(alpha: 0.2)
-                  : Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
+              color: !visionEnabled
+                  ? AppColors.primary
+                  : accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              isOcc ? Icons.remove_red_eye : Icons.visibility_off_outlined,
+              !visionEnabled
+                  ? Icons.touch_app_rounded
+                  : (isOffline
+                      ? Icons.videocam_off_outlined
+                      : (isOcc ? Icons.groups_rounded : Icons.event_seat_outlined)),
               size: 20,
-              color: isOcc ? AppColors.primary : AppColors.outline,
+              color: !visionEnabled ? AppColors.onPrimary : accent,
             ),
           ),
           const SizedBox(width: 12),
@@ -2165,55 +1821,348 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'AI VISION TELEMETRY',
-                      style: AppTypography.labelSm(
-                        color: isOcc ? AppColors.primary : AppColors.outline,
-                      ).copyWith(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: (room.visionMode == 'LIVE_APPLIANCE' || room.visionMode == 'AUTO'
-                            ? AppColors.primary
-                            : AppColors.telemetryAmber).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                    Flexible(
                       child: Text(
-                        room.visionMode,
-                        style: AppTypography.labelSm(
-                          color: room.visionMode == 'LIVE_APPLIANCE' || room.visionMode == 'AUTO'
-                              ? AppColors.primary
-                              : AppColors.telemetryAmber,
-                        ).copyWith(fontSize: 8.5, fontWeight: FontWeight.bold),
+                        headline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodyMd(color: AppColors.onSurface)
+                            .copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    if (!visionEnabled)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(6),
+                          color: AppColors.primary.withValues(alpha: 0.16),
+                        ),
+                        child: Text(
+                          'MANUAL',
+                          style: AppTypography.labelSm(color: AppColors.primary)
+                              .copyWith(fontSize: 9.5, fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    else if (!isOffline) ...[
+                      PulsingBeacon(
+                        size: 6,
+                        color: isLive
+                            ? AppColors.onlineMint
+                            : AppColors.telemetryAmber,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isLive ? 'Live' : room.visionMode,
+                        style: AppTypography.labelSm(
+                          color: isLive
+                              ? AppColors.onlineMint
+                              : AppColors.telemetryAmber,
+                        ).copyWith(fontSize: 11),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  room.visionMode == 'OFFLINE'
-                      ? 'Vision Model Offline · Standby Guard Active'
-                      : (isOcc
-                          ? '$total Detected (Front: ${room.frontOccupancy} · Back: ${room.backOccupancy} · $moving Mov · $seated Seat)'
-                          : 'Room Vacant (Front: 0 · Back: 0) · Standby Guard Active'),
-                  style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(
-                    fontSize: 12,
-                    fontWeight: isOcc ? FontWeight.w600 : FontWeight.normal,
-                  ),
+                  detail,
+                  style: AppTypography.bodySm(color: AppColors.onSurfaceVariant)
+                      .copyWith(fontSize: 12),
                 ),
               ],
             ),
           ),
-          PulsingBeacon(
-            size: 8,
-            color: room.visionMode == 'OFFLINE'
-                ? AppColors.outlineVariant
-                : (isOcc ? AppColors.primary : AppColors.outline),
+          const SizedBox(width: 8),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Vision',
+                style: AppTypography.labelSm(
+                  color: visionEnabled ? AppColors.primary : AppColors.outline,
+                ).copyWith(fontSize: 10.5, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              CyberSwitch(
+                width: 44,
+                height: 24,
+                value: visionEnabled,
+                onChanged: (val) async {
+                  HapticFeedback.mediumImpact();
+                  await _state.setVisionControlEnabled(val);
+                  if (!mounted) return;
+                  CyberToast.show(
+                    context,
+                    message: val
+                        ? 'Vision auto control enabled.'
+                        : 'Vision control disabled · Direct app control active.',
+                    type: ToastType.info,
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  /// Device names usually repeat their zone ("Zone 1 Front Light 1"). Inside
+  /// a zone card that prefix is noise and pushes the useful part off-screen.
+  String _deviceLabel(ClassroomDevice device) {
+    final short = device.name
+        .replaceFirst(RegExp(r'^Zone\s*\d+\s+', caseSensitive: false), '')
+        .trim();
+    return short.isEmpty ? device.name : short;
+  }
+
+  String _categoryLabel(String category) {
+    switch (category) {
+      case 'Ceiling Fan':
+        return 'Fans';
+      case 'Light':
+        return 'Lights';
+      default:
+        return category;
+    }
+  }
+
+  Widget _squareAction({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+    double size = 44,
+    double iconSize = 20,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: PressScale(
+        onTap: onTap,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(size * 0.3),
+            color: color.withValues(alpha: 0.10),
+            border: Border.all(color: color.withValues(alpha: 0.22)),
+          ),
+          child: Icon(icon, size: iconSize, color: color),
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _panelDecoration({Color? borderColor}) {
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(18),
+      color: AppColors.surfaceContainerLow,
+      border: Border.all(color: borderColor ?? AppColors.overlay(0.08)),
+      boxShadow: AppColors.cardShadow(strength: 0.7),
+    );
+  }
+
+  String _deviceStatusText(ClassroomDevice device) {
+    if (!device.isOn) return 'Off';
+    switch (device.type) {
+      case DeviceType.fan:
+        return 'Speed ${device.fanSpeed}';
+      case DeviceType.lighting:
+        return '${device.brightness.round()}% brightness';
+      case DeviceType.hvac:
+        final mode = device.hvacMode;
+        final pretty = mode.isEmpty
+            ? ''
+            : ' · ${mode[0].toUpperCase()}${mode.substring(1).toLowerCase()}';
+        return '${device.temperature}°C$pretty';
+      default:
+        return 'On';
+    }
+  }
+
+  Widget _controlLabel(String text) {
+    return SizedBox(
+      width: 46,
+      child: Text(
+        text,
+        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)
+            .copyWith(fontSize: 12, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
+  Widget _buildInlineControls(ClassroomDevice device) {
+    if (device.type == DeviceType.fan) {
+      return Row(
+        children: [
+          _controlLabel('Speed'),
+          Expanded(
+            child: SegmentedPicker<int>(
+              values: const [1, 2, 3, 4, 5],
+              selected: device.fanSpeed,
+              labelOf: (v) => '$v',
+              onChanged: (v) =>
+                  _state.setFanSpeed(widget.roomId, device.id, v),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (device.type == DeviceType.lighting) {
+      return CyberSlider(
+        value: device.brightness,
+        label: 'Level',
+        unit: '%',
+        maxMetric: 100,
+        onChanged: (val) {
+          _state.setBrightness(widget.roomId, device.id, val);
+        },
+      );
+    }
+
+    if (device.type == DeviceType.hvac) {
+      Widget stepButton(IconData icon, int delta, String tooltip) {
+        return Tooltip(
+          message: tooltip,
+          child: PressScale(
+            pressedScale: 0.88,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              _state.setTemperature(widget.roomId, device.id, delta);
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(11),
+                color: AppColors.surfaceContainerHigh,
+              ),
+              child: Icon(icon, size: 18, color: AppColors.onSurface),
+            ),
+          ),
+        );
+      }
+
+      return Column(
+        children: [
+          Row(
+            children: [
+              stepButton(Icons.remove_rounded, -1, 'Cooler'),
+              SizedBox(
+                width: 64,
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: ScaleTransition(
+                        scale:
+                            Tween<double>(begin: 0.85, end: 1).animate(anim),
+                        child: child,
+                      ),
+                    ),
+                    child: Text(
+                      '${device.temperature}°C',
+                      key: ValueKey(device.temperature),
+                      style: AppTypography.headlineSm(color: AppColors.primary)
+                          .copyWith(fontSize: 19, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+              stepButton(Icons.add_rounded, 1, 'Warmer'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: PressScale(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  _state.toggleAcSwing(widget.roomId, device.id);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(11),
+                    color: device.acSwing
+                        ? AppColors.onlineMint.withValues(alpha: 0.14)
+                        : AppColors.surfaceContainerHigh,
+                    border: Border.all(
+                      color: device.acSwing
+                          ? AppColors.onlineMint.withValues(alpha: 0.45)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.swap_vert_rounded,
+                        size: 16,
+                        color: device.acSwing
+                            ? AppColors.onlineMint
+                            : AppColors.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          device.acSwing ? 'Swing on' : 'Swing off',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSm(
+                            color: device.acSwing
+                                ? AppColors.onlineMint
+                                : AppColors.onSurfaceVariant,
+                          ).copyWith(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _controlLabel('Mode'),
+              Expanded(
+                child: SegmentedPicker<String>(
+                  values: const ['AUTO', 'COOL', 'DRY', 'FAN', 'HEAT'],
+                  selected: device.hvacMode,
+                  labelOf: (m) => m[0] + m.substring(1).toLowerCase(),
+                  onChanged: (m) =>
+                      _state.setHvacMode(widget.roomId, device.id, m),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _controlLabel('Fan'),
+              Expanded(
+                child: SegmentedPicker<int>(
+                  values: const [0, 1, 2, 3],
+                  selected: device.fanSpeed.clamp(0, 3),
+                  labelOf: (v) => v == 0 ? 'Auto' : '$v',
+                  accent: AppColors.onlineMint,
+                  onChanged: (v) =>
+                      _state.setAcFanSpeed(widget.roomId, device.id, v),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }

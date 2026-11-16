@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
+/// A 0–100 level slider with its label on the left and the current
+/// percentage on the right. Drag anywhere on the track or tap to jump.
 class CyberSlider extends StatefulWidget {
   final double value; // 0..100
   final ValueChanged<double> onChanged;
@@ -24,118 +26,112 @@ class CyberSlider extends StatefulWidget {
 }
 
 class _CyberSliderState extends State<CyberSlider> {
+  bool _dragging = false;
+  int _lastHapticStep = -1;
+
   void _updateValue(Offset localPos, double width) {
     if (width <= 0) return;
-    final clampedX = localPos.dx.clamp(0.0, width);
-    final ratio = clampedX / width;
-    final newValue = (ratio * 100.0).clamp(0.0, 100.0);
-    HapticFeedback.selectionClick();
+    final ratio = (localPos.dx / width).clamp(0.0, 1.0);
+    final newValue = ratio * 100.0;
+
+    // One tick per 5% rather than one per pixel of drag.
+    final step = (newValue / 5).round();
+    if (step != _lastHapticStep) {
+      _lastHapticStep = step;
+      HapticFeedback.selectionClick();
+    }
     widget.onChanged(newValue);
   }
 
   @override
   Widget build(BuildContext context) {
-    final metricValue = ((widget.value / 100.0) * widget.maxMetric).round();
+    final value = widget.value.clamp(0.0, 100.0);
+    final label = widget.label.replaceAll(':', '').trim();
 
     return Row(
       children: [
-        Text(
-          widget.label,
-          style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
-        ),
-        const SizedBox(width: 8),
+        if (label.isNotEmpty) ...[
+          Text(
+            label,
+            style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
+          ),
+          const SizedBox(width: 10),
+        ],
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final trackWidth = constraints.maxWidth;
-              final fillWidth = (widget.value / 100.0) * trackWidth;
+              const thumb = 18.0;
+              final thumbLeft =
+                  ((value / 100.0) * (trackWidth - thumb)).clamp(0.0, trackWidth);
+              final fillWidth = thumbLeft + thumb / 2;
 
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onHorizontalDragUpdate: (details) {
-                  _updateValue(details.localPosition, trackWidth);
+                onHorizontalDragStart: (d) {
+                  setState(() => _dragging = true);
+                  _updateValue(d.localPosition, trackWidth);
                 },
-                onTapDown: (details) {
-                  _updateValue(details.localPosition, trackWidth);
-                },
-                child: Container(
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
-                  ),
+                onHorizontalDragUpdate: (d) =>
+                    _updateValue(d.localPosition, trackWidth),
+                onHorizontalDragEnd: (_) => setState(() => _dragging = false),
+                onHorizontalDragCancel: () => setState(() => _dragging = false),
+                onTapDown: (d) => _updateValue(d.localPosition, trackWidth),
+                child: SizedBox(
+                  height: 30,
                   child: Stack(
                     alignment: Alignment.centerLeft,
+                    clipBehavior: Clip.none,
                     children: [
-                      // Progressive Glowing Fill
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 60),
-                        width: fillWidth,
-                        height: double.infinity,
+                      // Track
+                      Container(
+                        height: 8,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.horizontal(
-                            left: const Radius.circular(5),
-                            right: Radius.circular(widget.value >= 98 ? 5 : 2),
-                          ),
-                          gradient: const LinearGradient(
+                          color: AppColors.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      // Fill
+                      Container(
+                        width: fillWidth,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          gradient: LinearGradient(
                             colors: [
-                              AppColors.secondaryContainer,
+                              AppColors.secondary,
                               AppColors.primary,
                             ],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                            ),
-                          ],
                         ),
                       ),
-                      // Tactile Grip line
+                      // Thumb
                       Positioned(
-                        left: (fillWidth - 3).clamp(0.0, trackWidth - 3),
-                        top: 2,
-                        bottom: 2,
-                        child: Container(
-                          width: 3,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                blurRadius: 2,
+                        left: thumbLeft,
+                        child: AnimatedScale(
+                          scale: _dragging ? 1.25 : 1.0,
+                          duration: const Duration(milliseconds: 140),
+                          curve: Curves.easeOut,
+                          child: Container(
+                            width: thumb,
+                            height: thumb,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              border: Border.all(
+                                color: AppColors.primary,
+                                width: 2.5,
                               ),
-                            ],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(
+                                    alpha: _dragging ? 0.45 : 0.25,
+                                  ),
+                                  blurRadius: _dragging ? 14 : 6,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-                      // Metric readout (positioned cleanly on the right)
-                      Positioned(
-                        right: 8,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.brightness_medium,
-                              size: 11,
-                              color: widget.value > 50
-                                  ? AppColors.surfaceContainerLowest
-                                  : AppColors.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$metricValue ${widget.unit}',
-                              style: AppTypography.labelSm(
-                                color: widget.value > 50
-                                    ? AppColors.surfaceContainerLowest
-                                    : AppColors.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
                     ],
@@ -147,9 +143,9 @@ class _CyberSliderState extends State<CyberSlider> {
         ),
         const SizedBox(width: 10),
         SizedBox(
-          width: 36,
+          width: 40,
           child: Text(
-            '${widget.value.round()}%',
+            '${value.round()}%',
             textAlign: TextAlign.right,
             style: AppTypography.labelLg(color: AppColors.primary),
           ),
@@ -158,4 +154,3 @@ class _CyberSliderState extends State<CyberSlider> {
     );
   }
 }
-

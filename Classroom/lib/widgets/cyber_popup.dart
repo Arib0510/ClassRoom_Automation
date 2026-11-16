@@ -1,10 +1,13 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import 'pulsing_beacon.dart';
 
+/// The app's confirmation dialog: an icon, a title, optional supporting text
+/// or custom content, and a cancel / confirm pair.
+///
+/// [onConfirm] is responsible for closing the dialog (callers pop the
+/// navigator themselves so they can run async work first).
 class CyberPopup {
   static Future<T?> show<T>(
     BuildContext context, {
@@ -12,7 +15,7 @@ class CyberPopup {
     String? subtitle,
     Widget? content,
     IconData icon = Icons.security,
-    Color accentColor = AppColors.primary,
+    Color? accentColor,
     String confirmText = 'CONFIRM',
     VoidCallback? onConfirm,
     String cancelText = 'CANCEL',
@@ -24,48 +27,55 @@ class CyberPopup {
     return showGeneralDialog<T>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'CyberPopup',
-      barrierColor: Colors.black.withValues(alpha: 0.72),
-      transitionDuration: const Duration(milliseconds: 260),
+      barrierLabel: 'Dismiss',
+      barrierColor: AppColors.scrim,
+      transitionDuration: const Duration(milliseconds: 300),
       transitionBuilder: (context, anim1, anim2, child) {
-        final curved = CurvedAnimation(parent: anim1, curve: Curves.easeOutBack);
-        return ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
-          child: FadeTransition(
-            opacity: anim1,
-            child: child,
+        final curved = CurvedAnimation(
+          parent: anim1,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeIn,
+        );
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.04),
+              end: Offset.zero,
+            ).animate(curved),
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
+              child: child,
+            ),
           ),
         );
       },
       pageBuilder: (context, anim1, anim2) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        final accent =
+            isDestructive ? AppColors.error : (accentColor ?? AppColors.primary);
+        final onAccent =
+            isDestructive ? AppColors.onError : AppColors.onPrimary;
+
+        return SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Material(
+                color: Colors.transparent,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
                   child: Container(
-                    padding: const EdgeInsets.all(22),
+                    padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0A0F1D).withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: (isDestructive ? AppColors.error : accentColor).withValues(alpha: 0.45),
-                        width: 1.5,
-                      ),
+                      color: AppColors.sheet,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: AppColors.overlay(0.08)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.7),
-                          blurRadius: 36,
-                          offset: const Offset(0, 12),
-                        ),
-                        BoxShadow(
-                          color: (isDestructive ? AppColors.error : accentColor).withValues(alpha: 0.22),
-                          blurRadius: 28,
-                          spreadRadius: -4,
+                          color: AppColors.shadow(0.6),
+                          blurRadius: 40,
+                          spreadRadius: -8,
+                          offset: const Offset(0, 18),
                         ),
                       ],
                     ),
@@ -73,88 +83,62 @@ class CyberPopup {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header with Icon & Beacon
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              width: 42,
+                              height: 42,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                color: (isDestructive ? AppColors.error : accentColor).withValues(alpha: 0.15),
-                                border: Border.all(
-                                  color: (isDestructive ? AppColors.error : accentColor).withValues(alpha: 0.35),
-                                ),
+                                borderRadius: BorderRadius.circular(13),
+                                color: accent.withValues(alpha: 0.14),
                               ),
-                              child: Icon(
-                                icon,
-                                size: 20,
-                                color: isDestructive ? AppColors.error : accentColor,
-                              ),
+                              child: Icon(icon, size: 22, color: accent),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 14),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      PulsingBeacon(
-                                        size: 6,
-                                        color: isDestructive ? AppColors.error : accentColor,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'SYSTEM DIALOG // SECURE',
-                                        style: AppTypography.labelSm(
-                                          color: isDestructive ? AppColors.error : accentColor,
-                                        ).copyWith(fontSize: 8.5, letterSpacing: 1.2, fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    title,
-                                    style: AppTypography.headlineSm(
-                                      color: AppColors.onSurface,
-                                    ).copyWith(fontSize: 16, fontWeight: FontWeight.bold),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
+                              child: Text(
+                                title,
+                                style: AppTypography.headlineSm(
+                                  color: AppColors.onSurface,
+                                ).copyWith(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
-
                         if (subtitle != null) ...[
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           Text(
                             subtitle,
-                            style: AppTypography.bodySm(color: AppColors.onSurfaceVariant),
+                            style: AppTypography.bodySm(
+                              color: AppColors.onSurfaceVariant,
+                            ).copyWith(fontSize: 13, height: 1.45),
                           ),
                         ],
-
                         if (content != null) ...[
                           const SizedBox(height: 16),
                           content,
                         ],
-
                         const SizedBox(height: 22),
-
-                        // Actions Row
                         Row(
                           children: [
                             Expanded(
                               child: OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  backgroundColor: AppColors.surfaceContainerLowest,
-                                  foregroundColor: AppColors.outline,
+                                  foregroundColor: AppColors.onSurfaceVariant,
                                   side: BorderSide(
-                                    color: Colors.white.withValues(alpha: 0.12),
+                                    color: AppColors.outlineVariant,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 11),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 13),
                                 ),
                                 onPressed: () {
                                   Navigator.pop(context);
@@ -162,8 +146,10 @@ class CyberPopup {
                                 },
                                 child: Text(
                                   cancelText,
-                                  style: AppTypography.labelMd(color: AppColors.outline).copyWith(
-                                    fontWeight: FontWeight.bold,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelMd(
+                                    color: AppColors.onSurfaceVariant,
                                   ),
                                 ),
                               ),
@@ -172,23 +158,24 @@ class CyberPopup {
                             Expanded(
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: isDestructive ? AppColors.error : accentColor,
-                                  foregroundColor: isDestructive ? Colors.white : AppColors.surfaceContainerLowest,
+                                  backgroundColor: accent,
+                                  foregroundColor: onAccent,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 11),
-                                  elevation: 4,
-                                  shadowColor: (isDestructive ? AppColors.error : accentColor).withValues(alpha: 0.4),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 13),
+                                  elevation: 0,
                                 ),
                                 onPressed: () {
                                   onConfirm?.call();
                                 },
                                 child: Text(
                                   confirmText,
-                                  style: AppTypography.labelMd(
-                                    color: isDestructive ? Colors.white : AppColors.surfaceContainerLowest,
-                                  ).copyWith(fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelMd(color: onAccent)
+                                      .copyWith(fontWeight: FontWeight.w700),
                                 ),
                               ),
                             ),

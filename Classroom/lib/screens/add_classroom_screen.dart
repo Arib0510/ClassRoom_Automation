@@ -121,9 +121,9 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               color: AppColors.surfaceContainerHigh,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppColors.overlay(0.08)),
             ),
-            child: const Icon(Icons.arrow_back, size: 18, color: AppColors.primary),
+            child: Icon(Icons.arrow_back, size: 18, color: AppColors.primary),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -137,12 +137,12 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               color: AppColors.surfaceContainerLow,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: AppColors.overlay(0.1)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const PulsingBeacon(size: 5, color: AppColors.primary),
+                PulsingBeacon(size: 5, color: AppColors.primary),
                 const SizedBox(width: 6),
                 Text(
                   'PROVISIONING',
@@ -163,10 +163,10 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                Expanded(child: Text(
                   'NEW CLASSROOM SETUP',
-                  style: AppTypography.labelSm(color: AppColors.outline),
-                ),
+                  style: AppTypography.labelSm(color: AppColors.outline), overflow: TextOverflow.ellipsis,
+                )),
                 Text(
                   'RUET IOT SYSTEM',
                   style: AppTypography.labelSm(color: AppColors.outlineVariant),
@@ -190,20 +190,20 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
+                      Expanded(child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.meeting_room,
                             size: 18,
                             color: AppColors.primary,
                           ),
                           const SizedBox(width: 8),
-                          Text(
+                          Flexible(child: Text(
                             'Classroom Details',
-                            style: AppTypography.headlineSm(color: AppColors.onSurface),
-                          ),
+                            style: AppTypography.headlineSm(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
+                          )),
                         ],
-                      ),
+                      )),
                       Text(
                         'STEP 1/1',
                         style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
@@ -211,17 +211,17 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Divider(color: Colors.white.withValues(alpha: 0.08)),
+                  Divider(color: AppColors.overlay(0.08)),
                   const SizedBox(height: 14),
 
                   // Room Identifier
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      Expanded(child: Text(
                         'ROOM IDENTIFIER',
-                        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
-                      ),
+                        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,
+                      )),
                       Text(
                         '• REQUIRED',
                         style: AppTypography.labelSm(color: AppColors.primary),
@@ -237,10 +237,10 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      Expanded(child: Text(
                         'CAMPUS BUILDING',
-                        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
-                      ),
+                        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,
+                      )),
                       if (_isCustomBuilding)
                         GestureDetector(
                           onTap: () {
@@ -263,14 +263,14 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                         color: AppColors.surfaceContainerLowest,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                        border: Border.all(color: AppColors.overlay(0.1)),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _buildings.contains(_selectedBuilding) ? _selectedBuilding : _buildings.first,
                           isExpanded: true,
                           dropdownColor: AppColors.surfaceContainerHigh,
-                          icon: const Icon(Icons.expand_more, color: AppColors.outline),
+                          icon: Icon(Icons.expand_more, color: AppColors.outline),
                           style: AppTypography.bodyMd(color: AppColors.onSurface),
                           items: _buildings.map((b) {
                             final isCustomOption = b.startsWith('+');
@@ -330,7 +330,7 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                         decoration: InputDecoration(
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          prefixIcon: const Icon(Icons.apartment, size: 16, color: AppColors.primary),
+                          prefixIcon: Icon(Icons.apartment, size: 16, color: AppColors.primary),
                           border: InputBorder.none,
                           hintText: 'Enter custom building name (e.g. Mechanical Lab Wing)',
                           hintStyle: AppTypography.bodySm(color: AppColors.outline),
@@ -345,10 +345,10 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      Expanded(child: Text(
                         'SEPARATED CONTROL ZONES',
-                        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
-                      ),
+                        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,
+                      )),
                       Text(
                         '$_selectedZoneCount ZONES SELECTED',
                         style: AppTypography.labelSm(color: AppColors.primary),
@@ -383,7 +383,7 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                                 border: Border.all(
                                   color: isSelected
                                       ? AppColors.primary
-                                      : Colors.white.withValues(alpha: 0.1),
+                                      : AppColors.overlay(0.1),
                                 ),
                               ),
                               child: Center(
@@ -417,7 +417,7 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.grid_view, size: 12, color: AppColors.primary),
+                            Icon(Icons.grid_view, size: 12, color: AppColors.primary),
                             const SizedBox(width: 5),
                             Text(
                               'Zone ${i + 1}',
@@ -462,7 +462,7 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                             border: Border.all(
                               color: isSelected
                                   ? AppColors.primary
-                                  : Colors.white.withValues(alpha: 0.08),
+                                  : AppColors.overlay(0.08),
                             ),
                             boxShadow: isSelected
                                 ? [
@@ -513,7 +513,7 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       color: AppColors.surfaceContainerLowest,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                      border: Border.all(color: AppColors.overlay(0.1)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -563,7 +563,7 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add_circle, size: 20, color: AppColors.surfaceContainerLowest),
+                    Icon(Icons.add_circle, size: 20, color: AppColors.surfaceContainerLowest),
                     const SizedBox(width: 8),
                     Text(
                       'Create Classroom',
@@ -585,7 +585,7 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.onSurfaceVariant,
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                  side: BorderSide(color: AppColors.overlay(0.12)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -615,7 +615,7 @@ class _AddClassroomScreenState extends State<AddClassroomScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         color: AppColors.surfaceContainerLowest,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: AppColors.overlay(0.1)),
       ),
       child: TextField(
         controller: controller,

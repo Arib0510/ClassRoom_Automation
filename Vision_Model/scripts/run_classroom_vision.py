@@ -22,6 +22,7 @@ import json
 import logging
 import math
 import os
+import re
 import sys
 import threading
 import time
@@ -518,6 +519,11 @@ class PreviewHTTPHandler(BaseHTTPRequestHandler):
                     if new_mode in ("LIVE", "DRY_RUN"):
                         controller.mode = new_mode
                         LOG.info(f"⚡ [MODE CHANGED] Switched operation mode to: {controller.mode}")
+                if "vision_control" in qs:
+                    vc_raw = qs["vision_control"][0].strip().lower()
+                    controller.vision_control_enabled = vc_raw in ("1", "true", "on", "enable", "enabled")
+                    controller.last_state_pub = 0.0
+                    LOG.info(f"[VISION CONTROL] Updated via web API: enabled={controller.vision_control_enabled}")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -606,6 +612,7 @@ class PreviewHTTPHandler(BaseHTTPRequestHandler):
                 status_doc = dict(state.latest_status)
             if controller is not None:
                 status_doc["current_conf"] = controller.conf_thresh
+                status_doc["vision_control_enabled"] = controller.vision_control_enabled
                 status_doc["front_board_id"] = controller.front_board_id
                 status_doc["back_board_id"] = controller.back_board_id
                 status_doc["board1_relays"] = controller.board_relays.get(controller.front_board_id, {})
@@ -723,10 +730,11 @@ class ClassroomVisionController:
         # State tracking across boards
         self.active_overrides: Dict[str, Dict] = {}
         self.board_relays: Dict[str, Dict[int, bool]] = {
-            self.front_board_id: {1: False, 2: False, 3: False, 4: False},
-            self.back_board_id: {1: False, 2: False, 3: False, 4: False},
-            self.third_board_id: {1: False, 2: False, 3: False, 4: False},
+            self.front_board_id: {i: False for i in range(1, 9)},
+            self.back_board_id: {i: False for i in range(1, 9)},
+            self.third_board_id: {i: False for i in range(1, 9)},
         }
+        self.vision_control_enabled: bool = True
         self.last_sent_state: Dict[str, Tuple[str, float]] = {}
 
         # Multi-Zone Motion Tracker
@@ -907,6 +915,9 @@ class ClassroomVisionController:
             client.subscribe(f"classpulse/{self.room_id}/controllers/+/ack", qos=0)
             client.subscribe(self.app_req_topic, qos=1)
             client.subscribe(f"ruet/classroom/{self.room_id}/#", qos=0)
+            client.subscribe(f"classpulse/{self.room_id}/vision/control", qos=1)
+            client.subscribe(f"ruet/classroom/{self.room_id}/vision/control", qos=1)
+            client.subscribe("home/vision/control", qos=1)
 
             for bid in [self.front_board_id, self.back_board_id, self.third_board_id]:
                 hello_pkt = {
@@ -924,6 +935,26 @@ class ClassroomVisionController:
     def _on_message(self, client, userdata, msg):
         topic = msg.topic
         payload_str = msg.payload.decode("utf-8", errors="ignore")
+
+        if topic.endswith("/vision/control") or topic == "home/vision/control":
+            try:
+                enabled = self.vision_control_enabled
+                if payload_str.strip().startswith("{"):
+                    data = json.loads(payload_str)
+                    if "vision_control" in data:
+                        val = data["vision_control"]
+                        enabled = val if isinstance(val, bool) else str(val).lower() in ("1", "true", "on", "enable", "enabled")
+                    elif "mode" in data:
+                        enabled = str(data["mode"]).upper() not in ("MANUAL", "DIRECT", "DISABLED", "OFF")
+                else:
+                    upper = payload_str.strip().upper()
+                    enabled = upper in ("ON", "1", "TRUE", "ENABLE", "ENABLED", "VISION")
+                self.vision_control_enabled = enabled
+                self.last_state_pub = 0.0
+                LOG.info(f"[VISION CONTROL] MQTT updated vision_control_enabled={enabled}")
+            except Exception as e:
+                LOG.warning(f"Error parsing vision control payload: {e}")
+            return
 
         if "/status" in topic or topic.endswith("/status"):
             try:
@@ -960,7 +991,7 @@ class ClassroomVisionController:
                 pass
 
         elif topic.startswith(f"ruet/classroom/{self.room_id}/"):
-            if self.mode != "LIVE":
+            if self.mode != "LIVE" or not self.vision_control_enabled:
                 return
             try:
                 data = json.loads(payload_str) if payload_str.startswith("{") else {"state": payload_str}
@@ -971,7 +1002,7 @@ class ClassroomVisionController:
                 zone_count = self.latest_back_count if is_back else self.latest_front_count
                 zone_label = "Back Zone (Zone 2)" if is_back else "Front Zone (Zone 1)"
 
-                # Check if this is an Optical IR AC command (GPIO 4) from the Flutter App
+                # Check if this is an Optical IR AC command from the Flutter App
                 is_ac_cmd = ("/ac" in topic) or (str(data.get("type", "")).lower() == "ac") or (str(data.get("protocol", "")).upper() == "GREE")
                 if is_ac_cmd:
                     pub_fn = lambda t, p: self.mqtt_client.publish(t, p, qos=0)
@@ -1006,18 +1037,19 @@ class ClassroomVisionController:
                 dur = float(data.get("duration_seconds", 300.0))
                 now = time.time()
 
-                is_back = any(x in aid.lower() for x in ["zone 2", "zone_2", "b2", "_2", "back"])
+                is_back = any(x in aid.lower() for x in ["zone 2", "zone_2", "b2", "z2", "back"])
                 target_board = self.back_board_id if is_back else self.front_board_id
                 zone_id = 2 if is_back else 1
                 zone_count = self.latest_back_count if is_back else self.latest_front_count
+                effective_occ = zone_count if self.vision_control_enabled else max(1, zone_count)
                 zone_label = "Back Zone (Zone 2)" if is_back else "Front Zone (Zone 1)"
 
-                # Route AC / HVAC requests through ClassroomACController (GPIO 4 Optical IR)
+                # Route AC / HVAC requests through ClassroomACController
                 if any(k in aid.lower() for k in ("ac", "hvac", "gree")):
                     pub_fn = lambda t, p: self.mqtt_client.publish(t, p, qos=0)
                     accepted, reason = self.ac_controller.handle_app_ac_request(
                         zone_id=zone_id,
-                        occupant_count=zone_count,
+                        occupant_count=effective_occ,
                         desired_state=desired,
                         temp=int(data["temp"]) if "temp" in data else None,
                         mode=str(data["mode"]) if "mode" in data else None,
@@ -1042,7 +1074,7 @@ class ClassroomVisionController:
                     return
 
                 if desired == "ON":
-                    if zone_count <= 0:
+                    if self.vision_control_enabled and zone_count <= 0:
                         LOG.warning(f"[VISION GATE BLOCKED] Rejecting ON for {aid} ({target_board}): {zone_label} is EMPTY ({zone_count} people)!")
                         self.active_overrides.pop(aid, None)
                         for ch in self.active_channels:
@@ -1061,14 +1093,16 @@ class ClassroomVisionController:
                         self.mqtt_client.publish(self.app_res_topic, json.dumps(res_packet), qos=0)
                         return
 
+                    relay_match = re.search(r"r([1-8])$", aid.lower())
+                    req_channel = int(relay_match.group(1)) if relay_match else 1
                     self.active_overrides[aid] = {
                         "state": desired,
                         "operator": "flutter_user",
                         "expires_at": now + dur,
                         "board_id": target_board,
                     }
-                    LOG.info(f"[APP OVERRIDE ACCEPTED] {aid} -> ON for {dur}s on {target_board} ({zone_label} count: {zone_count})")
-                    self._send_esp32_command(board_id=target_board, channel=1, desired_state=desired, lease_sec=int(dur))
+                    LOG.info(f"[APP OVERRIDE ACCEPTED] {aid} -> ON for {dur}s on {target_board} ch={req_channel} ({zone_label} count: {zone_count})")
+                    self._send_esp32_command(board_id=target_board, channel=req_channel, desired_state=desired, lease_sec=int(dur))
                 elif desired == "OFF":
                     self.active_overrides[aid] = {
                         "state": desired,
@@ -1303,7 +1337,7 @@ class ClassroomVisionController:
                 else self.prev_back_occupied != back_occupied
             )
 
-            if frame_ok and front_transition:
+            if self.vision_control_enabled and frame_ok and front_transition:
                 self.prev_front_occupied = front_occupied
                 target_front = "ON" if front_occupied else "OFF"
                 LOG.info(f"⚡ [FRONT ZONE TRANSITION] {front_count} people -> {target_front} ({self.front_board_id}, mode={self.mode})")
@@ -1313,13 +1347,14 @@ class ClassroomVisionController:
                     ruet_cmd_f = "ALL_ON" if front_occupied else "ALL_OFF"
                     self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/zone/1/command/all", ruet_cmd_f, qos=0)
                     self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/board/1/command/all", ruet_cmd_f, qos=0)
+                    self.mqtt_client.publish("home/zone_1/command/all", ruet_cmd_f, qos=0)
                     self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/zone/1/all", json.dumps({"state": target_front}), qos=0)
-                    for ch in [1, 2, 3, 4]:
+                    for ch in range(1, 9):
                         self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/zone/1/relay/{ch}", json.dumps({"state": target_front}), qos=0)
                 self.last_sent_state[self.front_board_id] = (target_front, now_wall)
                 self.last_state_pub = 0.0
 
-            if frame_ok and back_transition:
+            if self.vision_control_enabled and frame_ok and back_transition:
                 self.prev_back_occupied = back_occupied
                 target_back = "ON" if back_occupied else "OFF"
                 LOG.info(f"⚡ [BACK ZONE TRANSITION] {back_count} people -> {target_back} ({self.back_board_id}, mode={self.mode})")
@@ -1329,8 +1364,9 @@ class ClassroomVisionController:
                     ruet_cmd_b = "ALL_ON" if back_occupied else "ALL_OFF"
                     self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/zone/2/command/all", ruet_cmd_b, qos=0)
                     self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/board/2/command/all", ruet_cmd_b, qos=0)
+                    self.mqtt_client.publish("home/zone_2/command/all", ruet_cmd_b, qos=0)
                     self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/zone/2/all", json.dumps({"state": target_back}), qos=0)
-                    for ch in [1, 2, 3, 4]:
+                    for ch in range(1, 9):
                         self.mqtt_client.publish(f"ruet/classroom/{self.room_id}/zone/2/relay/{ch}", json.dumps({"state": target_back}), qos=0)
                 self.last_sent_state[self.back_board_id] = (target_back, now_wall)
                 self.last_state_pub = 0.0
@@ -1346,24 +1382,25 @@ class ClassroomVisionController:
             }
             for z6_id, (b_id, ch_num) in six_zone_board_map.items():
                 z6_occ = held_occupied(z6_id, zone6_counts.get(z6_id, 0))
-                if frame_ok and self.prev_zone6_occupied.get(z6_id) != z6_occ:
+                if self.vision_control_enabled and frame_ok and self.prev_zone6_occupied.get(z6_id) != z6_occ:
                     self.prev_zone6_occupied[z6_id] = z6_occ
                     if b_id == self.third_board_id:
                         self._send_esp32_command(b_id, ch_num, "ON" if z6_occ else "OFF", lease_sec=60)
 
-            # 4B. Optical IR Air Conditioner Automation (Gree AC on GPIO 4)
+            # 4B. Optical IR Air Conditioner Automation (Standalone Dual-Gree AC on GPIO 33 & 12)
             pub_fn = (
                 (lambda t, p: self.mqtt_client.publish(t, p, qos=0))
                 if hasattr(self, "mqtt_client")
                 else None
             )
-            self.ac_controller.evaluate_all(
-                front_count=front_count,
-                back_count=back_count,
-                now=now_mono,
-                publish_fn=pub_fn,
-                operation_mode=self.mode,
-            )
+            if self.vision_control_enabled:
+                self.ac_controller.evaluate_all(
+                    front_count=front_count,
+                    back_count=back_count,
+                    now=now_mono,
+                    publish_fn=pub_fn,
+                    operation_mode=self.mode,
+                )
 
             # 5. Broadcast Multi-Zone App State Snapshot to Flutter App (1 Hz)
             if hasattr(self, "mqtt_client") and (now_wall - self.last_state_pub >= 1.0):
@@ -1375,9 +1412,11 @@ class ClassroomVisionController:
                     "kind": "app_state",
                     "session_id": self.session_id,
                     "mode": self.mode,
+                    "vision_control": self.vision_control_enabled,
                     "sent_at_unix_ms": int(now_wall * 1000),
                     "freshness_seconds": 4.0,
                     "occupancy": {
+                        "vision_control": self.vision_control_enabled,
                         "present": total_count > 0,
                         "observation_valid": frame_ok,
                         "observation_status": "OK" if frame_ok else "STALE",

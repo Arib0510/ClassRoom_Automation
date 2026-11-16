@@ -8,7 +8,7 @@ class FanSpinner extends StatefulWidget {
   final int speed; // 0..4
   final bool reverse;
   final double size;
-  final Color color;
+  final Color? color;
 
   const FanSpinner({
     super.key,
@@ -16,7 +16,7 @@ class FanSpinner extends StatefulWidget {
     this.speed = 3,
     this.reverse = false,
     this.size = 20.0,
-    this.color = AppColors.primary,
+    this.color,
   });
 
   @override
@@ -89,7 +89,9 @@ class _FanSpinnerState extends State<FanSpinner>
             math.pi;
         return CeilingFanIcon(
           size: widget.size,
-          color: widget.isSpinning ? widget.color : AppColors.outline,
+          color: widget.isSpinning
+              ? (widget.color ?? AppColors.primary)
+              : AppColors.outline,
           angle: angle,
         );
       },

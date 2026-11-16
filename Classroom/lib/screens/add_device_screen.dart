@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/connectivity.dart';
@@ -50,8 +51,13 @@ class _BatchChannelConfig {
 
 class AddDeviceScreen extends StatefulWidget {
   final String? preselectedRoomId;
+  final String? preselectedZone;
 
-  const AddDeviceScreen({super.key, this.preselectedRoomId});
+  const AddDeviceScreen({
+    super.key,
+    this.preselectedRoomId,
+    this.preselectedZone,
+  });
 
   @override
   State<AddDeviceScreen> createState() => _AddDeviceScreenState();
@@ -80,6 +86,9 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   String _selectedBoardName = 'Switchboard #1';
   String _selectedZoneId = 'zone_1';
   bool _isScanningMqtt = false;
+  Timer? _scanInitTimer;
+  Timer? _scanQueryTimer;
+  Timer? _scanCompleteTimer;
 
   // Single Appliance mode fields (for Switchboard Zones 1-3)
   String _selectedCategory = 'Ceiling Fan';
@@ -89,7 +98,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   int _selectedSwitchGpio = 13;
   int _selectedRelayNumber = 1;
 
-  // Standalone Dual-AC Module State (Gree AC #1 on GPIO 33, Gree AC #2 on GPIO 13)
+  // Standalone Dual-AC Module State (Gree AC #1 on GPIO 33, Gree AC #2 on GPIO 12)
   bool _ac1Enabled = true;
   bool _ac1PowerOn = false;
   int _ac1Temperature = 24;
@@ -132,11 +141,23 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     _selectedRoomId = widget.preselectedRoomId ??
         (_state.classrooms.isNotEmpty ? _state.classrooms.first.id : '');
     _updateDefaultZone();
+    if (widget.preselectedZone != null &&
+        !widget.preselectedZone!.toLowerCase().contains('ac')) {
+      _selectedZone = widget.preselectedZone!;
+      final zMatch = RegExp(r'(\d+)').firstMatch(_selectedZone);
+      if (zMatch != null) {
+        _selectedBoardId = (int.tryParse(zMatch.group(1) ?? '') ?? 1).clamp(1, 3);
+        _selectedBoardName = 'Switchboard #$_selectedBoardId';
+        _selectedZoneId = 'zone_$_selectedBoardId';
+      }
+    }
     _initBatchChannelsForBoard(_selectedBoardId);
     _syncSinglePairSelection(1);
     _updateDefaultDeviceName();
     ConnectivityState().addListener(_onConnectivityChanged);
-    _runMqttHardwareScan();
+    _scanInitTimer = Timer(const Duration(milliseconds: 280), () {
+      if (mounted) _runMqttHardwareScan();
+    });
   }
 
   void _initBatchChannelsForBoard(int boardId) {
@@ -192,28 +213,33 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     setState(() {});
   }
 
-  Future<void> _runMqttHardwareScan() async {
+  void _runMqttHardwareScan() {
     if (!mounted) return;
+    _scanQueryTimer?.cancel();
+    _scanCompleteTimer?.cancel();
     setState(() => _isScanningMqtt = true);
     ConnectivityState().purgeAllDiscoveredNodes(force: false);
 
     // Unified MQTT Scan: Query `home/discovery/query` and room query topics
     MqttService().publishStatusQuery(_selectedRoomId);
-    await Future.delayed(const Duration(milliseconds: 250));
-    MqttService().publishStatusQuery(_selectedRoomId);
+    _scanQueryTimer = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      MqttService().publishStatusQuery(_selectedRoomId);
+    });
 
-    await Future.delayed(const Duration(milliseconds: 1400));
-    if (!mounted) return;
-    setState(() {
-      _isScanningMqtt = false;
-      final online = ConnectivityState().discoveredIpNodes;
-      if (online.isNotEmpty) {
-        final currentFound = online
-                .where((n) => n.zoneId == _selectedZoneId || n.boardId == _selectedBoardId)
-                .firstOrNull ??
-            online.first;
-        _selectDiscoveredDevice(currentFound);
-      }
+    _scanCompleteTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (!mounted) return;
+      setState(() {
+        _isScanningMqtt = false;
+        final online = ConnectivityState().discoveredIpNodes;
+        if (online.isNotEmpty) {
+          final currentFound = online
+                  .where((n) => n.zoneId == _selectedZoneId || n.boardId == _selectedBoardId)
+                  .firstOrNull ??
+              online.first;
+          _selectDiscoveredDevice(currentFound);
+        }
+      });
     });
   }
 
@@ -277,6 +303,9 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
 
   @override
   void dispose() {
+    _scanInitTimer?.cancel();
+    _scanQueryTimer?.cancel();
+    _scanCompleteTimer?.cancel();
     ConnectivityState().removeListener(_onConnectivityChanged);
     _deviceNameController.dispose();
     _ac1NameController.dispose();
@@ -646,45 +675,44 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     return Scaffold(
       backgroundColor: AppColors.surfaceContainerLowest,
       appBar: AppBar(
-        backgroundColor: AppColors.surface.withValues(alpha: 0.90),
+        backgroundColor: AppColors.surfaceContainerLowest,
+        titleSpacing: 0,
         leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: AppColors.surfaceContainerHigh,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            ),
-            child: const Icon(Icons.arrow_back, size: 18, color: AppColors.primary),
-          ),
+          tooltip: 'Back',
+          icon: Icon(Icons.arrow_back_rounded, color: AppColors.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          isAddingAC ? 'Add AC' : 'Add Device',
-          style: AppTypography.headlineSm(color: AppColors.onSurface),
+          isAddingAC ? 'Add Dual AC' : 'Add Device',
+          style: AppTypography.headlineSm(color: AppColors.onSurface)
+              .copyWith(fontSize: 18, fontWeight: FontWeight.w600),
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: AppColors.surfaceContainerLow,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              borderRadius: BorderRadius.circular(10),
+              color: (isAddingAC ? AppColors.secondary : AppColors.primary)
+                  .withValues(alpha: 0.12),
+              border: Border.all(
+                color: (isAddingAC ? AppColors.secondary : AppColors.primary)
+                    .withValues(alpha: 0.28),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 PulsingBeacon(
-                  size: 5,
+                  size: 6,
                   color: isAddingAC ? AppColors.secondary : AppColors.primary,
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isAddingAC ? 'DUAL AC (33/12)' : '8-SWITCH ZONES',
+                  isAddingAC ? 'DUAL AC · 33/12' : 'SWITCHBOARD',
                   style: AppTypography.labelSm(
                     color: isAddingAC ? AppColors.secondary : AppColors.primary,
-                  ).copyWith(fontSize: 10),
+                  ).copyWith(fontSize: 10.5, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -693,7 +721,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -703,50 +731,50 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   color: AppColors.surfaceContainerLow,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(color: AppColors.overlay(0.08)),
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         onTap: () {
                           HapticFeedback.selectionClick();
                           setState(() => _mode = AddProvisioningMode.batchZone);
                         },
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 140),
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                          duration: const Duration(milliseconds: 160),
+                          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                             color: _mode == AddProvisioningMode.batchZone ? AppColors.primary : Colors.transparent,
                             boxShadow: _mode == AddProvisioningMode.batchZone
-                                ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.35), blurRadius: 8)]
+                                ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 8)]
                                 : null,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.dynamic_feed,
-                                size: 15,
+                                Icons.dynamic_feed_rounded,
+                                size: 16,
                                 color: _mode == AddProvisioningMode.batchZone
-                                    ? AppColors.surfaceContainerLowest
+                                    ? AppColors.onPrimary
                                     : AppColors.outline,
                               ),
-                              const SizedBox(width: 5),
+                              const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  'Batch (8 Pairs)',
+                                  'Batch (8 Relays)',
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                   style: AppTypography.labelSm(
                                     color: _mode == AddProvisioningMode.batchZone
-                                        ? AppColors.surfaceContainerLowest
+                                        ? AppColors.onPrimary
                                         : AppColors.onSurfaceVariant,
-                                  ).copyWith(fontWeight: FontWeight.bold, fontSize: 11.5),
+                                  ).copyWith(fontWeight: FontWeight.w600, fontSize: 12),
                                 ),
                               ),
                             ],
@@ -756,42 +784,42 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     ),
                     Expanded(
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         onTap: () {
                           HapticFeedback.selectionClick();
                           setState(() => _mode = AddProvisioningMode.singleAppliance);
                         },
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 140),
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                          duration: const Duration(milliseconds: 160),
+                          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                             color: _mode == AddProvisioningMode.singleAppliance ? AppColors.primary : Colors.transparent,
                             boxShadow: _mode == AddProvisioningMode.singleAppliance
-                                ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.35), blurRadius: 8)]
+                                ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 8)]
                                 : null,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.electrical_services,
-                                size: 15,
+                                Icons.electrical_services_rounded,
+                                size: 16,
                                 color: _mode == AddProvisioningMode.singleAppliance
-                                    ? AppColors.surfaceContainerLowest
+                                    ? AppColors.onPrimary
                                     : AppColors.outline,
                               ),
-                              const SizedBox(width: 5),
+                              const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  'Single Pair',
+                                  'Single Device',
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                   style: AppTypography.labelSm(
                                     color: _mode == AddProvisioningMode.singleAppliance
-                                        ? AppColors.surfaceContainerLowest
+                                        ? AppColors.onPrimary
                                         : AppColors.onSurfaceVariant,
-                                  ).copyWith(fontWeight: FontWeight.bold, fontSize: 11.5),
+                                  ).copyWith(fontWeight: FontWeight.w600, fontSize: 12),
                                 ),
                               ),
                             ],
@@ -859,17 +887,17 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Divider(color: Colors.white.withValues(alpha: 0.08)),
+                  Divider(color: AppColors.overlay(0.08)),
                   const SizedBox(height: 14),
 
                   // Classroom Assignment Dropdown
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      Expanded(child: Text(
                         'ASSIGN TO CLASSROOM',
-                        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
-                      ),
+                        style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,
+                      )),
                       Text('REQUIRED', style: AppTypography.labelSm(color: AppColors.primary)),
                     ],
                   ),
@@ -905,7 +933,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                   // =========================================================
                   Row(
                     children: [
-                      const Icon(Icons.radar, size: 16, color: AppColors.primary),
+                      Icon(Icons.radar, size: 16, color: AppColors.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -944,7 +972,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           if (_isScanningMqtt) ...[
-                            const SizedBox(
+                            SizedBox(
                               width: 14,
                               height: 14,
                               child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
@@ -962,7 +990,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                               ),
                             ),
                           ] else ...[
-                            const Icon(Icons.radar, size: 16, color: AppColors.primary),
+                            Icon(Icons.radar, size: 16, color: AppColors.primary),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
@@ -1013,7 +1041,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                   ? AppColors.surfaceContainerHigh
                                   : AppColors.surfaceContainerLowest,
                               border: Border.all(
-                                color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.08),
+                                color: isSelected ? accentColor : AppColors.overlay(0.08),
                                 width: isSelected ? 1.8 : 1.0,
                               ),
                             ),
@@ -1058,7 +1086,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                             child: Text(
                                               '${node.zoneId} • ${node.deviceType}',
                                               style: AppTypography.labelSm(color: accentColor)
-                                                  .copyWith(fontSize: 8.5, fontWeight: FontWeight.bold),
+                                                  .copyWith(fontSize: 9.5, fontWeight: FontWeight.bold),
                                             ),
                                           ),
                                         ],
@@ -1168,17 +1196,22 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.grid_view_rounded, size: 15, color: AppColors.primary),
-                            const SizedBox(width: 6),
-                            Text(
-                              'TARGET SWITCHBOARD ZONE (ZONES 1, 2, 3)',
-                              style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)
-                                  .copyWith(fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                            ),
-                          ],
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(Icons.grid_view_rounded, size: 15, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'TARGET SWITCHBOARD ZONE',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)
+                                      .copyWith(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -1209,7 +1242,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                               borderRadius: BorderRadius.circular(8),
                               color: isSelected ? AppColors.primary : AppColors.surfaceContainer,
                               border: Border.all(
-                                color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.1),
+                                color: isSelected ? AppColors.primary : AppColors.overlay(0.1),
                               ),
                             ),
                             child: Row(
@@ -1247,21 +1280,64 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
 
                     if (_mode == AddProvisioningMode.batchZone) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.link, size: 16, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '8 Linked Relay ↔ Manual Switch Pairs for $_selectedZone (zone_$_selectedBoardId):',
-                                style: AppTypography.bodySm(color: AppColors.primary).copyWith(fontSize: 11),
-                              ),
+                            Row(
+                              children: [
+                                Icon(Icons.link_rounded, size: 16, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Quickly set up 8 switches for $_selectedZone',
+                                    style: AppTypography.labelMd(color: AppColors.onSurface)
+                                        .copyWith(fontSize: 12.5, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                _buildQuickBatchPresetBtn('All Lights', () {
+                                  setState(() {
+                                    for (var i = 0; i < _batchChannels.length; i++) {
+                                      _batchChannels[i].enabled = true;
+                                      _setBatchChannelCategory(i, 'Light');
+                                    }
+                                  });
+                                }),
+                                _buildQuickBatchPresetBtn('All Fans', () {
+                                  setState(() {
+                                    for (var i = 0; i < _batchChannels.length; i++) {
+                                      _batchChannels[i].enabled = true;
+                                      _setBatchChannelCategory(i, 'Ceiling Fan');
+                                    }
+                                  });
+                                }),
+                                _buildQuickBatchPresetBtn('Select All', () {
+                                  setState(() {
+                                    for (final c in _batchChannels) {
+                                      c.enabled = true;
+                                    }
+                                  });
+                                }),
+                                _buildQuickBatchPresetBtn('Clear', () {
+                                  setState(() {
+                                    for (final c in _batchChannels) {
+                                      c.enabled = false;
+                                    }
+                                  });
+                                }),
+                              ],
                             ),
                           ],
                         ),
@@ -1272,6 +1348,10 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                       ..._batchChannels.asMap().entries.map((entry) {
                         final idx = entry.key;
                         final ch = entry.value;
+                        final alreadyAdded = currentRoom?.devices.any((d) =>
+                                d.zone == _selectedZone &&
+                                d.relayNumber == ch.relayNumber) ??
+                            false;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
@@ -1284,7 +1364,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                             border: Border.all(
                               color: ch.enabled
                                   ? AppColors.primary.withValues(alpha: 0.35)
-                                  : Colors.white.withValues(alpha: 0.06),
+                                  : AppColors.overlay(0.06),
                               width: ch.enabled ? 1.2 : 1.0,
                             ),
                           ),
@@ -1313,17 +1393,32 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                         borderRadius: BorderRadius.circular(6),
                                         color: ch.enabled
                                             ? AppColors.primary.withValues(alpha: 0.14)
-                                            : Colors.white.withValues(alpha: 0.05),
+                                            : AppColors.overlay(0.05),
                                       ),
                                       child: Text(
-                                        'PAIR ${ch.relayNumber}: Relay ${ch.relayLabel} (D${ch.gpio}) ↔ Switch ${ch.switchName} (D${ch.switchGpio})',
+                                        'Switch ${ch.switchName} · Relay ${ch.relayNumber} (D${ch.gpio})',
                                         style: AppTypography.labelSm(
                                           color: ch.enabled ? AppColors.primary : AppColors.outline,
-                                        ).copyWith(fontWeight: FontWeight.bold, fontSize: 10.5),
+                                        ).copyWith(fontWeight: FontWeight.bold, fontSize: 11),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ),
+                                  if (alreadyAdded) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(6),
+                                        color: AppColors.onlineMint.withValues(alpha: 0.14),
+                                      ),
+                                      child: Text(
+                                        'Added',
+                                        style: AppTypography.labelSm(color: AppColors.onlineMint)
+                                            .copyWith(fontSize: 9.5, fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                               if (ch.enabled) ...[
@@ -1354,7 +1449,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(8),
                                     color: AppColors.surfaceContainer,
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                    border: Border.all(color: AppColors.overlay(0.08)),
                                   ),
                                   child: TextField(
                                     controller: ch.nameController,
@@ -1409,7 +1504,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                     borderRadius: BorderRadius.circular(10),
                                     color: isSelected ? AppColors.surfaceContainerHigh : AppColors.surfaceContainer,
                                     border: Border.all(
-                                      color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.08),
+                                      color: isSelected ? AppColors.primary : AppColors.overlay(0.08),
                                       width: isSelected ? 1.5 : 1.0,
                                     ),
                                   ),
@@ -1491,7 +1586,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                   ),
                                   side: BorderSide(
-                                    color: isSelected ? AppColors.primary : Colors.white12,
+                                    color: isSelected ? AppColors.primary : AppColors.overlay(0.12),
                                   ),
                                   onSelected: (_) {
                                     HapticFeedback.selectionClick();
@@ -1517,7 +1612,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
                           color: AppColors.surfaceContainer,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                          border: Border.all(color: AppColors.overlay(0.1)),
                         ),
                         child: TextField(
                           controller: _deviceNameController,
@@ -1541,14 +1636,14 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
             // Primary Action CTA Button
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 52,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isAddingAC ? AppColors.secondary : AppColors.primary,
-                  foregroundColor: AppColors.surfaceContainerLowest,
-                  elevation: 6,
+                  foregroundColor: AppColors.onPrimary,
+                  elevation: 3,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
                 onPressed: isAddingAC
@@ -1560,22 +1655,22 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      isAddingAC ? Icons.ac_unit : Icons.check_circle,
+                      isAddingAC ? Icons.ac_unit_rounded : Icons.check_circle_rounded,
                       size: 20,
-                      color: AppColors.surfaceContainerLowest,
+                      color: AppColors.onPrimary,
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
+                    Flexible(
                       child: Text(
                         isAddingAC
-                            ? 'Save ${(_ac1Enabled ? 1 : 0) + (_ac2Enabled ? 1 : 0)} Gree AC(s) (GPIO 33 / 12)'
+                            ? 'Save ${(_ac1Enabled ? 1 : 0) + (_ac2Enabled ? 1 : 0)} Gree AC(s)'
                             : (_mode == AddProvisioningMode.batchZone
-                                ? 'Provision ${_batchChannels.where((c) => c.enabled).length} Pairs to $_selectedZone'
+                                ? 'Save ${_batchChannels.where((c) => c.enabled).length} Devices to $_selectedZone'
                                 : 'Save Device to $_selectedZone'),
                         textAlign: TextAlign.center,
                         style: AppTypography.headlineSm(
-                          color: AppColors.surfaceContainerLowest,
-                        ).copyWith(fontWeight: FontWeight.bold, fontSize: 13.0),
+                          color: AppColors.onPrimary,
+                        ).copyWith(fontWeight: FontWeight.w700, fontSize: 14.5),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1633,7 +1728,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                       borderRadius: BorderRadius.circular(8),
                       color: AppColors.secondary.withValues(alpha: 0.2),
                     ),
-                    child: const Icon(Icons.ac_unit, size: 20, color: AppColors.secondary),
+                    child: Icon(Icons.ac_unit, size: 20, color: AppColors.secondary),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -1657,7 +1752,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
+              Divider(color: AppColors.overlay(0.08), height: 1),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -1777,7 +1872,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
         border: Border.all(
           color: enabled
               ? AppColors.secondary.withValues(alpha: 0.45)
-              : Colors.white.withValues(alpha: 0.08),
+              : AppColors.overlay(0.08),
           width: enabled ? 1.3 : 1.0,
         ),
       ),
@@ -1827,7 +1922,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: AppColors.surfaceContainer,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: Border.all(color: AppColors.overlay(0.08)),
               ),
               child: TextField(
                 controller: nameController,
@@ -1841,30 +1936,42 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
                       visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                       onPressed: () => onTempDelta(-1),
-                      icon: const Icon(Icons.remove_circle_outline, color: AppColors.secondary, size: 18),
+                      icon: Icon(Icons.remove_circle_outline, color: AppColors.secondary, size: 18),
                     ),
-                    Text(
-                      '$temperature°C',
-                      style: AppTypography.labelLg(color: AppColors.secondary)
-                          .copyWith(fontWeight: FontWeight.bold, fontSize: 15),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        '$temperature°C',
+                        style: AppTypography.labelLg(color: AppColors.secondary)
+                            .copyWith(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
                     ),
                     IconButton(
                       visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                       onPressed: () => onTempDelta(1),
-                      icon: const Icon(Icons.add_circle_outline, color: AppColors.secondary, size: 18),
+                      icon: Icon(Icons.add_circle_outline, color: AppColors.secondary, size: 18),
                     ),
                   ],
                 ),
                 Wrap(
                   spacing: 4,
+                  runSpacing: 4,
                   children: ['COOL', 'AUTO', 'DRY', 'FAN'].map((m) {
                     final selected = mode == m;
                     return GestureDetector(
@@ -1877,7 +1984,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                               ? AppColors.secondary.withValues(alpha: 0.25)
                               : AppColors.surfaceContainer,
                           border: Border.all(
-                            color: selected ? AppColors.secondary : Colors.white12,
+                            color: selected ? AppColors.secondary : AppColors.overlay(0.12),
                           ),
                         ),
                         child: Text(
@@ -1956,7 +2063,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
           borderRadius: BorderRadius.circular(10),
           color: isSelected ? accentColor.withValues(alpha: 0.18) : AppColors.surfaceContainerLowest,
           border: Border.all(
-            color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.08),
+            color: isSelected ? accentColor : AppColors.overlay(0.08),
             width: isSelected ? 1.6 : 1.0,
           ),
         ),
@@ -1977,11 +2084,34 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
               subtitle,
               style: AppTypography.bodySm(
                 color: isSelected ? accentColor.withValues(alpha: 0.85) : AppColors.outline,
-              ).copyWith(fontSize: 8.5),
+              ).copyWith(fontSize: 9.5),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickBatchPresetBtn(String label, VoidCallback onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: AppColors.surfaceContainerLow,
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelSm(color: AppColors.primary)
+              .copyWith(fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -2005,7 +2135,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
           borderRadius: BorderRadius.circular(8),
           color: isSelected ? AppColors.primary.withValues(alpha: 0.22) : AppColors.surfaceContainer,
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.08),
+            color: isSelected ? AppColors.primary : AppColors.overlay(0.08),
             width: isSelected ? 1.5 : 1.0,
           ),
         ),

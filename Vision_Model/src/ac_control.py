@@ -54,6 +54,9 @@ class ACUnitState:
         """Builds the exact JSON payload expected by ESP32 handleAcCommand()."""
         return {
             "room": room_id,
+            "zone_id": "zone_ac",
+            "device_type": "ac_unit",
+            "ac_unit": self.zone_id,
             "zone": self.zone_id,
             "board": self.zone_id,
             "controller_id": self.board_id,
@@ -114,8 +117,8 @@ class ClassroomACController:
         self.default_mode = default_mode.upper() if default_mode.upper() in VALID_AC_MODES else "COOL"
 
         self.units: Dict[int, ACUnitState] = {
-            1: ACUnitState(zone_id=1, board_id=self.front_board_id, temperature=self.default_temp, mode=self.default_mode),
-            2: ACUnitState(zone_id=2, board_id=self.back_board_id, temperature=self.default_temp, mode=self.default_mode),
+            1: ACUnitState(zone_id=1, board_id=self.front_board_id, gpio_pin=33, temperature=self.default_temp, mode=self.default_mode),
+            2: ACUnitState(zone_id=2, board_id=self.back_board_id, gpio_pin=12, temperature=self.default_temp, mode=self.default_mode),
         }
 
     @staticmethod
@@ -344,8 +347,10 @@ class ClassroomACController:
 
         # Strict DRY_RUN isolation: only publish to physical ESP32 IR topics in LIVE mode
         if operation_mode.upper() == "LIVE":
+            publish_fn(f"ruet/classroom/{self.room_id}/ac/{unit.zone_id}/command", payload_json)
             publish_fn(f"ruet/classroom/{self.room_id}/zone/{unit.zone_id}/ac/command", payload_json)
             publish_fn(f"ruet/classroom/{self.room_id}/board/{unit.zone_id}/ac/command", payload_json)
+            publish_fn("home/zone_ac/command", payload_json)
             if unit.zone_id == 1:
                 publish_fn(f"ruet/classroom/{self.room_id}/ac/command", payload_json)
 

@@ -27,7 +27,7 @@ class CyberUpdateDialog extends StatefulWidget {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.75),
+      barrierColor: AppColors.scrim,
       builder: (context) => const CyberUpdateDialog(),
     );
   }
@@ -289,7 +289,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
               children: [
                 Text(
                   'OTA SYSTEM UPDATER',
-                  style: AppTypography.headlineSm(color: Colors.white).copyWith(
+                  style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -306,7 +306,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
           ),
           if (_step != UpdateStep.downloading)
             IconButton(
-              icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.outline),
+              icon: Icon(Icons.close_rounded, size: 20, color: AppColors.outline),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               splashRadius: 20,
@@ -363,7 +363,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
                       color: AppColors.primary.withValues(alpha: 0.15),
                       border: Border.all(color: AppColors.primary.withValues(alpha: 0.6)),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.cloud_sync_rounded,
                       color: AppColors.primary,
                       size: 24,
@@ -377,7 +377,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
         const SizedBox(height: 24),
         Text(
           'CONNECTING TO REPOSITORY',
-          style: AppTypography.headlineSm(color: Colors.white).copyWith(
+          style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -421,7 +421,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.new_releases_rounded, color: AppColors.onlineMint, size: 16),
+                Icon(Icons.new_releases_rounded, color: AppColors.onlineMint, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   'NEW UPDATE DISCOVERED',
@@ -442,7 +442,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             color: AppColors.surfaceContainerLowest,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: AppColors.overlay(0.08)),
           ),
           child: Row(
             children: [
@@ -450,7 +450,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('CURRENT BUILD', style: AppTypography.labelSm(color: AppColors.outline).copyWith(fontSize: 9)),
+                    Text('CURRENT BUILD', style: AppTypography.labelSm(color: AppColors.outline).copyWith(fontSize: 10)),
                     const SizedBox(height: 2),
                     Text(
                       'v${release.currentVersion}',
@@ -459,12 +459,12 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_rounded, color: AppColors.onlineMint, size: 18),
+              Icon(Icons.arrow_forward_rounded, color: AppColors.onlineMint, size: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('TARGET RELEASE', style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(fontSize: 9)),
+                    Text('TARGET RELEASE', style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(fontSize: 10)),
                     const SizedBox(height: 2),
                     Text(
                       release.tagName,
@@ -483,7 +483,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Changelog & Notes', style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.w600)),
+            Expanded(child: Text('Changelog & Notes', style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis,)),
             if (release.apkSize > 0)
               Text(
                 'Size: ${release.formattedApkSize}',
@@ -566,8 +566,8 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
               child: CircularProgressIndicator(
                 value: _downloadProgress > 0 ? _downloadProgress : null,
                 strokeWidth: 6,
-                backgroundColor: Colors.white.withValues(alpha: 0.08),
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                backgroundColor: AppColors.overlay(0.08),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             ),
             Text(
@@ -582,7 +582,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
         const SizedBox(height: 20),
         Text(
           'DOWNLOADING BINARY ARCHIVE',
-          style: AppTypography.headlineSm(color: Colors.white).copyWith(
+          style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(
             fontSize: 13,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -614,7 +614,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
                     width: fillWidth,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(6),
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [AppColors.secondary, AppColors.primary],
                       ),
                     ),
@@ -633,7 +633,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
                             gradient: LinearGradient(
                               colors: [
                                 Colors.transparent,
-                                Colors.white.withValues(alpha: 0.4),
+                                AppColors.overlay(0.4),
                                 Colors.transparent,
                               ],
                             ),
@@ -684,7 +684,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.task_alt_rounded,
             color: AppColors.onlineMint,
             size: 40,
@@ -693,7 +693,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
         const SizedBox(height: 18),
         Text(
           'PACKAGE READY TO INSTALL',
-          style: AppTypography.headlineSm(color: Colors.white).copyWith(
+          style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -761,7 +761,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.verified_user_rounded,
             color: AppColors.primary,
             size: 38,
@@ -770,7 +770,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
         const SizedBox(height: 18),
         Text(
           'SYSTEM IS UP TO DATE',
-          style: AppTypography.headlineSm(color: Colors.white).copyWith(
+          style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -847,7 +847,7 @@ class _CyberUpdateDialogState extends State<CyberUpdateDialog>
             color: AppColors.error.withValues(alpha: 0.15),
             border: Border.all(color: AppColors.error.withValues(alpha: 0.5), width: 1.5),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.cloud_off_rounded,
             color: AppColors.error,
             size: 32,

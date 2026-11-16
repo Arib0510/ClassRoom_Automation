@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../state/auth_state.dart';
 import '../theme/app_colors.dart';
@@ -92,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen>
     _autoNavTimer?.cancel();
     _telemetryTimer?.cancel();
 
-    final isAuth = AuthState().isLoggedIn || FirebaseAuth.instance.currentUser != null;
+    final isAuth = AuthState().isLoggedIn || AuthState.firebaseUserOrNull != null;
 
     Navigator.of(context).pushReplacement(
       Cube3DPageRoute(
@@ -174,7 +173,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.6),
+                        color: AppColors.shadow(0.6),
                         blurRadius: 36,
                         offset: const Offset(0, 8),
                       ),
@@ -201,7 +200,7 @@ class _SplashScreenState extends State<SplashScreen>
                             Text(
                               'ClassPulse',
                               style: AppTypography.displayLg(
-                                color: Colors.white,
+                                color: AppColors.onSurface,
                                 fontSize: 32,
                               ).copyWith(
                                 letterSpacing: -0.5,
@@ -255,7 +254,7 @@ class _SplashScreenState extends State<SplashScreen>
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const PulsingBeacon(
+                          PulsingBeacon(
                             size: 7,
                             color: AppColors.primary,
                           ),
@@ -294,7 +293,7 @@ class _SplashScreenState extends State<SplashScreen>
                     borderRadius: BorderRadius.circular(12),
                     color: AppColors.surfaceContainerLow.withValues(alpha: 0.85),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08),
+                      color: AppColors.overlay(0.08),
                     ),
                   ),
                   child: Row(
@@ -303,7 +302,7 @@ class _SplashScreenState extends State<SplashScreen>
                       Expanded(
                         child: Row(
                           children: [
-                            const PulsingBeacon(
+                            PulsingBeacon(
                               size: 5,
                               color: AppColors.onlineMint,
                             ),

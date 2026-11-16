@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
+/// A small status dot. When [isPulsing] it emits a soft sonar ring that
+/// expands and fades, which reads as "live" without the dot itself
+/// flickering. The ring paints outside the dot's layout box, so the widget
+/// always occupies exactly [size] × [size].
 class PulsingBeacon extends StatefulWidget {
   final double size;
-  final Color color;
+  final Color? color;
   final bool isPulsing;
 
   const PulsingBeacon({
     super.key,
     this.size = 6.0,
-    this.color = AppColors.primary,
+    this.color,
     this.isPulsing = true,
   });
 
@@ -26,10 +30,10 @@ class _PulsingBeaconState extends State<PulsingBeacon>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 1800),
     );
     if (widget.isPulsing) {
-      _controller.repeat(reverse: true);
+      _controller.repeat();
     }
   }
 
@@ -37,9 +41,10 @@ class _PulsingBeaconState extends State<PulsingBeacon>
   void didUpdateWidget(covariant PulsingBeacon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isPulsing && !_controller.isAnimating) {
-      _controller.repeat(reverse: true);
+      _controller.repeat();
     } else if (!widget.isPulsing && _controller.isAnimating) {
       _controller.stop();
+      _controller.value = 0;
     }
   }
 
@@ -51,50 +56,45 @@ class _PulsingBeaconState extends State<PulsingBeacon>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final scale = widget.isPulsing ? 0.85 + (_controller.value * 0.35) : 1.0;
-        final alpha = widget.isPulsing ? 0.4 + (_controller.value * 0.6) : 0.8;
+    final color = widget.color ?? AppColors.primary;
+    final size = widget.size;
 
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer glow halo
-            if (widget.isPulsing)
-              Transform.scale(
-                scale: scale * 1.8,
-                child: Container(
-                  width: widget.size,
-                  height: widget.size,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: widget.color.withValues(alpha: 0.25 * alpha),
+    return SizedBox(
+      width: size,
+      height: size,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final t = Curves.easeOut.transform(_controller.value);
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              if (widget.isPulsing)
+                Transform.scale(
+                  scale: 1.0 + t * 1.6,
+                  child: Container(
+                    width: size,
+                    height: size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color.withValues(alpha: 0.40 * (1.0 - t)),
+                    ),
                   ),
                 ),
-              ),
-            // Solid center beacon
-            Transform.scale(
-              scale: scale,
-              child: Container(
-                width: widget.size,
-                height: widget.size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.color.withValues(alpha: alpha),
-                  boxShadow: [
-                    BoxShadow(
-                      color: widget.color.withValues(alpha: 0.6 * alpha),
-                      blurRadius: widget.size * 1.2,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+              child!,
+            ],
+          );
+        },
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: widget.isPulsing ? color : color.withValues(alpha: 0.7),
+          ),
+        ),
+      ),
     );
   }
 }
-

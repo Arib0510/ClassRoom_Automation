@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../state/connectivity_state.dart';
 import '../state/classroom_state.dart';
 import '../state/auth_state.dart';
@@ -39,7 +38,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadAppVersion();
-    _usersStream = FirebaseFirestore.instance.collection('users').snapshots();
+    try {
+      _usersStream = FirebaseFirestore.instance.collection('users').snapshots();
+    } catch (e) {
+      // Firebase may be unavailable (offline first launch, missing config).
+      // Surface that in the directory panel instead of crashing the screen.
+      debugPrint('[Settings] Campus directory unavailable: $e');
+      _usersStream = Stream<QuerySnapshot>.error(e);
+    }
     _connState.addListener(_onStateChange);
     AuthState().addListener(_onStateChange);
     ClassroomState().addListener(_onStateChange);
@@ -90,14 +96,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
           ),
           title: Row(
             children: [
-              const Icon(Icons.cloud_sync, color: AppColors.primary),
+              Icon(Icons.cloud_sync, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 'MQTT Broker Configuration',
@@ -128,7 +134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.primary),
+                    borderSide: BorderSide(color: AppColors.primary),
                   ),
                 ),
               ),
@@ -148,7 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.primary),
+                    borderSide: BorderSide(color: AppColors.primary),
                   ),
                 ),
               ),
@@ -167,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.primary),
+                    borderSide: BorderSide(color: AppColors.primary),
                   ),
                 ),
               ),
@@ -218,14 +224,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
           ),
           title: Row(
             children: [
-              const Icon(Icons.badge_outlined, color: AppColors.primary, size: 20),
+              Icon(Icons.badge_outlined, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Modify Profile Name',
@@ -255,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.primary),
+                    borderSide: BorderSide(color: AppColors.primary),
                   ),
                   hintText: 'Enter new name',
                 ),
@@ -281,7 +287,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Navigator.pop(context);
                     setState(() {});
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Profile name updated in Firestore.'),
                         backgroundColor: AppColors.onlineMint,
                         duration: Duration(seconds: 2),
@@ -306,14 +312,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
           ),
           title: Row(
             children: [
-              const Icon(Icons.switch_account, color: AppColors.primary),
+              Icon(Icons.switch_account, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 'Switch Accounts',
@@ -334,16 +340,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: AppColors.surfaceContainerLowest,
                     border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                   ),
-                  child: const Center(child: Icon(Icons.account_circle, color: AppColors.primary, size: 20)),
+                  child: Center(child: Icon(Icons.account_circle, color: AppColors.primary, size: 20)),
                 ),
                 title: Text(AuthState().userName, style: AppTypography.bodySm(color: AppColors.onSurface)),
                 subtitle: Text(AuthState().userEmail, style: AppTypography.labelSm(color: AppColors.outline)),
-                trailing: const Icon(Icons.check, color: AppColors.onlineMint, size: 18),
+                trailing: Icon(Icons.check, color: AppColors.onlineMint, size: 18),
               ),
-              const Divider(color: Colors.white12),
+              Divider(color: AppColors.overlay(0.12)),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.add_circle_outline, color: AppColors.secondaryLight, size: 22),
+                leading: Icon(Icons.add_circle_outline, color: AppColors.secondaryLight, size: 22),
                 title: Text('Sign in with another Google Account', style: AppTypography.bodySm(color: AppColors.onSurface)),
                 onTap: () {
                   Navigator.pop(context);
@@ -379,7 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
@@ -392,7 +398,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: AppColors.errorContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 22),
+                child: Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 22),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -409,7 +415,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 'Are you sure you want to wipe all classroom records?',
-                style: AppTypography.bodySm(color: Colors.white).copyWith(fontWeight: FontWeight.w600),
+                style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Text(
@@ -429,7 +435,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.onError,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 elevation: 0,
               ),
@@ -449,12 +455,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     content: Row(
                       children: [
-                        const Icon(Icons.check_circle_outline, color: AppColors.error, size: 20),
+                        Icon(Icons.check_circle_outline, color: AppColors.error, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Classroom records cleared from local storage and Firebase.',
-                            style: AppTypography.bodySm(color: Colors.white),
+                            style: AppTypography.bodySm(color: AppColors.onSurface),
                           ),
                         ),
                       ],
@@ -476,7 +482,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerHigh,
+          backgroundColor: AppColors.sheet,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
@@ -491,7 +497,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: AppColors.primaryContainer.withValues(alpha: 0.3),
                   border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
                 ),
-                child: const Center(
+                child: Center(
                   child: Icon(Icons.hub_rounded, color: AppColors.primary, size: 24),
                 ),
               ),
@@ -502,7 +508,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       'ClassPulse IoT',
-                      style: AppTypography.headlineSm(color: Colors.white).copyWith(fontWeight: FontWeight.bold),
+                      style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       'Smart Classroom Platform',
@@ -523,7 +529,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: AppColors.surfaceContainerLowest,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(color: AppColors.overlay(0.08)),
                 ),
                 child: Column(
                   children: [
@@ -532,7 +538,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       label: 'App Name',
                       value: 'ClassPulse IoT',
                     ),
-                    const Divider(color: Colors.white12, height: 16),
+                    Divider(color: AppColors.overlay(0.12), height: 16),
                     _buildDetailRow(
                       icon: Icons.verified_rounded,
                       label: 'Version',
@@ -557,7 +563,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.code_rounded, size: 16, color: AppColors.primary),
+                        Icon(Icons.code_rounded, size: 16, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Text(
                           'DEVELOPER',
@@ -589,7 +595,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 10),
                     Text(
                       'Fayem Muktadir Rahman',
-                      style: AppTypography.headlineSm(color: Colors.white).copyWith(
+                      style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.3,
@@ -598,7 +604,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.badge_outlined, size: 14, color: AppColors.outline),
+                        Icon(Icons.badge_outlined, size: 14, color: AppColors.outline),
                         const SizedBox(width: 6),
                         Text(
                           'Roll: ',
@@ -671,7 +677,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Text(
           value,
           style: AppTypography.bodySm(
-            color: highlightValue ? AppColors.secondaryLight : Colors.white,
+            color: highlightValue ? AppColors.secondaryLight : AppColors.onSurface,
           ).copyWith(fontWeight: highlightValue ? FontWeight.bold : FontWeight.w600),
         ),
       ],
@@ -694,7 +700,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.manage_accounts_rounded, color: AppColors.primary),
+                  Icon(Icons.manage_accounts_rounded, color: AppColors.primary),
                   const SizedBox(width: 10),
                   Text('Console Role & Privileges', style: AppTypography.headlineSm(fontSize: 16)),
                 ],
@@ -708,17 +714,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 tileColor: AuthState().isAdmin ? AppColors.primary.withValues(alpha: 0.15) : AppColors.surfaceContainerLowest,
-                leading: const Icon(Icons.admin_panel_settings_rounded, color: AppColors.primary),
-                title: const Text('Administrator Mode', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                subtitle: const Text('Full layout, hardware provisioning, pin mapping & cloud directory', style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
-                trailing: AuthState().isAdmin ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+                leading: Icon(Icons.admin_panel_settings_rounded, color: AppColors.primary),
+                title: Text('Administrator Mode', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                subtitle: Text('Full layout, hardware provisioning, pin mapping & cloud directory', style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
+                trailing: AuthState().isAdmin ? Icon(Icons.check_circle, color: AppColors.primary) : null,
                 onTap: () async {
                   Navigator.pop(ctx);
                   await AuthState().setUserRole(UserRole.admin);
                   setState(() {});
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Switched to Administrator Mode. Role synced to Firebase.'), backgroundColor: AppColors.primary),
+                      SnackBar(content: Text('Switched to Administrator Mode. Role synced to Firebase.'), backgroundColor: AppColors.primary),
                     );
                   }
                 },
@@ -727,17 +733,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 tileColor: AuthState().isTeacher ? AppColors.onlineMint.withValues(alpha: 0.15) : AppColors.surfaceContainerLowest,
-                leading: const Icon(Icons.school_rounded, color: AppColors.onlineMint),
-                title: const Text('Teacher Mode', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onlineMint)),
-                subtitle: const Text('Classroom monitoring and live appliance controls only', style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
-                trailing: AuthState().isTeacher ? const Icon(Icons.check_circle, color: AppColors.onlineMint) : null,
+                leading: Icon(Icons.school_rounded, color: AppColors.onlineMint),
+                title: Text('Teacher Mode', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onlineMint)),
+                subtitle: Text('Classroom monitoring and live appliance controls only', style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
+                trailing: AuthState().isTeacher ? Icon(Icons.check_circle, color: AppColors.onlineMint) : null,
                 onTap: () async {
                   Navigator.pop(ctx);
                   await AuthState().setUserRole(UserRole.teacher);
                   setState(() {});
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Switched to Teacher Mode. Role synced to Firebase.'), backgroundColor: AppColors.onlineMint),
+                      SnackBar(content: Text('Switched to Teacher Mode. Role synced to Firebase.'), backgroundColor: AppColors.onlineMint),
                     );
                   }
                 },
@@ -763,17 +769,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
+              Expanded(child: Row(
                 children: [
-                  const Icon(Icons.hub_rounded, size: 16, color: AppColors.primary),
+                  Icon(Icons.hub_rounded, size: 16, color: AppColors.primary),
                   const SizedBox(width: 8),
-                  Text(
+                  Flexible(child: Text(
                     'Campus Directory & Roles',
                     style: AppTypography.bodySm(color: AppColors.onSurface)
-                        .copyWith(fontWeight: FontWeight.bold),
-                  ),
+                        .copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis,
+                  )),
                 ],
-              ),
+              )),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -783,12 +789,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.cloud_done_rounded, size: 10, color: AppColors.primary),
+                    Icon(Icons.cloud_done_rounded, size: 10, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
                       'FIREBASE',
                       style: AppTypography.labelSm(color: AppColors.primary)
-                          .copyWith(fontSize: 8.5, fontWeight: FontWeight.bold),
+                          .copyWith(fontSize: 9.5, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -808,7 +814,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: BoxDecoration(
               color: AppColors.surfaceContainerLowest,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppColors.overlay(0.08)),
             ),
             child: TextField(
               controller: _userSearchController,
@@ -820,12 +826,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 hintText: 'Search by name, email, or dept...',
                 hintStyle: AppTypography.bodySm(color: AppColors.outline).copyWith(fontSize: 12),
                 prefixIconConstraints: const BoxConstraints(minWidth: 38, minHeight: 38, maxWidth: 38, maxHeight: 38),
-                prefixIcon: const Icon(Icons.search, size: 16, color: AppColors.outline),
+                prefixIcon: Icon(Icons.search, size: 16, color: AppColors.outline),
                 suffixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 34, maxWidth: 34, maxHeight: 34),
                 suffixIcon: _userSearchQuery.isNotEmpty
                     ? IconButton(
                         padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.close, size: 14, color: AppColors.outline),
+                        icon: Icon(Icons.close, size: 14, color: AppColors.outline),
                         onPressed: () {
                           _userSearchController.clear();
                           setState(() => _userSearchQuery = '');
@@ -853,7 +859,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, size: 16, color: AppColors.error),
+                      Icon(Icons.error_outline, size: 16, color: AppColors.error),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -867,7 +873,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
+                return Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
                     child: SizedBox(
@@ -994,7 +1000,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(8),
             color: isSelected ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surfaceContainerLowest,
             border: Border.all(
-              color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.08),
+              color: isSelected ? AppColors.primary : AppColors.overlay(0.08),
             ),
           ),
           child: Row(
@@ -1011,12 +1017,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.08),
+                  color: isSelected ? AppColors.primary.withValues(alpha: 0.3) : AppColors.overlay(0.08),
                 ),
                 child: Text(
                   '$count',
                   style: TextStyle(
-                    fontSize: 8.5,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.bold,
                     color: isSelected ? AppColors.primary : AppColors.outline,
                   ),
@@ -1035,7 +1041,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         color: AppColors.surfaceContainerLowest,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: AppColors.overlay(0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1049,7 +1055,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.domain_rounded, size: 14, color: AppColors.secondaryLight),
+                Icon(Icons.domain_rounded, size: 14, color: AppColors.secondaryLight),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -1069,13 +1075,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   child: Text(
                     '${userDocs.length} ${userDocs.length == 1 ? 'user' : 'users'}',
-                    style: AppTypography.labelSm(color: AppColors.secondaryLight).copyWith(fontSize: 8.5),
+                    style: AppTypography.labelSm(color: AppColors.secondaryLight).copyWith(fontSize: 9.5),
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(color: Colors.white10, height: 1),
+          Divider(color: AppColors.overlay(0.10), height: 1),
           // User Rows
           ...userDocs.map((doc) => _buildUserRow(doc)),
         ],
@@ -1089,12 +1095,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final email = (data['email'] ?? doc.id).toString();
     final roleCode = data['role']?.toString();
     final userRole = UserRole.fromCode(roleCode);
-    final isCurrent = FirebaseAuth.instance.currentUser?.uid == doc.id;
+    final isCurrent = AuthState.firebaseUserOrNull?.uid == doc.id;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.overlay(0.10), width: 0.5)),
       ),
       child: Row(
         children: [
@@ -1137,7 +1143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           borderRadius: BorderRadius.circular(3),
                           color: AppColors.primary.withValues(alpha: 0.2),
                         ),
-                        child: const Text('YOU', style: TextStyle(fontSize: 7.5, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        child: Text('YOU', style: TextStyle(fontSize: 7.5, color: AppColors.primary, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ],
@@ -1184,7 +1190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     userRole.badgeLabel,
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: userRole == UserRole.admin ? AppColors.primary : AppColors.onlineMint,
                     ),
@@ -1210,7 +1216,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: userRole == UserRole.admin ? FontWeight.bold : FontWeight.normal,
-                        color: userRole == UserRole.admin ? AppColors.primary : Colors.white,
+                        color: userRole == UserRole.admin ? AppColors.primary : AppColors.onSurface,
                       ),
                     ),
                   ],
@@ -1227,7 +1233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: userRole == UserRole.teacher ? FontWeight.bold : FontWeight.normal,
-                        color: userRole == UserRole.teacher ? AppColors.onlineMint : Colors.white,
+                        color: userRole == UserRole.teacher ? AppColors.onlineMint : AppColors.onSurface,
                       ),
                     ),
                   ],
@@ -1236,11 +1242,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'reassign_dept',
-                child: const Row(
+                child: Row(
                   children: [
                     Icon(Icons.domain_rounded, size: 16, color: AppColors.secondaryLight),
                     SizedBox(width: 8),
-                    Text('Reassign Department', style: TextStyle(fontSize: 12, color: Colors.white)),
+                    Text('Reassign Department', style: TextStyle(fontSize: 12, color: AppColors.onSurface)),
                   ],
                 ),
               ),
@@ -1288,14 +1294,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
             return AlertDialog(
-              backgroundColor: AppColors.surfaceContainerHigh,
+              backgroundColor: AppColors.sheet,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
               title: Row(
                 children: [
-                  const Icon(Icons.domain_rounded, color: AppColors.primary),
+                  Icon(Icons.domain_rounded, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1392,9 +1398,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               color: AppColors.surfaceContainerHigh,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppColors.overlay(0.08)),
             ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.primary),
+            child: Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.primary),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -1404,7 +1410,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(
               children: [
                 Text('Root', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
-                const Icon(Icons.chevron_right, size: 12, color: AppColors.outline),
+                Icon(Icons.chevron_right, size: 12, color: AppColors.outline),
                 Text('System', style: AppTypography.labelSm(color: AppColors.primary)),
               ],
             ),
@@ -1420,12 +1426,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               color: AppColors.surfaceContainerLow,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppColors.overlay(0.08)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const PulsingBeacon(size: 6, color: AppColors.onlineMint),
+                PulsingBeacon(size: 6, color: AppColors.onlineMint),
                 const SizedBox(width: 6),
                 Text(
                   'SYS:OK',
@@ -1509,7 +1515,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.edit, size: 16, color: AppColors.primary),
+                                  icon: Icon(Icons.edit, size: 16, color: AppColors.primary),
                                   tooltip: 'Modify Name',
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
@@ -1529,7 +1535,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Divider(color: Colors.white10, height: 1),
+                  Divider(color: AppColors.overlay(0.10), height: 1),
                   const SizedBox(height: 10),
                   // Full-width Meta / Badges Bar
                   Row(
@@ -1542,12 +1548,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: AppColors.surfaceContainerLowest,
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                            border: Border.all(color: AppColors.overlay(0.1)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.domain_rounded, size: 12, color: AppColors.secondaryLight),
+                              Icon(Icons.domain_rounded, size: 12, color: AppColors.secondaryLight),
                               const SizedBox(width: 5),
                               Flexible(
                                 child: Text(
@@ -1623,7 +1629,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   await AuthState().setUserRole(UserRole.admin);
                   setState(() {});
                   messenger.showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Switched to Administrator Mode. Full console and role management unlocked.'),
                       backgroundColor: AppColors.primary,
                     ),
@@ -1644,7 +1650,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           borderRadius: BorderRadius.circular(8),
                           color: AppColors.primary.withValues(alpha: 0.15),
                         ),
-                        child: const Icon(Icons.admin_panel_settings_rounded, size: 16, color: AppColors.primary),
+                        child: Icon(Icons.admin_panel_settings_rounded, size: 16, color: AppColors.primary),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1662,7 +1668,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
                     ],
                   ),
                 ),
@@ -1678,7 +1684,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: AppColors.surfaceContainerLow,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(color: AppColors.overlay(0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1686,7 +1692,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
+                        Expanded(child: Row(
                           children: [
                             Icon(
                               AuthState().isAdmin ? Icons.admin_panel_settings_rounded : Icons.school_rounded,
@@ -1694,13 +1700,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
                             ),
                             const SizedBox(width: 8),
-                            Text(
+                            Flexible(child: Text(
                               'Active Console Role',
                               style: AppTypography.bodySm(color: AppColors.onSurface)
-                                  .copyWith(fontWeight: FontWeight.bold),
-                            ),
+                                  .copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis,
+                            )),
                           ],
-                        ),
+                        )),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
@@ -1713,7 +1719,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             AuthState().userRole.displayName,
                             style: AppTypography.labelSm(
                               color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
-                            ).copyWith(fontSize: 9, fontWeight: FontWeight.bold),
+                            ).copyWith(fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -1789,16 +1795,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                Expanded(child: Row(
                   children: [
-                    const Icon(Icons.hub, size: 16, color: AppColors.primary),
+                    Icon(Icons.hub, size: 16, color: AppColors.primary),
                     const SizedBox(width: 6),
-                    Text(
+                    Flexible(child: Text(
                       'NETWORK & MQTT GATEWAY',
-                      style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold),
-                    ),
+                      style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis,
+                    )),
                   ],
-                ),
+                )),
                 Text('CONTROLLER #01', style: AppTypography.labelSm(color: AppColors.outline)),
               ],
             ),
@@ -1810,7 +1816,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 color: AppColors.surfaceContainer,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: Border.all(color: AppColors.overlay(0.08)),
               ),
               child: Column(
                 children: [
@@ -1832,7 +1838,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
                           color: AppColors.surfaceContainerHigh,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                          border: Border.all(color: AppColors.overlay(0.08)),
                         ),
                         child: Row(
                           children: [
@@ -1853,7 +1859,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Divider(color: Colors.white.withValues(alpha: 0.06)),
+                  Divider(color: AppColors.overlay(0.06)),
                   const SizedBox(height: 10),
 
                   // Wi-Fi Connection Launcher Tile
@@ -1865,7 +1871,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Expanded(
                           child: Row(
                             children: [
-                              const Icon(Icons.wifi, size: 18, color: AppColors.primary),
+                              Icon(Icons.wifi, size: 18, color: AppColors.primary),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -1888,7 +1894,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text('CONFIGURE', style: AppTypography.labelSm(color: AppColors.primary)),
-                            const Icon(Icons.chevron_right, size: 14, color: AppColors.primary),
+                            Icon(Icons.chevron_right, size: 14, color: AppColors.primary),
                           ],
                         ),
                       ],
@@ -1896,7 +1902,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
 
                   const SizedBox(height: 12),
-                  Divider(color: Colors.white.withValues(alpha: 0.06)),
+                  Divider(color: AppColors.overlay(0.06)),
                   const SizedBox(height: 10),
 
                   // MQTT Hardware Mesh Bridge Tile
@@ -1908,7 +1914,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Expanded(
                           child: Row(
                             children: [
-                              const Icon(Icons.cloud_sync, size: 18, color: AppColors.secondary),
+                              Icon(Icons.cloud_sync, size: 18, color: AppColors.secondary),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -1916,7 +1922,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   children: [
                                     Row(
                                       children: [
-                                        Text('MQTT Hardware Mesh', style: AppTypography.bodyMd(fontSize: 13)),
+                                        Flexible(
+                                          child: Text(
+                                            'MQTT Hardware Mesh',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppTypography.bodyMd(fontSize: 13),
+                                          ),
+                                        ),
                                         const SizedBox(width: 8),
                                         PulsingBeacon(
                                           size: 5,
@@ -1953,7 +1966,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 color: MqttService().isConnected ? AppColors.primary : AppColors.secondary,
                               ),
                             ),
-                            const Icon(Icons.chevron_right, size: 14, color: AppColors.primary),
+                            Icon(Icons.chevron_right, size: 14, color: AppColors.primary),
                           ],
                         ),
                       ],
@@ -1961,7 +1974,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
 
                   const SizedBox(height: 12),
-                  Divider(color: Colors.white.withValues(alpha: 0.06)),
+                  Divider(color: AppColors.overlay(0.06)),
                   const SizedBox(height: 10),
 
                   // Class Session Auto-Sync Indicator (3 intervals in a 50-minute class session, zero manual buttons)
@@ -1971,7 +1984,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(Icons.sync_rounded, size: 18, color: AppColors.onlineMint),
+                            Icon(Icons.sync_rounded, size: 18, color: AppColors.onlineMint),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -2007,12 +2020,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const PulsingBeacon(color: AppColors.onlineMint, size: 5),
+                            PulsingBeacon(color: AppColors.onlineMint, size: 5),
                             const SizedBox(width: 5),
                             Text(
                               'AUTO',
                               style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(
-                                fontSize: 9,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,
                               ),
@@ -2028,13 +2041,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 20),
 
-            // Client Preferences
+            // Software & OTA Updates
             Row(
               children: [
-                const Icon(Icons.settings_applications, size: 16, color: AppColors.primary),
+                Icon(Icons.system_update_rounded, size: 16, color: AppColors.primary),
                 const SizedBox(width: 6),
                 Text(
-                  'CLIENT PREFERENCES',
+                  'SOFTWARE & OTA UPDATES',
                   style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -2042,143 +2055,103 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
 
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 color: AppColors.surfaceContainer,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: Border.all(color: AppColors.overlay(0.08)),
               ),
               child: Column(
                 children: [
-                  // Interface Visual Mode
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    'Interface Visual Mode',
-                                    style: AppTypography.bodyMd().copyWith(fontWeight: FontWeight.w500),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.lock, size: 12, color: AppColors.outline),
-                              ],
-                            ),
-                            Text(
-                              'Low-glare auditorium dark mode',
-                              style: AppTypography.bodySm(color: AppColors.onSurfaceVariant),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          color: AppColors.surfaceContainerLow,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const PulsingBeacon(size: 6, color: AppColors.secondary),
-                            const SizedBox(width: 6),
-                            Text(
-                              'DARK INDIGO',
-                              style: AppTypography.labelSm(color: AppColors.secondaryLight).copyWith(fontSize: 9),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(color: Colors.white.withValues(alpha: 0.06)),
-                  const SizedBox(height: 10),
-
-                  // Version info
+                  // Current App Version row
                   InkWell(
                     onTap: _showAppDetailsDialog,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Text('Firmware & App Version', style: AppTypography.bodySm(color: AppColors.onSurfaceVariant)),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.info_outline, size: 14, color: AppColors.secondaryLight),
-                            ],
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                            ),
+                            child: Icon(Icons.verified_rounded, size: 18, color: AppColors.primary),
                           ),
-                          Text(_appVersion, style: AppTypography.labelSm(color: AppColors.secondaryLight)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Installed Version',
+                                  style: AppTypography.bodyMd(color: AppColors.onSurface).copyWith(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  'Tap for developer & release details',
+                                  style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 11.5),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: AppColors.surfaceContainerHigh,
+                            ),
+                            child: Text(
+                              _appVersion,
+                              style: AppTypography.labelSm(color: AppColors.primary).copyWith(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Divider(color: Colors.white.withValues(alpha: 0.06)),
                   const SizedBox(height: 10),
+                  Divider(color: AppColors.overlay(0.07), height: 1),
+                  const SizedBox(height: 12),
 
-                  // OTA Software Update Section
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withValues(alpha: 0.12),
-                          AppColors.secondary.withValues(alpha: 0.06),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          spreadRadius: 1,
+                  // OTA Software Update Action Card
+                  Material(
+                    color: Colors.transparent,
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        color: AppColors.primary.withValues(alpha: AppColors.isDark ? 0.12 : 0.08),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.35),
+                          width: 1.2,
                         ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
+                      ),
                       child: InkWell(
                         onTap: () => CyberUpdateDialog.show(context),
                         borderRadius: BorderRadius.circular(14),
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           child: Row(
                             children: [
                               Container(
                                 width: 38,
                                 height: 38,
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.primary.withValues(alpha: 0.18),
-                                  border: Border.all(
-                                    color: AppColors.primary.withValues(alpha: 0.6),
-                                  ),
+                                  borderRadius: BorderRadius.circular(11),
+                                  color: AppColors.primary,
                                 ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.system_update_rounded,
-                                    color: AppColors.primary,
-                                    size: 20,
-                                  ),
+                                child: Icon(
+                                  Icons.cloud_download_rounded,
+                                  color: AppColors.onPrimary,
+                                  size: 20,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -2186,56 +2159,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'Check for Updates',
-                                          style: AppTypography.bodyMd(color: Colors.white).copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        const PulsingBeacon(size: 6, color: AppColors.onlineMint),
-                                      ],
+                                    Text(
+                                      'Check for Updates',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.bodyMd(color: AppColors.onSurface).copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'GitHub OTA release synchronizer',
+                                      'Install latest GitHub OTA APK release',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(
-                                        fontSize: 11,
+                                        fontSize: 11.5,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
-                                  color: AppColors.primary.withValues(alpha: 0.2),
-                                  border: Border.all(
-                                    color: AppColors.primary.withValues(alpha: 0.6),
-                                  ),
+                                  color: AppColors.primary,
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.cloud_sync_rounded,
-                                      size: 14,
-                                      color: AppColors.primary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'UPDATE',
-                                      style: AppTypography.labelSm(color: AppColors.primary).copyWith(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.8,
-                                      ),
-                                    ),
-                                  ],
+                                child: Text(
+                                  'UPDATE',
+                                  style: AppTypography.labelSm(color: AppColors.onPrimary).copyWith(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.6,
+                                  ),
                                 ),
                               ),
                             ],
@@ -2292,7 +2250,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.delete_sweep, size: 16, color: AppColors.error),
+                      Icon(Icons.delete_sweep, size: 16, color: AppColors.error),
                       const SizedBox(width: 8),
                       Text('Wipe All Classroom Records', style: AppTypography.bodySm(color: AppColors.error).copyWith(fontWeight: FontWeight.w500)),
                     ],
@@ -2317,7 +2275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.logout, size: 18, color: AppColors.error),
+                    Icon(Icons.logout, size: 18, color: AppColors.error),
                     const SizedBox(width: 8),
                     Text(
                       'Sign Out of ClassPulse Session',
@@ -2345,7 +2303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primary),
+                    Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primary),
                     const SizedBox(width: 8),
                     Text(
                       'App Details & Information',

@@ -1,134 +1,193 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
+/// Type scale. Two families, both bundled with the app (see `pubspec.yaml`)
+/// so text renders identically offline and never reflows after a late font
+/// download:
+///
+///  * Space Grotesk — headlines and large numerals.
+///  * Inter — body copy and UI labels.
+///
+/// A colour left unset resolves against the active palette at call time.
 class AppTypography {
-  // Headlines: Space Grotesk
+  AppTypography._();
+
+  static const String headlineFamily = 'SpaceGrotesk';
+  static const String bodyFamily = 'Inter';
+
+  static TextStyle _style({
+    required String family,
+    required double size,
+    required FontWeight weight,
+    required Color color,
+    double letterSpacing = 0,
+    double height = 1.3,
+  }) {
+    return TextStyle(
+      fontFamily: family,
+      fontSize: size,
+      fontWeight: weight,
+      letterSpacing: letterSpacing,
+      height: height,
+      // Centre glyphs in their line box so text sits optically centred in
+      // chips, pills and buttons instead of riding high.
+      leadingDistribution: TextLeadingDistribution.even,
+      color: color,
+    );
+  }
+
+  // --- Headlines: Space Grotesk ---
+
   static TextStyle displayLg({
-    Color color = AppColors.onSurface,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.spaceGrotesk(
-      fontSize: fontSize ?? 38,
-      fontWeight: fontWeight ?? FontWeight.w700,
-      letterSpacing: -0.02 * (fontSize ?? 38),
-      color: color,
+    final size = fontSize ?? 38;
+    return _style(
+      family: headlineFamily,
+      size: size,
+      weight: fontWeight ?? FontWeight.w700,
+      letterSpacing: -0.02 * size,
+      height: 1.15,
+      color: color ?? AppColors.onSurface,
     );
   }
 
   static TextStyle headlineLg({
-    Color color = AppColors.onSurface,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.spaceGrotesk(
-      fontSize: fontSize ?? 26,
-      fontWeight: fontWeight ?? FontWeight.w600,
-      letterSpacing: -0.01 * (fontSize ?? 26),
-      color: color,
+    final size = fontSize ?? 26;
+    return _style(
+      family: headlineFamily,
+      size: size,
+      weight: fontWeight ?? FontWeight.w600,
+      letterSpacing: -0.01 * size,
+      height: 1.2,
+      color: color ?? AppColors.onSurface,
     );
   }
 
   static TextStyle headlineMd({
-    Color color = AppColors.onSurface,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.spaceGrotesk(
-      fontSize: fontSize ?? 20,
-      fontWeight: fontWeight ?? FontWeight.w600,
-      letterSpacing: -0.01 * (fontSize ?? 20),
-      color: color,
+    final size = fontSize ?? 20;
+    return _style(
+      family: headlineFamily,
+      size: size,
+      weight: fontWeight ?? FontWeight.w600,
+      letterSpacing: -0.01 * size,
+      height: 1.25,
+      color: color ?? AppColors.onSurface,
     );
   }
 
   static TextStyle headlineSm({
-    Color color = AppColors.onSurface,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.spaceGrotesk(
-      fontSize: fontSize ?? 16,
-      fontWeight: fontWeight ?? FontWeight.w500,
-      color: color,
+    return _style(
+      family: headlineFamily,
+      size: fontSize ?? 16,
+      weight: fontWeight ?? FontWeight.w500,
+      height: 1.25,
+      color: color ?? AppColors.onSurface,
     );
   }
 
-  // Body: Geist / Inter fallback
+  // --- Body: Inter ---
+
   static TextStyle bodyLg({
-    Color color = AppColors.onSurface,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.inter(
-      fontSize: fontSize ?? 16,
-      fontWeight: fontWeight ?? FontWeight.w400,
-      color: color,
+    return _style(
+      family: bodyFamily,
+      size: fontSize ?? 16,
+      weight: fontWeight ?? FontWeight.w400,
+      height: 1.4,
+      color: color ?? AppColors.onSurface,
     );
   }
 
   static TextStyle bodyMd({
-    Color color = AppColors.onSurface,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.inter(
-      fontSize: fontSize ?? 14,
-      fontWeight: fontWeight ?? FontWeight.w400,
-      color: color,
+    return _style(
+      family: bodyFamily,
+      size: fontSize ?? 14,
+      weight: fontWeight ?? FontWeight.w400,
+      height: 1.4,
+      color: color ?? AppColors.onSurface,
     );
   }
 
   static TextStyle bodySm({
-    Color color = AppColors.onSurfaceVariant,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.inter(
-      fontSize: fontSize ?? 12,
-      fontWeight: fontWeight ?? FontWeight.w400,
-      color: color,
+    return _style(
+      family: bodyFamily,
+      size: fontSize ?? 12,
+      weight: fontWeight ?? FontWeight.w400,
+      height: 1.4,
+      color: color ?? AppColors.onSurfaceVariant,
     );
   }
 
-  // Telemetry & Technical: JetBrains Mono
+  // --- Labels: Inter, semi-bold, lightly tracked ---
+
   static TextStyle labelLg({
-    Color color = AppColors.primary,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.jetBrainsMono(
-      fontSize: fontSize ?? 13,
-      fontWeight: fontWeight ?? FontWeight.w600,
-      letterSpacing: 0.04 * (fontSize ?? 13),
-      color: color,
+    return _style(
+      family: bodyFamily,
+      size: fontSize ?? 13,
+      weight: fontWeight ?? FontWeight.w600,
+      letterSpacing: 0.15,
+      height: 1.25,
+      color: color ?? AppColors.primary,
     );
   }
 
   static TextStyle labelMd({
-    Color color = AppColors.onSurfaceVariant,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.jetBrainsMono(
-      fontSize: fontSize ?? 11,
-      fontWeight: fontWeight ?? FontWeight.w500,
-      letterSpacing: 0.06 * (fontSize ?? 11),
-      color: color,
+    return _style(
+      family: bodyFamily,
+      size: fontSize ?? 12,
+      weight: fontWeight ?? FontWeight.w600,
+      letterSpacing: 0.2,
+      height: 1.25,
+      color: color ?? AppColors.onSurfaceVariant,
     );
   }
 
   static TextStyle labelSm({
-    Color color = AppColors.onSurfaceVariant,
+    Color? color,
     double? fontSize,
     FontWeight? fontWeight,
   }) {
-    return GoogleFonts.jetBrainsMono(
-      fontSize: fontSize ?? 10,
-      fontWeight: fontWeight ?? FontWeight.w500,
-      letterSpacing: 0.08 * (fontSize ?? 10),
-      color: color,
+    return _style(
+      family: bodyFamily,
+      size: fontSize ?? 11,
+      weight: fontWeight ?? FontWeight.w600,
+      letterSpacing: 0.25,
+      height: 1.25,
+      color: color ?? AppColors.onSurfaceVariant,
     );
   }
 }

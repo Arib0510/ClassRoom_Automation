@@ -182,9 +182,7 @@ class MqttService {
   void _onConnected() {
     debugPrint('[MQTT] Connected successfully to $_broker:$_port');
     _setStatus(MqttConnectionStatus.connected);
-    // 1. Purge any stale retained messages from public broker to eliminate ghost toggles
-    clearLegacyRetainedStatus();
-    // 2. Query actual live hardware states from all active ESP32 switchboards
+    // Query live hardware states from all active ESP32 switchboards & Dual-AC
     Timer(const Duration(milliseconds: 350), () {
       requestHardwareSync();
     });
@@ -264,6 +262,8 @@ class MqttService {
     _client!.subscribe('$_baseTopic/+/+/discovery', MqttQos.atLeastOnce);
     _client!.subscribe('home/+/relay/+/status', MqttQos.atLeastOnce);
     _client!.subscribe('home/zone_ac/status', MqttQos.atLeastOnce);
+    _client!.subscribe('$_baseTopic/+/vision/control', MqttQos.atLeastOnce);
+    _client!.subscribe('classpulse/+/vision/control', MqttQos.atLeastOnce);
 
     // 2. Listen strictly to physical switchboard telemetry & relay status channels (Relays 1-8)
     _client!.subscribe('$_baseTopic/+/zone/+/status', MqttQos.atLeastOnce);
@@ -309,8 +309,10 @@ class MqttService {
         // Stale messages lingering on the public EMQX broker must NEVER overwrite
         // active user states or mimic phantom hardware toggles.
         if (isRetained) {
-          debugPrint('[MQTT] Discarding stale retained broker message on $topic - purging from broker');
-          _publish(topic, '', retain: true);
+          if (payload.isNotEmpty) {
+            debugPrint('[MQTT] Discarding stale retained broker message on $topic - purging from broker');
+            _publish(topic, '', retain: true);
+          }
           continue;
         }
 
@@ -824,6 +826,7 @@ class MqttService {
   void publishZoneAll(String roomId, int boardId, bool turnOn) {
     final payload = turnOn ? 'ALL_ON' : 'ALL_OFF';
     _publishToRoom(roomId, 'zone/$boardId/command/all', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publish('home/zone_$boardId/command/all', payload, retain: false, qos: MqttQos.atMostOnce);
   }
 
   // 3. Adjust Fan Speed with Board Isolation
@@ -837,6 +840,7 @@ class MqttService {
       'speed': speed,
     });
     _publishToRoom(roomId, 'zone/$boardId/relay/$relayNumber', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publish('home/zone_$boardId/relay/$relayNumber', payload, retain: false, qos: MqttQos.atMostOnce);
   }
 
   // 4. Adjust Light Brightness with Board Isolation
@@ -851,17 +855,35 @@ class MqttService {
     });
     // Throttled to prevent flooding ESP32 PWM during continuous touch drag
     _publishThrottledToRoom(roomId, 'zone/$boardId/relay/$relayNumber', payload, duration: const Duration(milliseconds: 75), retain: false);
+    _publishThrottled('home/zone_$boardId/relay/$relayNumber', payload, duration: const Duration(milliseconds: 75), retain: false);
   }
 
   // 5. Global All On / All Off for Entire Room
   void publishAllDevices(String roomId, bool allOn) {
     final payload = allOn ? 'ALL_ON' : 'ALL_OFF';
     _publishToRoom(roomId, 'command/all', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publish('home/command/all', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publish('home/zone_ac/command/all', payload, retain: false, qos: MqttQos.atMostOnce);
   }
 
   // 6. Emergency Cutoff / Trip All Relays
   void publishEmergencyCutoff(String roomId, bool cutoff) {
-    _publishToRoom(roomId, 'command/emergency', cutoff ? 'CUTOFF' : 'RESTORE');
+    final payload = cutoff ? 'CUTOFF' : 'RESTORE';
+    _publishToRoom(roomId, 'command/emergency', payload);
+    _publish('home/command/emergency', payload);
+  }
+
+  // 6b. Toggle Vision Control vs Direct App Control on Pi Vision Model
+  void publishVisionControl(String roomId, bool enabled) {
+    final payload = jsonEncode({
+      'room': roomId,
+      'vision_control': enabled,
+      'mode': enabled ? 'VISION' : 'MANUAL',
+      'sent_at_unix_ms': DateTime.now().millisecondsSinceEpoch,
+    });
+    _publishToRoom(roomId, 'vision/control', payload, retain: false, qos: MqttQos.atLeastOnce);
+    _publish('classpulse/$roomId/vision/control', payload, retain: false, qos: MqttQos.atLeastOnce);
+    _publish('home/vision/control', payload, retain: false, qos: MqttQos.atLeastOnce);
   }
 
   // 7. Remote Customizable GPIO Configuration (OTA Pin Remapping)

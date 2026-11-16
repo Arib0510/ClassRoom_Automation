@@ -49,7 +49,7 @@
 
 struct AcUnitState {
   int      unitId;      // 1 or 2
-  uint16_t irPin;       // GPIO 33 (AC 1) or GPIO 13 (AC 2)
+  uint16_t irPin;       // GPIO 33 (AC 1) or GPIO 12 (AC 2)
   bool     isOn;
   int      temperature; // 16 - 30 °C
   String   mode;        // "COOL", "AUTO", "DRY", "FAN", "HEAT"
@@ -109,7 +109,7 @@ public:
     doc["protocol"]    = "GREE";
     doc["ac_count"]    = 2;
     doc["ac1_gpio"]    = units[0].irPin;   // GPIO 33
-    doc["ac2_gpio"]    = units[1].irPin;   // GPIO 13
+    doc["ac2_gpio"]    = units[1].irPin;   // GPIO 12
     doc["ac1_state"]   = units[0].isOn ? "ON" : "OFF";
     doc["ac2_state"]   = units[1].isOn ? "ON" : "OFF";
     doc["status"]      = "ONLINE";
@@ -223,12 +223,12 @@ public:
     }
   }
 
-  // Handles MQTT AC command for Unit 1 (GPIO 33), Unit 2 (GPIO 13), or Both (targetUnit = 0)
+  // Handles MQTT AC command for Unit 1 (GPIO 33), Unit 2 (GPIO 12), or Both (targetUnit = 0)
   void handleCommand(
     String msg,
     PubSubClient* mqtt = nullptr,
     const char* classroomId = "reb_room_301",
-    int defaultUnit = 0 // 0 = infer from payload (or apply to both if unspecified), 1 = AC #1 (GPIO 33), 2 = AC #2 (GPIO 13)
+    int defaultUnit = 0 // 0 = infer from payload (or apply to both if unspecified), 1 = AC #1 (GPIO 33), 2 = AC #2 (GPIO 12)
   ) {
     int targetUnit = defaultUnit;
 
@@ -238,7 +238,7 @@ public:
       if (!err) {
         JsonVariant src = doc["ac"].is<JsonObject>() ? doc["ac"] : doc.as<JsonVariant>();
 
-        // Determine whether this command targets AC #1 (GPIO 33) or AC #2 (GPIO 13)
+        // Determine whether this command targets AC #1 (GPIO 33) or AC #2 (GPIO 12)
         int gpio = src["gpio"] | (doc["gpio"] | 0);
         int acUnit = src["ac_unit"] | (doc["ac_unit"] | 0);
         int zone = src["zone"] | (doc["zone"] | 0);
