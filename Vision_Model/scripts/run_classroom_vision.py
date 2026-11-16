@@ -1,7 +1,7 @@
-"""ClassPulse Classroom Vision & Multi-Zone Decision Controller (Pi 5 4GB Optimized).
+"""ClassPulse Classroom Vision & Multi-Zone Decision Controller (Pi 5 8GB Optimized).
 
 Features:
-  • Zero-Lag Dual-Thread Pipeline for Raspberry Pi 5 (4GB RAM):
+  • Zero-Lag Dual-Thread Pipeline for Raspberry Pi 5 (8GB RAM):
       - Thread 1: High-speed Camera Capture & 25-30 FPS MJPEG Web Streamer
       - Thread 2: Asynchronous YOLOv8 Inference (trained on Pi_5_Images) + Motion Gate
   • True-Color Picamera2 Pipeline:
@@ -34,7 +34,7 @@ from urllib.parse import parse_qs, urlparse
 import cv2
 import numpy as np
 
-# Optimize OpenCV thread count for Raspberry Pi 5 (4GB) 4-core CPU
+# Optimize OpenCV thread count for Raspberry Pi 5 (8GB) 4-core CPU
 try:
     cv2.setNumThreads(2)
 except Exception:
@@ -46,6 +46,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.ac_control import ClassroomACController
 from src.classroom_tracker import ClassroomMotionTracker, TrackedPerson
+from src.offline_diagnostics import class_names, resolve_model_path
 
 try:
     import paho.mqtt.client as mqtt
@@ -312,7 +313,7 @@ PREVIEW_HTML = """<!DOCTYPE html>
   <div class="header">
     <div class="title">
       <div class="pulse-dot"></div>
-      ClassPulse Pi 5 Multi-Zone Vision Hub (Zero-Lag 4GB Edition)
+      ClassPulse Pi 5 Multi-Zone Vision Hub (Zero-Lag 8GB Edition)
     </div>
     <div class="badges">
       <span class="badge badge-res" id="res_tag">640x480 4:3</span>
@@ -380,7 +381,7 @@ PREVIEW_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="footer-note">
-    Raspberry Pi 5 (4GB) Decoupled Pipeline &bull; True-Color BGR Native &bull; Protocol: classroom-control-v1
+    Raspberry Pi 5 (8GB) Decoupled Pipeline &bull; True-Color BGR Native &bull; Protocol: classroom-control-v1
   </div>
 
   <script>
@@ -639,7 +640,7 @@ class ThreadedPreviewServer(ThreadingHTTPServer):
 
 
 # ============================================================================
-# Main Multi-Zone Controller (Pi 5 4GB Decoupled Architecture)
+# Main Multi-Zone Controller (Pi 5 8GB Decoupled Architecture)
 # ============================================================================
 class ClassroomVisionController:
     def __init__(
@@ -701,6 +702,9 @@ class ClassroomVisionController:
         self.imgsz = imgsz
         self.flip_180 = flip_180
         self.picam2 = None
+        # Resolve before any preview or MQTT setup so a missing explicit model
+        # path fails without starting another runtime component.
+        self.model_path = self._resolve_model(model_path)
 
         self.session_id = f"sess_{uuid.uuid4().hex[:8]}"
         self.command_seq = 1
@@ -786,7 +790,7 @@ class ClassroomVisionController:
         if self.preview_port > 0:
             self._start_preview_server()
 
-        # Limit PyTorch CPU threads on Pi 5 (4GB) so camera & web server never lag
+        # Limit PyTorch CPU threads on Pi 5 (8GB) so camera & web server never lag
         try:
             import torch
             torch.set_num_threads(min(3, max(1, (os.cpu_count() or 4) - 1)))
@@ -794,12 +798,13 @@ class ClassroomVisionController:
             pass
 
         # Resolve Model Path (Prioritizing newly trained Pi_5_Images classroom model)
-        self.model_path = self._resolve_model(model_path)
         model_sha = self._file_sha256(self.model_path)
         LOG.info(f"Loading Classroom Vision Model: {self.model_path.name} ({self.model_path})")
-        LOG.info(f"Model SHA256: {model_sha[:16]}...")
+        LOG.info(f"Model SHA256: {model_sha}")
         from ultralytics import YOLO
         self.model = YOLO(str(self.model_path))
+        self.model_class_names = class_names(self.model)
+        LOG.info("Model class names: %s", self.model_class_names)
 
         # Setup MQTT
         self.setup_mqtt()
@@ -813,26 +818,8 @@ class ClassroomVisionController:
             return "unknown"
 
     def _resolve_model(self, candidate: str) -> Path:
-        if candidate and candidate not in ("auto", "yolov8n.pt"):
-            custom_candidates = [Path(candidate), ROOT / candidate]
-            for c in custom_candidates:
-                if c.exists() and c.is_file():
-                    return c.resolve()
-
-        # Priority order: Trained classroom model first, then base yolov8n
-        paths_to_check = [
-            ROOT / "models/classroom_yolo_best.pt",
-            ROOT / "yolov8n_classroom.pt",
-            ROOT / "runs/train/classroom_person_detector/weights/best.pt",
-            ROOT / "models/classroom_yolo_best.onnx",
-            ROOT / "runs/train/classroom_person_detector/weights/best.onnx",
-            Path(candidate) if candidate != "auto" else ROOT / "yolov8n.pt",
-            ROOT / "yolov8n.pt",
-        ]
-        for p in paths_to_check:
-            if p.exists() and p.is_file():
-                return p.resolve()
-        return ROOT / "yolov8n.pt"
+        # Only the literal auto selector may choose another model.
+        return resolve_model_path(candidate)
 
     def set_camera_awb(self, mode: str):
         if self.picam2 is None:
@@ -1168,7 +1155,7 @@ class ClassroomVisionController:
             # 1. Fast Motion Pre-Check (<0.5ms)
             has_motion, _, _ = self.motion_filter.check_motion(frame)
 
-            # Smart scheduling for Pi 5 (4GB):
+            # Smart scheduling for Pi 5 (8GB):
             # Run at full speed when motion is present; run at 3 Hz (every 0.33s) when motionless
             # so stationary students are never dropped while keeping CPU cool and responsive.
             if not has_motion and (now_mono - last_yolo_time) < 0.33:
@@ -1590,7 +1577,7 @@ class ClassroomVisionController:
                     # CRITICAL COLOR & LATENCY FIX FOR RASPBERRY PI 5:
                     # 1. format="RGB888" in Picamera2 outputs [B, G, R] bytes in memory (native OpenCV BGR).
                     #    Never use "BGR888" or cvtColor(COLOR_RGB2BGR), which swaps Red and Blue!
-                    # 2. buffer_count=2, queue=False guarantees zero frame lag and low RAM usage on 4GB Pi 5.
+                    # 2. buffer_count=2, queue=False guarantees zero frame lag and low RAM usage on 8GB Pi 5.
                     picam2_config = self.picam2.create_video_configuration(
                         main={"size": (self.cam_width, self.cam_height), "format": "RGB888"},
                         buffer_count=2,
@@ -1615,7 +1602,7 @@ class ClassroomVisionController:
                 cap.set(cv2.CAP_PROP_FPS, self.target_fps)
 
         LOG.info("=" * 64)
-        LOG.info("  ClassPulse Pi 5 (4GB) Zero-Lag Vision & Decision Loop Active")
+        LOG.info("  ClassPulse Pi 5 (8GB) Zero-Lag Vision & Decision Loop Active")
         LOG.info(f"  Classroom:        {self.room_id}")
         LOG.info(f"  Model:            {self.model_path.name}")
         LOG.info(f"  Front Zone Board: {self.front_board_id} (Zone 1)")
@@ -1803,7 +1790,7 @@ class ClassroomVisionController:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ClassPulse Pi 5 (4GB) Multi-Zone Classroom Vision Controller")
+    parser = argparse.ArgumentParser(description="ClassPulse Pi 5 (8GB) Multi-Zone Classroom Vision Controller")
     parser.add_argument(
         "--model",
         default="auto",

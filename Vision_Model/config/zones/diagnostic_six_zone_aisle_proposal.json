@@ -1,0 +1,1158 @@
+{
+  "schema": "image_zone_definition_proposal",
+  "schema_version": 2,
+  "status": "provisional_aisle_edge_proposal_needs_review",
+  "diagnostic_only": true,
+  "physical_floor_calibration": false,
+  "reference": {
+    "file": "reference_raw.png",
+    "file_name": "reference_raw.png",
+    "sha256": "6e89484650e73b3474bf60caf92f8c1478b41a86e05cce25126785dba1a8d96b",
+    "width": 1920,
+    "height": 1440,
+    "aspect_ratio": 1.333333333,
+    "coordinate_system": "original_image_pixels_and_normalized_xy"
+  },
+  "source_svg": {
+    "file": "config\\zones\\zone_layout.svg",
+    "file_name": "zone_layout.svg",
+    "sha256": "dd6aa2693b00e2924209eeb9d4a269a1980819ffe7f4a18070f77e5b602a67de",
+    "viewBox": [
+      0.0,
+      0.0,
+      2145.45,
+      1440.0
+    ],
+    "embedded_image": {
+      "width": 1920.0,
+      "height": 1440.0,
+      "x": 101.68,
+      "y": 0.0,
+      "transform": "translate(101.68)"
+    },
+    "svg_to_image": {
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "offset_x": -101.68,
+      "offset_y": -0.0,
+      "formula": "x_image=(x_svg-101.68), y_image=y_svg"
+    },
+    "source_polygons_svg": [
+      [
+        [
+          14.71,
+          1169.24
+        ],
+        [
+          485.92,
+          1288.94
+        ],
+        [
+          1058.65,
+          1313.18
+        ],
+        [
+          1045.01,
+          885.91
+        ],
+        [
+          355.62,
+          873.79
+        ]
+      ],
+      [
+        [
+          1070.77,
+          1319.24
+        ],
+        [
+          1055.62,
+          876.82
+        ],
+        [
+          1779.86,
+          846.52
+        ],
+        [
+          2129.86,
+          1108.64
+        ],
+        [
+          1661.68,
+          1238.94
+        ]
+      ],
+      [
+        [
+          355.62,
+          866.21
+        ],
+        [
+          557.13,
+          729.85
+        ],
+        [
+          1041.98,
+          720.76
+        ],
+        [
+          1048.04,
+          861.67
+        ]
+      ],
+      [
+        [
+          1054.1,
+          719.24
+        ],
+        [
+          1061.68,
+          863.18
+        ],
+        [
+          1763.19,
+          832.88
+        ],
+        [
+          1548.04,
+          716.21
+        ]
+      ],
+      [
+        [
+          566.0,
+          723.38
+        ],
+        [
+          658.94,
+          669.26
+        ],
+        [
+          1045.32,
+          660.4
+        ],
+        [
+          1043.96,
+          713.17
+        ],
+        [
+          568.04,
+          721.68
+        ]
+      ],
+      [
+        [
+          1052.81,
+          712.49
+        ],
+        [
+          1054.51,
+          659.04
+        ],
+        [
+          1426.25,
+          660.06
+        ],
+        [
+          1546.08,
+          707.72
+        ]
+      ]
+    ],
+    "conversion_note": "All stored polygon_px coordinates are source SVG polygon coordinates translated by (-101.68, 0); no marked PNG coordinates were used."
+  },
+  "assignment": {
+    "anchor_policy_default": "bottom_center",
+    "supported_anchor_policies": [
+      "center",
+      "bottom_center"
+    ],
+    "boundary_tolerance_px": 12,
+    "boundary_tolerance_reference_px": 12,
+    "tolerance_scaling": "reference_pixels * sqrt((frame_width/reference_width)*(frame_height/reference_height))",
+    "track_history_enabled": true,
+    "track_rule": "retain previous zone when the current assignment point is within the tolerance band and a track history exists",
+    "no_history_tie_break": [
+      "Z1",
+      "Z3",
+      "Z5",
+      "Z2",
+      "Z4",
+      "Z6"
+    ],
+    "aisle_ownership": "right_zones",
+    "outside_label": "outside_zone",
+    "uncertain_label": "boundary_ambiguous"
+  },
+  "sync_groups": [
+    {
+      "id": "shared_vertex_0",
+      "vertices": [
+        {
+          "zone": "Z6",
+          "index": 1
+        },
+        {
+          "zone": "Z5",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "shared_vertex_1",
+      "vertices": [
+        {
+          "zone": "Z6",
+          "index": 2
+        },
+        {
+          "zone": "Z5",
+          "index": 3
+        },
+        {
+          "zone": "Z4",
+          "index": 1
+        },
+        {
+          "zone": "Z3",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "shared_vertex_2",
+      "vertices": [
+        {
+          "zone": "Z6",
+          "index": 3
+        },
+        {
+          "zone": "Z4",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "shared_vertex_3",
+      "vertices": [
+        {
+          "zone": "Z5",
+          "index": 2
+        },
+        {
+          "zone": "Z3",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "shared_vertex_4",
+      "vertices": [
+        {
+          "zone": "Z4",
+          "index": 2
+        },
+        {
+          "zone": "Z3",
+          "index": 3
+        },
+        {
+          "zone": "Z2",
+          "index": 1
+        },
+        {
+          "zone": "Z1",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "shared_vertex_5",
+      "vertices": [
+        {
+          "zone": "Z4",
+          "index": 3
+        },
+        {
+          "zone": "Z2",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "shared_vertex_6",
+      "vertices": [
+        {
+          "zone": "Z3",
+          "index": 2
+        },
+        {
+          "zone": "Z1",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "shared_vertex_7",
+      "vertices": [
+        {
+          "zone": "Z2",
+          "index": 2
+        },
+        {
+          "zone": "Z1",
+          "index": 4
+        }
+      ]
+    }
+  ],
+  "zones": [
+    {
+      "id": "Z1",
+      "band": "near",
+      "side": "right",
+      "appliance": {
+        "esp32": "ESP32 1",
+        "fan": "F1",
+        "light": "L1",
+        "shared": "B1",
+        "shared_condition": "Z1 OR Z2"
+      },
+      "source_polygon_px": [
+        [
+          969.09,
+          1319.24
+        ],
+        [
+          953.94,
+          876.82
+        ],
+        [
+          1678.18,
+          846.52
+        ],
+        [
+          2028.18,
+          1108.64
+        ],
+        [
+          1560.0,
+          1238.94
+        ]
+      ],
+      "polygon_px": [
+        [
+          830.0,
+          875.0
+        ],
+        [
+          1678.18,
+          846.52
+        ],
+        [
+          2028.18,
+          1108.64
+        ],
+        [
+          1560.0,
+          1238.94
+        ],
+        [
+          810.0,
+          1313.0
+        ]
+      ],
+      "polygon_norm": [
+        [
+          0.432291667,
+          0.607638889
+        ],
+        [
+          0.874052083,
+          0.587861111
+        ],
+        [
+          1.05634375,
+          0.769888889
+        ],
+        [
+          0.8125,
+          0.860375
+        ],
+        [
+          0.421875,
+          0.911805556
+        ]
+      ],
+      "diagnostic_clipped_polygon_px": [
+        [
+          830.0,
+          875.0
+        ],
+        [
+          1678.18,
+          846.52
+        ],
+        [
+          1920,
+          1027.622
+        ],
+        [
+          1920,
+          1138.748
+        ],
+        [
+          1560.0,
+          1238.94
+        ],
+        [
+          810.0,
+          1313.0
+        ]
+      ],
+      "source_polygon_index": 2
+    },
+    {
+      "id": "Z2",
+      "band": "near",
+      "side": "left",
+      "appliance": {
+        "esp32": "ESP32 1",
+        "fan": "F2",
+        "light": "L2",
+        "shared": "B1",
+        "shared_condition": "Z1 OR Z2"
+      },
+      "source_polygon_px": [
+        [
+          -86.97,
+          1169.24
+        ],
+        [
+          969.09,
+          1319.24
+        ],
+        [
+          953.94,
+          876.82
+        ],
+        [
+          943.33,
+          885.91
+        ],
+        [
+          253.94,
+          873.79
+        ]
+      ],
+      "polygon_px": [
+        [
+          253.94,
+          873.79
+        ],
+        [
+          830.0,
+          875.0
+        ],
+        [
+          810.0,
+          1313.0
+        ],
+        [
+          384.24,
+          1288.94
+        ],
+        [
+          -86.97,
+          1169.24
+        ]
+      ],
+      "polygon_norm": [
+        [
+          0.132260417,
+          0.606798611
+        ],
+        [
+          0.432291667,
+          0.607638889
+        ],
+        [
+          0.421875,
+          0.911805556
+        ],
+        [
+          0.200125,
+          0.895097222
+        ],
+        [
+          -0.045296875,
+          0.811972222
+        ]
+      ],
+      "diagnostic_clipped_polygon_px": [
+        [
+          0,
+          1093.867
+        ],
+        [
+          253.94,
+          873.79
+        ],
+        [
+          830.0,
+          875.0
+        ],
+        [
+          810.0,
+          1313.0
+        ],
+        [
+          384.24,
+          1288.94
+        ],
+        [
+          0,
+          1191.333
+        ]
+      ],
+      "source_polygon_index": 1
+    },
+    {
+      "id": "Z3",
+      "band": "middle",
+      "side": "right",
+      "appliance": {
+        "esp32": "ESP32 2",
+        "fan": "F3",
+        "light": "L3",
+        "shared": "B2",
+        "shared_condition": "Z3 OR Z4"
+      },
+      "source_polygon_px": [
+        [
+          952.42,
+          719.24
+        ],
+        [
+          960.0,
+          863.18
+        ],
+        [
+          1661.51,
+          832.88
+        ],
+        [
+          1446.36,
+          716.21
+        ]
+      ],
+      "polygon_px": [
+        [
+          880.0,
+          713.0
+        ],
+        [
+          1444.4,
+          707.72
+        ],
+        [
+          1678.18,
+          846.52
+        ],
+        [
+          830.0,
+          875.0
+        ]
+      ],
+      "polygon_norm": [
+        [
+          0.458333333,
+          0.495138889
+        ],
+        [
+          0.752291667,
+          0.491472222
+        ],
+        [
+          0.874052083,
+          0.587861111
+        ],
+        [
+          0.432291667,
+          0.607638889
+        ]
+      ],
+      "diagnostic_clipped_polygon_px": [
+        [
+          880.0,
+          713.0
+        ],
+        [
+          1444.4,
+          707.72
+        ],
+        [
+          1678.18,
+          846.52
+        ],
+        [
+          830.0,
+          875.0
+        ]
+      ],
+      "source_polygon_index": 4
+    },
+    {
+      "id": "Z4",
+      "band": "middle",
+      "side": "left",
+      "appliance": {
+        "esp32": "ESP32 2",
+        "fan": "F4",
+        "light": "L4",
+        "shared": "B2",
+        "shared_condition": "Z3 OR Z4"
+      },
+      "source_polygon_px": [
+        [
+          253.94,
+          866.21
+        ],
+        [
+          455.45,
+          729.85
+        ],
+        [
+          952.42,
+          719.24
+        ],
+        [
+          960.0,
+          863.18
+        ]
+      ],
+      "polygon_px": [
+        [
+          466.36,
+          721.68
+        ],
+        [
+          880.0,
+          713.0
+        ],
+        [
+          830.0,
+          875.0
+        ],
+        [
+          253.94,
+          873.79
+        ]
+      ],
+      "polygon_norm": [
+        [
+          0.242895833,
+          0.501166667
+        ],
+        [
+          0.458333333,
+          0.495138889
+        ],
+        [
+          0.432291667,
+          0.607638889
+        ],
+        [
+          0.132260417,
+          0.606798611
+        ]
+      ],
+      "diagnostic_clipped_polygon_px": [
+        [
+          466.36,
+          721.68
+        ],
+        [
+          880.0,
+          713.0
+        ],
+        [
+          830.0,
+          875.0
+        ],
+        [
+          253.94,
+          873.79
+        ]
+      ],
+      "source_polygon_index": 3
+    },
+    {
+      "id": "Z5",
+      "band": "far",
+      "side": "right",
+      "appliance": {
+        "esp32": "ESP32 3",
+        "fan": "F5",
+        "light": "L5",
+        "shared": "B3",
+        "shared_condition": "Z5 OR Z6"
+      },
+      "source_polygon_px": [
+        [
+          951.13,
+          712.49
+        ],
+        [
+          952.83,
+          659.04
+        ],
+        [
+          1324.57,
+          660.06
+        ],
+        [
+          1444.4,
+          707.72
+        ]
+      ],
+      "polygon_px": [
+        [
+          900.0,
+          659.0
+        ],
+        [
+          1324.57,
+          660.06
+        ],
+        [
+          1444.4,
+          707.72
+        ],
+        [
+          880.0,
+          713.0
+        ]
+      ],
+      "polygon_norm": [
+        [
+          0.46875,
+          0.457638889
+        ],
+        [
+          0.689880208,
+          0.458375
+        ],
+        [
+          0.752291667,
+          0.491472222
+        ],
+        [
+          0.458333333,
+          0.495138889
+        ]
+      ],
+      "diagnostic_clipped_polygon_px": [
+        [
+          900.0,
+          659.0
+        ],
+        [
+          1324.57,
+          660.06
+        ],
+        [
+          1444.4,
+          707.72
+        ],
+        [
+          880.0,
+          713.0
+        ]
+      ],
+      "source_polygon_index": 6
+    },
+    {
+      "id": "Z6",
+      "band": "far",
+      "side": "left",
+      "appliance": {
+        "esp32": "ESP32 3",
+        "fan": "F6",
+        "light": "L6",
+        "shared": "B3",
+        "shared_condition": "Z5 OR Z6"
+      },
+      "source_polygon_px": [
+        [
+          464.32,
+          723.38
+        ],
+        [
+          557.26,
+          669.26
+        ],
+        [
+          952.83,
+          659.04
+        ],
+        [
+          951.13,
+          712.49
+        ],
+        [
+          466.36,
+          721.68
+        ]
+      ],
+      "polygon_px": [
+        [
+          557.26,
+          669.26
+        ],
+        [
+          900.0,
+          659.0
+        ],
+        [
+          880.0,
+          713.0
+        ],
+        [
+          466.36,
+          721.68
+        ]
+      ],
+      "polygon_norm": [
+        [
+          0.290239583,
+          0.464763889
+        ],
+        [
+          0.46875,
+          0.457638889
+        ],
+        [
+          0.458333333,
+          0.495138889
+        ],
+        [
+          0.242895833,
+          0.501166667
+        ]
+      ],
+      "diagnostic_clipped_polygon_px": [
+        [
+          557.26,
+          669.26
+        ],
+        [
+          900.0,
+          659.0
+        ],
+        [
+          880.0,
+          713.0
+        ],
+        [
+          466.36,
+          721.68
+        ]
+      ],
+      "source_polygon_index": 5
+    }
+  ],
+  "notes": [
+    "Boundaries follow marked desktop edges/heights and are not calibrated floor-plane boundaries.",
+    "Camera position and orientation are intended to remain fixed.",
+    "Manual review is required before any operational use."
+  ],
+  "monitored_outer_region": {
+    "name": "desktop_envelope_source_outer_edges",
+    "polygon_px": [
+      [
+        557.26,
+        669.26
+      ],
+      [
+        1324.57,
+        660.06
+      ],
+      [
+        1444.4,
+        707.72
+      ],
+      [
+        1678.18,
+        846.52
+      ],
+      [
+        2028.18,
+        1108.64
+      ],
+      [
+        1560.0,
+        1238.94
+      ],
+      [
+        384.24,
+        1288.94
+      ],
+      [
+        -86.97,
+        1169.24
+      ],
+      [
+        253.94,
+        873.79
+      ],
+      [
+        466.36,
+        721.68
+      ]
+    ],
+    "polygon_norm": [
+      [
+        0.290239583,
+        0.464763889
+      ],
+      [
+        0.689880208,
+        0.458375
+      ],
+      [
+        0.752291667,
+        0.491472222
+      ],
+      [
+        0.874052083,
+        0.587861111
+      ],
+      [
+        1.05634375,
+        0.769888889
+      ],
+      [
+        0.8125,
+        0.860375
+      ],
+      [
+        0.200125,
+        0.895097222
+      ],
+      [
+        -0.045296875,
+        0.811972222
+      ],
+      [
+        0.132260417,
+        0.606798611
+      ],
+      [
+        0.242895833,
+        0.501166667
+      ]
+    ],
+    "diagnostic_clipped_polygon_px": [
+      [
+        557.26,
+        669.26
+      ],
+      [
+        1324.57,
+        660.06
+      ],
+      [
+        1444.4,
+        707.72
+      ],
+      [
+        1678.18,
+        846.52
+      ],
+      [
+        1920,
+        1027.622
+      ],
+      [
+        1920,
+        1138.748
+      ],
+      [
+        1560.0,
+        1238.94
+      ],
+      [
+        384.24,
+        1288.94
+      ],
+      [
+        0,
+        1191.333
+      ],
+      [
+        0,
+        1093.867
+      ],
+      [
+        253.94,
+        873.79
+      ],
+      [
+        466.36,
+        721.68
+      ]
+    ],
+    "outside_image_vertices_preserved": true
+  },
+  "proposal": {
+    "approved": false,
+    "review_required": true,
+    "proposal_type": "image_left_edge_of_central_aisle",
+    "divider_proposal_px": [
+      [
+        900.0,
+        659.0
+      ],
+      [
+        880.0,
+        713.0
+      ],
+      [
+        830.0,
+        875.0
+      ],
+      [
+        810.0,
+        1313.0
+      ]
+    ],
+    "old_divider_description": "source-derived shared edge around x=950-970; retained in the base config",
+    "proposal_uncertainty_band_px_at_reference": 40,
+    "aisle_right_edge_test_only": {
+      "far": 1070.0,
+      "middle": 1100.0,
+      "near": 1160.0
+    },
+    "notes": [
+      "The proposed divider is an editable visual hypothesis, not user approval.",
+      "It follows the visible image-left aisle edge by inspection and must be reviewed.",
+      "The right edge values are test-only extents; they do not redefine the zone boundary."
+    ]
+  },
+  "shared_edges": [
+    {
+      "id": "far_top",
+      "points_px": [
+        [
+          557.26,
+          669.26
+        ],
+        [
+          900.0,
+          659.0
+        ],
+        [
+          1324.57,
+          660.06
+        ]
+      ]
+    },
+    {
+      "id": "far_middle",
+      "points_px": [
+        [
+          466.36,
+          721.68
+        ],
+        [
+          880.0,
+          713.0
+        ],
+        [
+          1444.4,
+          707.72
+        ]
+      ]
+    },
+    {
+      "id": "middle_near",
+      "points_px": [
+        [
+          253.94,
+          873.79
+        ],
+        [
+          830.0,
+          875.0
+        ],
+        [
+          1678.18,
+          846.52
+        ]
+      ]
+    },
+    {
+      "id": "near_bottom",
+      "points_px": [
+        [
+          384.24,
+          1288.94
+        ],
+        [
+          810.0,
+          1313.0
+        ],
+        [
+          1560.0,
+          1238.94
+        ]
+      ]
+    },
+    {
+      "id": "divider_far",
+      "points_px": [
+        [
+          900.0,
+          659.0
+        ],
+        [
+          880.0,
+          713.0
+        ]
+      ]
+    },
+    {
+      "id": "divider_middle",
+      "points_px": [
+        [
+          880.0,
+          713.0
+        ],
+        [
+          830.0,
+          875.0
+        ]
+      ]
+    },
+    {
+      "id": "divider_near",
+      "points_px": [
+        [
+          830.0,
+          875.0
+        ],
+        [
+          810.0,
+          1313.0
+        ]
+      ]
+    }
+  ],
+  "source_preservation": {
+    "base_config": "config\\zones\\diagnostic_six_zone.json",
+    "base_config_sha256": "480df99125390742f5c2752af6d23a8e7991218f0b47c47469ae241ed0b4a980",
+    "source_polygons_preserved_in_each_zone": true,
+    "clipping_is_diagnostic_only": true
+  }
+}

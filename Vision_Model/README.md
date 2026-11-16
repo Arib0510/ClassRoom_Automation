@@ -1,5 +1,15 @@
 # Classroom occupancy vision
 
+The current Raspberry Pi 5 8 GB YOLO workflow has an explicit offline diagnostic
+gate before further training or physical six-zone calibration. See
+[Offline diagnostics](docs/offline_diagnostics.md). These commands use only
+saved image/video files and do not access cameras, MQTT, actuators, weights,
+datasets, calibration, or zone mappings.
+
+The earlier reviewed SSD entry point under `src.main` retains its separate
+Raspberry Pi Zero 2 W deployment documentation; the commands above target the
+current Pi 5 runtime.
+
 Modular, headless person detection for a **Raspberry Pi Zero 2 W**, **Raspberry Pi
 OS Bookworm 32-bit**, and a front-ceiling Pi Camera facing the back of the room.
 Four physical quadrants produce independent `unknown`, `occupied`, or `vacant`
@@ -172,6 +182,7 @@ reproducible `models/inspection.json`. No tensor layout is inferred from filenam
 | `src/detector.py` | Hash-checked, configurable SSD interpreter adapter |
 | `src/inference_runtime.py` | Lazy TensorFlow CPU / Pi tflite-runtime selection |
 | `src/images.py`, `src/image_inference.py` | Disk-image source, annotations and prediction reports |
+| `src/offline_diagnostics.py` | Pi 5 offline detector/tracker diagnostics, label review and evaluation |
 | `src/zones.py` | Legacy polygon reader and version-2 calibration dispatch |
 | `src/calibration.py`, `src/calibration_geometry.py` | Physical floor/seat geometry, homography, conservative UNKNOWN assignment |
 | `src/calibrate_zones.py`, `src/calibration_preview.py` | Offline calibration editor, versioned files and linked image/floor previews |
@@ -205,3 +216,7 @@ Live camera frames stay in RAM and are not stored or transmitted. Offline image
 inference saves annotated copies and prediction reports locally under the chosen
 output directory. Counts are model observations, not a guaranteed census. No
 repository commit or remote publication is performed automatically.
+
+The current Ultralytics output may already have model-internal suppression
+applied; it is not pre-NMS raw prediction data. Do not infer classroom
+reliability from training metrics, offline precision/recall, or unit tests.
