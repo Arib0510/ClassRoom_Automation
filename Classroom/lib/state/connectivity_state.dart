@@ -373,16 +373,46 @@ class ConnectivityState extends ChangeNotifier {
     // Fake/blind port-80 probing is disabled to prevent phantom mock hardware nodes from showing.
   }
 
-  void updateBoardTelemetry(int boardId, bool isOnline, String ip, int rssi, [String roomId = '']) {
-    final nodeName = 'Switchboard #$boardId';
+  void updateBoardTelemetry(
+    int boardId,
+    bool isOnline,
+    String ip,
+    int rssi, [
+    String roomId = '',
+    String? zoneId,
+    String? deviceType,
+  ]) {
+    final bool isAc = (deviceType?.toLowerCase() == 'ac_unit') ||
+        (zoneId?.toLowerCase() == 'zone_ac') ||
+        boardId == 4;
+    final String resolvedZoneId = zoneId ?? (isAc ? 'zone_ac' : 'zone_$boardId');
+    final String resolvedType = deviceType ?? (isAc ? 'ac_unit' : 'switchboard');
+    final int resolvedBoardId = isAc ? 4 : boardId;
+    final String nodeName = isAc ? 'Standalone AC' : 'Switchboard #$resolvedBoardId';
+
     if (!isOnline) {
-      _discoveredIpNodes.removeWhere((n) => n.boardId == boardId || n.name == nodeName || n.ip == ip);
+      _discoveredIpNodes.removeWhere(
+        (n) =>
+            n.zoneId == resolvedZoneId ||
+            n.boardId == resolvedBoardId ||
+            n.name == nodeName ||
+            (ip.isNotEmpty && n.ip == ip),
+      );
       notifyListeners();
       return;
     }
-    final existingIdx = _discoveredIpNodes.indexWhere((n) => n.boardId == boardId || n.name == nodeName || n.ip == ip);
+
+    final existingIdx = _discoveredIpNodes.indexWhere(
+      (n) =>
+          n.zoneId == resolvedZoneId ||
+          n.boardId == resolvedBoardId ||
+          n.name == nodeName ||
+          (ip.isNotEmpty && n.ip == ip),
+    );
     final newNode = IpDeviceNode(
-      boardId: boardId,
+      boardId: resolvedBoardId,
+      zoneId: resolvedZoneId,
+      deviceType: resolvedType,
       ip: ip,
       name: nodeName,
       port: 1883,
@@ -397,6 +427,39 @@ class ConnectivityState extends ChangeNotifier {
       _discoveredIpNodes.add(newNode);
     }
     notifyListeners();
+  }
+
+  void updateDiscoveredDevice({
+    required String zoneId,
+    required String deviceType,
+    required String ip,
+    int rssi = -55,
+    String roomId = '',
+    bool isOnline = true,
+  }) {
+    final lowerZone = zoneId.trim().toLowerCase();
+    final lowerType = deviceType.trim().toLowerCase();
+    final isAc = lowerType == 'ac_unit' || lowerZone == 'zone_ac';
+
+    int boardId = 1;
+    if (isAc) {
+      boardId = 4;
+    } else {
+      final m = RegExp(r'(\d+)').firstMatch(lowerZone);
+      if (m != null) {
+        boardId = int.tryParse(m.group(1) ?? '') ?? 1;
+      }
+    }
+
+    updateBoardTelemetry(
+      boardId,
+      isOnline,
+      ip,
+      rssi,
+      roomId,
+      isAc ? 'zone_ac' : 'zone_$boardId',
+      isAc ? 'ac_unit' : 'switchboard',
+    );
   }
 
   void connectToWifi(String ssid) {

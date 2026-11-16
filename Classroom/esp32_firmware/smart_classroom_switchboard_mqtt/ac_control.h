@@ -1,23 +1,23 @@
 /*
   =============================================================================
-  ClassPulse IoT - Optical IR Air Conditioner Control Module (ac_control.h)
+  ClassPulse IoT - Standalone Dual-Gree AC Optical IR Module (ac_control.h)
   =============================================================================
-  Dedicated ESP32 IR AC Control Logic for Gree Air Conditioners (GPIO 4).
-  • Operates the classroom AC via Optical Infrared (IRremoteESP8266 / IRGreeAC).
-  • Completely bypasses the 4 mechanical relays so relays never chatter or wear.
-  • Supports JSON and plain-text MQTT payloads:
-      - Power state ("ON", "OFF", "TOGGLE")
-      - Temperature (16°C – 30°C)
-      - Mode ("COOL", "AUTO", "DRY", "FAN", "HEAT")
-      - Fan Speed (0 = Auto, 1 = Low, 2 = Med, 3 = High)
-      - Vertical Louver Swing (true = Auto Swing, false = Fixed Upward)
-      - Turbo & Sleep modes
+  Dedicated ESP32 Standalone AC Controller Logic ("zone_ac", "ac_unit"):
+  • Runs on an independent ESP32 board with TWO IR Transmitter/Receiver circuits
+    controlling the TWO Gree Air Conditioners in the classroom:
+      - Gree AC #1 (Front / Unit 1): IR Transmitter on GPIO 33
+      - Gree AC #2 (Back  / Unit 2): IR Transmitter on GPIO 12
+  • Completely isolated from the 8-switch zone switchboards (Zones 1, 2, 3).
+  • Publishes MQTT Discovery payload to `home/discovery`:
+      {"zone_id": "zone_ac", "device_type": "ac_unit", "ip": "192.168.X.X",
+       "ac_count": 2, "ac1_gpio": 33, "ac2_gpio": 12, "protocol": "GREE"}
   =============================================================================
 */
 
 #pragma once
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <IRremoteESP8266.h>
@@ -34,188 +34,286 @@
   #endif
 #endif
 
-// Default GPIO 4 for Optical IR Transmitter LED
-#ifndef IR_LED_PIN
-  #define IR_LED_PIN 4
+// Dual IR Transmitter GPIOs for the Two Classroom Gree ACs
+#ifndef AC1_IR_PIN
+  #define AC1_IR_PIN 33   // GPIO 33: IR Transmitter Circuit #1 -> Gree AC #1
 #endif
 
-struct AcState {
-  bool   isOn;
-  int    temperature; // 16 - 30 °C
-  String mode;        // "COOL", "AUTO", "DRY", "FAN", "HEAT"
-  int    fanSpeed;    // 0 = Auto, 1 = Low, 2 = Med, 3 = High
-  bool   swing;       // true = Auto Vertical Swing, false = Fixed Upward
-  bool   turbo;       // true = Turbo fast cooling
+#ifndef AC2_IR_PIN
+  #define AC2_IR_PIN 12   // GPIO 12: IR Transmitter Circuit #2 -> Gree AC #2
+#endif
+
+#define AC_ZONE_ID_STR     "zone_ac"
+#define AC_DEVICE_TYPE     "ac_unit"
+#define AC_DISCOVERY_TOPIC "home/discovery"
+
+struct AcUnitState {
+  int      unitId;      // 1 or 2
+  uint16_t irPin;       // GPIO 33 (AC 1) or GPIO 13 (AC 2)
+  bool     isOn;
+  int      temperature; // 16 - 30 °C
+  String   mode;        // "COOL", "AUTO", "DRY", "FAN", "HEAT"
+  int      fanSpeed;    // 0 = Auto, 1 = Low, 2 = Med, 3 = High
+  bool     swing;       // true = Auto Vertical Swing, false = Fixed Upward
+  bool     turbo;
 };
 
-class ClassroomAcController {
+class StandaloneDualAcController {
 public:
-  IRGreeAC irAc;
-  AcState state;
+  IRGreeAC irAc1;
+  IRGreeAC irAc2;
+  AcUnitState units[2];
+  bool emergencyLocked;
 
-  ClassroomAcController(uint16_t irPin = IR_LED_PIN)
-    : irAc(irPin),
-      state{false, 24, "COOL", 0, false, false},
-      _irPin(irPin) {}
+  StandaloneDualAcController(
+    uint16_t ac1Pin = AC1_IR_PIN,
+    uint16_t ac2Pin = AC2_IR_PIN
+  )
+    : irAc1(ac1Pin),
+      irAc2(ac2Pin),
+      units{
+        {1, ac1Pin, false, 24, "COOL", 0, false, false},
+        {2, ac2Pin, false, 24, "COOL", 0, false, false}
+      },
+      emergencyLocked(false) {}
 
   void begin() {
-    irAc.begin();
-    irAc.setMode(kGreeCool);
-    irAc.setTemp(state.temperature);
-    irAc.setFan(state.fanSpeed);
-    irAc.setSwingVertical(false, kGreeSwingUp);
-    irAc.setTurbo(false);
-    irAc.setSleep(false);
-    irAc.setLight(true);
-    Serial.printf("❄️ [IR AC] Gree AC Optical Controller initialized on GPIO %d (Relays Bypassed)\n", _irPin);
+    irAc1.begin();
+    irAc2.begin();
+    for (int i = 0; i < 2; i++) {
+      IRGreeAC& ir = (i == 0) ? irAc1 : irAc2;
+      ir.setMode(kGreeCool);
+      ir.setTemp(units[i].temperature);
+      ir.setFan(units[i].fanSpeed);
+      ir.setSwingVertical(false, kGreeSwingUp);
+      ir.setTurbo(false);
+      ir.setSleep(false);
+      ir.setLight(true);
+    }
+    Serial.printf("❄️ [STANDALONE DUAL-AC] Initialized 2 Gree IR Circuits: AC #1 on GPIO %d | AC #2 on GPIO %d\n",
+                  units[0].irPin, units[1].irPin);
   }
 
-  void publishStatus(PubSubClient& mqtt, const char* classroomId, int zoneId, int boardId) {
+  void publishDiscovery(PubSubClient& mqtt, const char* classroomId = "reb_room_301", int boardId = 4) {
     if (!mqtt.connected()) return;
 
-    JSON_DOC(doc, 256);
-    doc["room"]     = classroomId;
-    doc["zone"]     = zoneId;
-    doc["board"]    = boardId;
-    doc["type"]     = "ac";
-    doc["state"]    = state.isOn ? "ON" : "OFF";
-    doc["temp"]     = state.temperature;
-    doc["mode"]     = state.mode;
-    doc["fan"]      = state.fanSpeed;
-    doc["swing"]    = state.swing;
-    doc["turbo"]    = state.turbo;
-    doc["gpio"]     = _irPin;
-    doc["protocol"] = "GREE";
+    JSON_DOC(doc, 512);
+    doc["zone_id"]     = AC_ZONE_ID_STR;   // "zone_ac"
+    doc["device_type"] = AC_DEVICE_TYPE;   // "ac_unit"
+    doc["ip"]          = WiFi.localIP().toString();
+    doc["room"]        = classroomId;
+    doc["zone"]        = boardId;
+    doc["board"]       = boardId;
+    doc["mac"]         = WiFi.macAddress();
+    doc["rssi"]        = WiFi.RSSI();
+    doc["protocol"]    = "GREE";
+    doc["ac_count"]    = 2;
+    doc["ac1_gpio"]    = units[0].irPin;   // GPIO 33
+    doc["ac2_gpio"]    = units[1].irPin;   // GPIO 13
+    doc["ac1_state"]   = units[0].isOn ? "ON" : "OFF";
+    doc["ac2_state"]   = units[1].isOn ? "ON" : "OFF";
+    doc["status"]      = "ONLINE";
 
-    char buffer[256];
+    char buffer[512];
     serializeJson(doc, buffer, sizeof(buffer));
 
     String baseTopic = "ruet/classroom/" + String(classroomId);
-    String zoneTopic = baseTopic + "/zone/" + String(zoneId);
+    mqtt.publish(AC_DISCOVERY_TOPIC, buffer, false);
+    mqtt.publish((baseTopic + "/discovery").c_str(), buffer, false);
+    mqtt.publish((baseTopic + "/status/board/" + String(boardId)).c_str(), buffer, false);
 
-    // 1. Zone AC Status: ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/ac/status
-    mqtt.publish((zoneTopic + "/ac/status").c_str(), buffer, false);
-    // 2. Global AC Status: ruet/classroom/<CLASSROOM_ID>/status/ac
-    mqtt.publish((baseTopic + "/status/ac").c_str(), buffer, false);
-    // 3. Board AC Status: ruet/classroom/<CLASSROOM_ID>/status/board/<ZONE_ID>/ac
-    mqtt.publish((baseTopic + "/status/board/" + String(zoneId) + "/ac").c_str(), buffer, false);
-
-    Serial.printf("📡 [MQTT] AC Status -> %s (%d°C, %s, Fan %d, Swing %s)\n",
-                  state.isOn ? "ON" : "OFF", state.temperature, state.mode.c_str(),
-                  state.fanSpeed, state.swing ? "ON" : "OFF");
+    Serial.printf("🔍 [AC DISCOVERY] Published to %s => %s\n", AC_DISCOVERY_TOPIC, buffer);
   }
 
-  void executeControl(
+  void publishUnitStatus(int unitNum, PubSubClient& mqtt, const char* classroomId = "reb_room_301") {
+    if (!mqtt.connected() || unitNum < 1 || unitNum > 2) return;
+    const AcUnitState& u = units[unitNum - 1];
+
+    JSON_DOC(doc, 384);
+    doc["room"]        = classroomId;
+    doc["zone_id"]     = AC_ZONE_ID_STR;
+    doc["device_type"] = AC_DEVICE_TYPE;
+    doc["ac_unit"]     = u.unitId;
+    doc["zone"]        = u.unitId;
+    doc["board"]       = u.unitId;
+    doc["type"]        = "ac";
+    doc["state"]       = u.isOn ? "ON" : "OFF";
+    doc["temp"]        = u.temperature;
+    doc["mode"]        = u.mode;
+    doc["fan"]         = u.fanSpeed;
+    doc["swing"]       = u.swing;
+    doc["turbo"]       = u.turbo;
+    doc["gpio"]        = u.irPin;
+    doc["protocol"]    = "GREE";
+
+    char buffer[384];
+    serializeJson(doc, buffer, sizeof(buffer));
+
+    String baseTopic = "ruet/classroom/" + String(classroomId);
+    // 1. Unit-specific status: ruet/classroom/<room>/zone/<1|2>/ac/status
+    mqtt.publish((baseTopic + "/zone/" + String(u.unitId) + "/ac/status").c_str(), buffer, false);
+    mqtt.publish((baseTopic + "/status/board/" + String(u.unitId) + "/ac").c_str(), buffer, false);
+    // 2. Global AC status & home/zone_ac/status
+    mqtt.publish((baseTopic + "/status/ac").c_str(), buffer, false);
+    mqtt.publish("home/zone_ac/status", buffer, false);
+
+    Serial.printf("📡 [MQTT AC #%d SYNC] Gree IR on GPIO %d -> %s (%d°C, %s, Fan %d, Swing %s)\n",
+                  u.unitId, u.irPin, u.isOn ? "ON" : "OFF",
+                  u.temperature, u.mode.c_str(), u.fanSpeed, u.swing ? "ON" : "OFF");
+  }
+
+  void publishAllStatus(PubSubClient& mqtt, const char* classroomId = "reb_room_301") {
+    publishUnitStatus(1, mqtt, classroomId);
+    publishUnitStatus(2, mqtt, classroomId);
+  }
+
+  void executeUnitControl(
+    int unitNum,
     bool turnOn,
     int temp,
     String mode,
     int fan,
     bool swing,
     PubSubClient* mqtt = nullptr,
-    const char* classroomId = "",
-    int zoneId = 1,
-    int boardId = 1,
+    const char* classroomId = "reb_room_301",
     bool publishFeedback = true
   ) {
-    state.isOn = turnOn;
-    state.temperature = constrain(temp, 16, 30);
+    if (unitNum < 1 || unitNum > 2) return;
+    if (emergencyLocked) turnOn = false;
+
+    AcUnitState& u = units[unitNum - 1];
+    IRGreeAC& ir = (unitNum == 1) ? irAc1 : irAc2;
+
+    u.isOn = turnOn;
+    u.temperature = constrain(temp, 16, 30);
     mode.toUpperCase();
-    state.mode = mode;
-    state.fanSpeed = constrain(fan, 0, 3);
-    state.swing = swing;
+    u.mode = mode;
+    u.fanSpeed = constrain(fan, 0, 3);
+    u.swing = swing;
 
     if (turnOn) {
-      irAc.on();
-      irAc.setTemp(state.temperature);
-      if (mode == "COOL") irAc.setMode(kGreeCool);
-      else if (mode == "DRY") irAc.setMode(kGreeDry);
-      else if (mode == "FAN") irAc.setMode(kGreeFan);
-      else if (mode == "HEAT") irAc.setMode(kGreeHeat);
-      else irAc.setMode(kGreeAuto);
+      ir.on();
+      ir.setTemp(u.temperature);
+      if (mode == "COOL") ir.setMode(kGreeCool);
+      else if (mode == "DRY") ir.setMode(kGreeDry);
+      else if (mode == "FAN") ir.setMode(kGreeFan);
+      else if (mode == "HEAT") ir.setMode(kGreeHeat);
+      else ir.setMode(kGreeAuto);
 
-      irAc.setFan(state.fanSpeed);
-      if (state.swing) {
-        irAc.setSwingVertical(true, kGreeSwingAuto);
+      ir.setFan(u.fanSpeed);
+      if (u.swing) {
+        ir.setSwingVertical(true, kGreeSwingAuto);
       } else {
-        irAc.setSwingVertical(false, kGreeSwingUp);
+        ir.setSwingVertical(false, kGreeSwingUp);
       }
-      irAc.setTurbo(state.turbo);
-      irAc.setLight(true);
-      irAc.send();
-      Serial.printf("❄️ [IR AC] Sent IR Command: ON, %d°C, %s, Fan %d, Swing %s via GPIO %d (RELAYS BYPASSED)\n",
-                    state.temperature, state.mode.c_str(), state.fanSpeed,
-                    state.swing ? "AUTO" : "FIXED", _irPin);
+      ir.setTurbo(u.turbo);
+      ir.setLight(true);
+      ir.send();
+      Serial.printf("❄️ [GREE IR #%d] Sent IR ON (%d°C, %s, Fan %d, Swing %s) via GPIO %d\n",
+                    u.unitId, u.temperature, u.mode.c_str(), u.fanSpeed,
+                    u.swing ? "AUTO" : "FIXED", u.irPin);
     } else {
-      irAc.off();
-      irAc.send();
-      Serial.printf("❄️ [IR AC] Sent IR Command: OFF via GPIO %d (RELAYS BYPASSED)\n", _irPin);
+      ir.off();
+      ir.send();
+      Serial.printf("❄️ [GREE IR #%d] Sent IR OFF via GPIO %d\n", u.unitId, u.irPin);
     }
 
     if (publishFeedback && mqtt != nullptr && mqtt->connected()) {
-      publishStatus(*mqtt, classroomId, zoneId, boardId);
+      publishUnitStatus(unitNum, *mqtt, classroomId);
     }
   }
 
+  // Handles MQTT AC command for Unit 1 (GPIO 33), Unit 2 (GPIO 13), or Both (targetUnit = 0)
   void handleCommand(
     String msg,
     PubSubClient* mqtt = nullptr,
-    const char* classroomId = "",
-    int zoneId = 1,
-    int boardId = 1
+    const char* classroomId = "reb_room_301",
+    int defaultUnit = 0 // 0 = infer from payload (or apply to both if unspecified), 1 = AC #1 (GPIO 33), 2 = AC #2 (GPIO 13)
   ) {
-    bool turnOn = state.isOn;
-    int targetTemp = state.temperature;
-    String targetMode = state.mode;
-    int targetFan = state.fanSpeed;
-    bool targetSwing = state.swing;
+    int targetUnit = defaultUnit;
 
     if (msg.startsWith("{")) {
-      JSON_DOC(doc, 384);
+      JSON_DOC(doc, 512);
       DeserializationError err = deserializeJson(doc, msg);
       if (!err) {
         JsonVariant src = doc["ac"].is<JsonObject>() ? doc["ac"] : doc.as<JsonVariant>();
-        if (!src["state"].isNull()) {
-          String st = src["state"].as<String>();
-          st.toUpperCase();
-          turnOn = (st == "ON" || st == "1" || st == "TRUE");
-        } else if (!doc["desired_state"].isNull()) {
-          String st = doc["desired_state"].as<String>();
-          st.toUpperCase();
-          turnOn = (st == "ON" || st == "1" || st == "TRUE");
+
+        // Determine whether this command targets AC #1 (GPIO 33) or AC #2 (GPIO 13)
+        int gpio = src["gpio"] | (doc["gpio"] | 0);
+        int acUnit = src["ac_unit"] | (doc["ac_unit"] | 0);
+        int zone = src["zone"] | (doc["zone"] | 0);
+        int relay = src["relay"] | (doc["relay"] | 0);
+        String idStr = doc["id"] | (doc["appliance_id"] | "");
+
+        if (gpio == AC2_IR_PIN || acUnit == 2 || zone == 2 || relay == 2 ||
+            idStr.indexOf("ac_2") != -1 || idStr.indexOf("ac2") != -1 || idStr.endsWith("-2")) {
+          targetUnit = 2;
+        } else if (gpio == AC1_IR_PIN || acUnit == 1 || zone == 1 || relay == 1 ||
+                   idStr.indexOf("ac_1") != -1 || idStr.indexOf("ac1") != -1 || idStr.endsWith("-1")) {
+          targetUnit = 1;
         }
-        if (!src["temp"].isNull()) {
-          targetTemp = constrain(src["temp"].as<int>(), 16, 30);
+
+        int startUnit = (targetUnit == 2) ? 2 : 1;
+        int endUnit   = (targetUnit == 1) ? 1 : 2;
+
+        for (int uIdx = startUnit; uIdx <= endUnit; uIdx++) {
+          AcUnitState& cur = units[uIdx - 1];
+          bool turnOn = cur.isOn;
+          int targetTemp = cur.temperature;
+          String targetMode = cur.mode;
+          int targetFan = cur.fanSpeed;
+          bool targetSwing = cur.swing;
+
+          if (!src["state"].isNull()) {
+            String st = src["state"].as<String>();
+            st.toUpperCase();
+            if (st == "TOGGLE") turnOn = !cur.isOn;
+            else turnOn = (st == "ON" || st == "1" || st == "TRUE");
+          } else if (!doc["desired_state"].isNull()) {
+            String st = doc["desired_state"].as<String>();
+            st.toUpperCase();
+            turnOn = (st == "ON" || st == "1" || st == "TRUE");
+          }
+          if (!src["temp"].isNull()) {
+            targetTemp = constrain(src["temp"].as<int>(), 16, 30);
+          }
+          if (!src["mode"].isNull()) {
+            targetMode = src["mode"].as<String>();
+          }
+          if (!src["fan"].isNull()) {
+            targetFan = constrain(src["fan"].as<int>(), 0, 3);
+          }
+          if (!src["speed"].isNull() && src["fan"].isNull()) {
+            int spd = src["speed"].as<int>();
+            targetFan = (spd == 0) ? 0 : constrain(spd - 1, 1, 3);
+          }
+          if (!src["swing"].isNull()) {
+            targetSwing = src["swing"].as<bool>();
+          }
+          if (!src["turbo"].isNull()) {
+            cur.turbo = src["turbo"].as<bool>();
+          }
+
+          executeUnitControl(uIdx, turnOn, targetTemp, targetMode, targetFan, targetSwing, mqtt, classroomId, true);
         }
-        if (!src["mode"].isNull()) {
-          targetMode = src["mode"].as<String>();
-        }
-        if (!src["fan"].isNull()) {
-          targetFan = constrain(src["fan"].as<int>(), 0, 3);
-        }
-        if (!src["speed"].isNull() && src["fan"].isNull()) {
-          int spd = src["speed"].as<int>();
-          targetFan = (spd == 0) ? 0 : constrain(spd - 1, 1, 3);
-        }
-        if (!src["swing"].isNull()) {
-          targetSwing = src["swing"].as<bool>();
-        }
-        if (!src["turbo"].isNull()) {
-          state.turbo = src["turbo"].as<bool>();
-        }
-      }
-    } else {
-      if (msg.equalsIgnoreCase("ON") || msg == "1" || msg.equalsIgnoreCase("TRUE")) {
-        turnOn = true;
-      } else if (msg.equalsIgnoreCase("OFF") || msg == "0" || msg.equalsIgnoreCase("FALSE")) {
-        turnOn = false;
-      } else if (msg.equalsIgnoreCase("TOGGLE")) {
-        turnOn = !state.isOn;
+        return;
       }
     }
 
-    executeControl(turnOn, targetTemp, targetMode, targetFan, targetSwing, mqtt, classroomId, zoneId, boardId, true);
+    // Plain-text command ("ON", "OFF", "TOGGLE")
+    int startUnit = (targetUnit == 2) ? 2 : 1;
+    int endUnit   = (targetUnit == 1) ? 1 : 2;
+    for (int uIdx = startUnit; uIdx <= endUnit; uIdx++) {
+      AcUnitState& cur = units[uIdx - 1];
+      bool turnOn = cur.isOn;
+      if (msg.equalsIgnoreCase("ON") || msg == "1" || msg.equalsIgnoreCase("TRUE") || msg.equalsIgnoreCase("ALL_ON")) {
+        turnOn = true;
+      } else if (msg.equalsIgnoreCase("OFF") || msg == "0" || msg.equalsIgnoreCase("FALSE") || msg.equalsIgnoreCase("ALL_OFF")) {
+        turnOn = false;
+      } else if (msg.equalsIgnoreCase("TOGGLE")) {
+        turnOn = !cur.isOn;
+      }
+      executeUnitControl(uIdx, turnOn, cur.temperature, cur.mode, cur.fanSpeed, cur.swing, mqtt, classroomId, true);
+    }
   }
-
-private:
-  uint16_t _irPin;
 };

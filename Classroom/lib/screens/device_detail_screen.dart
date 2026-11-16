@@ -393,12 +393,18 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildPinoutRow('Target Relay', dev.relayChannel),
-              _buildPinoutRow('Control Logic', 'Active LOW / HIGH (Configurable)'),
+              _buildPinoutRow('Target Relay / Switch Pair', dev.relayChannel),
+              _buildPinoutRow(
+                'Manual Switch Input',
+                dev.type == DeviceType.hvac
+                    ? 'Optical IR (GPIO 33 / GPIO 12)'
+                    : 'GPIO ${dev.switchGpioPinNumber} (INPUT_PULLUP)',
+              ),
+              _buildPinoutRow('Control Logic', 'Active LOW Relay ↔ State-Change Switch'),
               _buildPinoutRow('Coil Rating', '5V DC / 70mA'),
               _buildPinoutRow('Contact Load', '250V AC / 10A Max'),
-              _buildPinoutRow('Microcontroller', 'ESP32-WROOM-32D (Dual-Core 240MHz)'),
-              _buildPinoutRow('Communication', 'MQTT / Wi-Fi / ESP-NOW'),
+              _buildPinoutRow('Microcontroller', 'ESP32 30-Pin (Dual-Core 240MHz)'),
+              _buildPinoutRow('Communication', 'MQTT (home/discovery & status)'),
             ],
           ),
           actions: [
@@ -824,13 +830,15 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      device.type == DeviceType.hvac ? Icons.settings_remote : Icons.hub_outlined,
+                      device.type == DeviceType.hvac ? Icons.ac_unit : Icons.hub_outlined,
                       size: 15,
                       color: AppColors.primary,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      device.type == DeviceType.hvac ? 'IR TRANSMITTER (GPIO 4)' : device.relayChannel,
+                      device.type == DeviceType.hvac
+                          ? 'GREE IR #${device.relayNumber} (GPIO ${device.gpioPinNumber})'
+                          : device.relayChannel,
                       style: AppTypography.labelSm(
                         color: AppColors.primary,
                       ).copyWith(fontSize: 11),
@@ -866,7 +874,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     ),
                   ),
                   child: Text(
-                    device.type == DeviceType.hvac ? 'IR: GPIO 4' : device.relayChannel,
+                    device.type == DeviceType.hvac
+                        ? 'GREE IR: GPIO ${device.gpioPinNumber}'
+                        : device.relayChannel,
                     style: AppTypography.labelSm(color: AppColors.primary)
                         .copyWith(fontSize: 10, fontWeight: FontWeight.bold),
                   ),
@@ -965,7 +975,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      device.type == DeviceType.hvac ? 'Gree AC Optical Controller (GPIO 4)' : device.relayChannel,
+                      device.type == DeviceType.hvac
+                          ? 'Standalone Dual-Gree AC Module (IR Circuit on GPIO ${device.gpioPinNumber})'
+                          : device.relayChannel,
                       style: AppTypography.labelSm(
                         color: AppColors.outline,
                       ).copyWith(fontSize: 11),
@@ -1052,9 +1064,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         break;
 
       case DeviceType.hvac:
-        badge1Title = 'IR LINK';
+        badge1Title = 'GREE IR LINK';
         badge1Val = device.isOn ? 'ACTIVE' : 'STANDBY';
-        badge1Sub = 'Gree 38kHz';
+        badge1Sub = 'AC #${device.relayNumber} (38kHz)';
         badge1Icon = Icons.settings_remote;
 
         badge2Title = 'THERMOSTAT';
@@ -1062,15 +1074,15 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
         badge2Sub = device.isOn ? 'Cooling Active' : 'Standby';
         badge2Icon = Icons.device_thermostat;
 
-        badge3Title = 'TRANSMITTER PIN';
-        badge3Val = 'GPIO 4';
-        badge3Sub = 'Optical PWM';
+        badge3Title = 'IR CIRCUIT PIN';
+        badge3Val = 'GPIO ${device.gpioPinNumber}';
+        badge3Sub = device.gpioPinNumber == 33 ? 'Gree AC #1' : 'Gree AC #2';
         badge3Icon = Icons.memory;
 
         badge4Title = 'CONTROLLER';
-        badge4Val = 'OPTICAL IR';
-        badge4Sub = 'Relays Bypassed';
-        badge4Icon = Icons.settings_remote;
+        badge4Val = 'zone_ac';
+        badge4Sub = 'Dual-IR ESP32';
+        badge4Icon = Icons.ac_unit;
         break;
 
       case DeviceType.projector:

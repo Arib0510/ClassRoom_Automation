@@ -27,33 +27,33 @@ class ClassroomDevice {
   bool isOn;
   bool manualOverrideOff;
 
-  // Hardware & ESP32 Relay mapping
-  String relayChannel; // e.g. "RELAY 1 (GPIO 16)"
-  String hardwareModel; // e.g. "Ceiling Fan Controller"
+  // Hardware & ESP32 Relay / Switch mapping
+  String relayChannel; // e.g. "RELAY 1 [In4 R] (D15) ↔ S1 (D13)" or "AC RELAY (GPIO 33) ↔ BTN (GPIO 13)"
+  String hardwareModel;
   String ipAddress;
   int pingMs;
   String zigbeeOrBleNode;
   String firmwareVersion;
 
-  // HVAC specific
+  // HVAC / Standalone AC specific (GPIO 33 Relay <-> GPIO 13 Manual Button)
   int temperature;
-  String hvacMode; // AUTO, QUIET, BOOST, COOL, DRY
-  bool acSwing; // Auto vertical louver oscillation
+  String hvacMode; // AUTO, QUIET, BOOST, COOL, DRY, FAN, HEAT
+  bool acSwing;
 
   // Fan specific
-  int fanSpeed; // 0, 1, 2, 3, 4
-  bool fanReverse; // false: forward downward, true: reverse upward
-  int fanTimerMinutes; // 0, 15, 30, 60, 120
+  int fanSpeed; // 0, 1, 2, 3, 4, 5
+  bool fanReverse;
+  int fanTimerMinutes;
 
   // Light specific
   double brightness; // 0..100
   int lumens;
 
   // Projector specific
-  String projectorSource; // HDMI 1, HDMI 2, AIRPLAY, USB-C
+  String projectorSource;
   bool screenDeployed;
-  String screenPosition; // 'Retracted', 'Halfway', 'Deployed'
-  String pictureProfile; // 'Presentation', 'Cinema Eco', 'Blackboard'
+  String screenPosition;
+  String pictureProfile;
 
   // Telemetry specific
   int co2Ppm;
@@ -66,8 +66,8 @@ class ClassroomDevice {
   int activeSockets;
   int totalSockets;
 
-  // Zone mapping
-  String zone; // e.g. "Zone 1", "Zone 2"
+  // Zone mapping ("Zone 1", "Zone 2", "Zone 3", or "Standalone AC")
+  String zone;
 
   // Metadata
   String macAddress;
@@ -82,8 +82,8 @@ class ClassroomDevice {
     this.isOn = true,
     this.manualOverrideOff = false,
     this.zone = 'Zone 1',
-    this.temperature = 22,
-    this.hvacMode = 'AUTO',
+    this.temperature = 24,
+    this.hvacMode = 'COOL',
     this.acSwing = false,
     this.fanSpeed = 3,
     this.fanReverse = false,
@@ -108,55 +108,111 @@ class ClassroomDevice {
     this.ipAddress = '192.168.1.142',
     this.pingMs = 12,
     this.zigbeeOrBleNode = 'ESP32-BOARD-01',
-    this.firmwareVersion = 'v3.1.2-esp32-relays',
+    this.firmwareVersion = 'v3.2.0-8pair-sync',
     List<DeviceEvent>? eventLog,
-  })  : relayChannel = relayChannel ?? _defaultRelayChannel(type),
+  })  : relayChannel = relayChannel ?? _defaultRelayChannel(type, zone: zone),
         hardwareModel = hardwareModel ?? _defaultHardwareModel(type),
         eventLog = eventLog ?? _defaultEventLog(type);
 
-  // Exact 4-channel GPIO pin mappings on physical ESP32 switchboards
-  static int defaultGpioForRelay(int relayNum) {
-    switch (relayNum) {
-      case 1:
-        return 18;
-      case 2:
-        return 19;
-      case 3:
-        return 21;
-      case 4:
-        return 22;
-      default:
-        return 18;
+  // ===========================================================================
+  // EXACT 8-PAIR HARDWARE GPIO MAPPING (ZONE 1 vs ZONE 2 & ZONE 3)
+  // ===========================================================================
+  static List<Map<String, dynamic>> switchRelayPairsForZone(int boardId) {
+    if (boardId == 1) {
+      // Zone 1 (ESP32 30-Pin - "1st Board"):
+      return const [
+        {'relay': 1, 'relayLabel': 'In4 [R]', 'gpio': 15, 'switchName': 'S1', 'switchGpio': 13},
+        {'relay': 2, 'relayLabel': 'In3 [R]', 'gpio': 2,  'switchName': 'S2', 'switchGpio': 12},
+        {'relay': 3, 'relayLabel': 'In2 [R]', 'gpio': 4,  'switchName': 'S3', 'switchGpio': 14},
+        {'relay': 4, 'relayLabel': 'In1 [R]', 'gpio': 5,  'switchName': 'S4', 'switchGpio': 27},
+        {'relay': 5, 'relayLabel': 'In4 [L]', 'gpio': 18, 'switchName': 'S5', 'switchGpio': 26},
+        {'relay': 6, 'relayLabel': 'In3 [L]', 'gpio': 19, 'switchName': 'S6', 'switchGpio': 25},
+        {'relay': 7, 'relayLabel': 'In2 [L]', 'gpio': 21, 'switchName': 'S7', 'switchGpio': 33},
+        {'relay': 8, 'relayLabel': 'In1 [L]', 'gpio': 22, 'switchName': 'S8', 'switchGpio': 32},
+      ];
+    } else {
+      // Zone 2 (Unlabeled Board) & Zone 3 ("3rd One"):
+      return const [
+        {'relay': 1, 'relayLabel': 'In4 [R]', 'gpio': 15, 'switchName': 'SW1', 'switchGpio': 13},
+        {'relay': 2, 'relayLabel': 'In3 [R]', 'gpio': 2,  'switchName': 'SW2', 'switchGpio': 12},
+        {'relay': 3, 'relayLabel': 'In2 [R]', 'gpio': 4,  'switchName': 'SW3', 'switchGpio': 14},
+        {'relay': 4, 'relayLabel': 'In1 [R]', 'gpio': 16, 'switchName': 'SW4', 'switchGpio': 27},
+        {'relay': 5, 'relayLabel': 'In4 [L]', 'gpio': 5,  'switchName': 'SW5', 'switchGpio': 26},
+        {'relay': 6, 'relayLabel': 'In3 [L]', 'gpio': 18, 'switchName': 'SW6', 'switchGpio': 25},
+        {'relay': 7, 'relayLabel': 'In2 [L]', 'gpio': 19, 'switchName': 'SW7', 'switchGpio': 33},
+        {'relay': 8, 'relayLabel': 'In1 [L]', 'gpio': 21, 'switchName': 'SW8', 'switchGpio': 32},
+      ];
     }
   }
 
-  static String defaultRelayChannelForRelay(int relayNum) {
-    final validRelay = ((relayNum - 1) % 4) + 1;
-    final gpio = defaultGpioForRelay(validRelay);
-    return 'RELAY $validRelay (GPIO $gpio)';
+  static Map<String, dynamic> pairInfoForRelay(int relayNum, {int boardId = 1}) {
+    final pairs = switchRelayPairsForZone(boardId);
+    final idx = ((relayNum - 1) % 8).clamp(0, 7);
+    return pairs[idx];
   }
 
-  static String _defaultRelayChannel(DeviceType type) {
+  static int defaultGpioForRelay(int relayNum, {int boardId = 1}) {
+    final info = pairInfoForRelay(relayNum, boardId: boardId);
+    return info['gpio'] as int;
+  }
+
+  static int defaultSwitchGpioForRelay(int relayNum, {int boardId = 1}) {
+    final info = pairInfoForRelay(relayNum, boardId: boardId);
+    return info['switchGpio'] as int;
+  }
+
+  static String defaultRelayChannelForRelay(int relayNum, {int boardId = 1}) {
+    final validRelay = ((relayNum - 1) % 8) + 1;
+    final info = pairInfoForRelay(validRelay, boardId: boardId);
+    final rLabel = info['relayLabel'];
+    final gpio = info['gpio'];
+    final swName = info['switchName'];
+    final swGpio = info['switchGpio'];
+    return 'RELAY $validRelay [$rLabel] (GPIO $gpio) ↔ $swName (D$swGpio)';
+  }
+
+  static int defaultGpioForAcUnit(int acUnitNum) {
+    return acUnitNum == 2 ? 12 : 33;
+  }
+
+  static String defaultAcChannelForUnit(int acUnitNum) {
+    final validUnit = acUnitNum == 2 ? 2 : 1;
+    final gpio = defaultGpioForAcUnit(validUnit);
+    return 'GREE AC #$validUnit IR (GPIO $gpio)';
+  }
+
+  static int _boardIdFromZone(String zoneStr) {
+    final lower = zoneStr.toLowerCase();
+    if (lower.contains('ac') || lower.contains('standalone')) return 4;
+    final m = RegExp(r'(\d+)').firstMatch(zoneStr);
+    if (m != null) {
+      return int.tryParse(m.group(1) ?? '') ?? 1;
+    }
+    return 1;
+  }
+
+  static String _defaultRelayChannel(DeviceType type, {String zone = 'Zone 1'}) {
+    final bId = _boardIdFromZone(zone);
     switch (type) {
       case DeviceType.hvac:
-        return 'IR TRANSMITTER (GPIO 4)'; // Optical Gree IR on GPIO 4 (Relays bypassed)
+        return defaultAcChannelForUnit(1); // Gree AC #1 on GPIO 33 (AC #2 uses GPIO 12)
       case DeviceType.lighting:
-        return defaultRelayChannelForRelay(2); // Relay 2 -> GPIO 19
+        return defaultRelayChannelForRelay(1, boardId: bId);
       case DeviceType.fan:
-        return defaultRelayChannelForRelay(3); // Relay 3 -> GPIO 21
+        return defaultRelayChannelForRelay(5, boardId: bId);
       case DeviceType.projector:
-        return defaultRelayChannelForRelay(4); // Relay 4 -> GPIO 22
+        return defaultRelayChannelForRelay(7, boardId: bId);
       case DeviceType.telemetry:
         return 'I2C BUS (GPIO 21/22)';
       case DeviceType.powerStrip:
-        return defaultRelayChannelForRelay(1);
+        return defaultRelayChannelForRelay(8, boardId: bId);
     }
   }
 
   static String _defaultHardwareModel(DeviceType type) {
     switch (type) {
       case DeviceType.hvac:
-        return 'Gree AC Optical Controller (IR)';
+        return 'Standalone Dual-Gree AC IR Controller (GPIO 33 / GPIO 12)';
       case DeviceType.fan:
         return 'Ceiling Fan Controller';
       case DeviceType.lighting:
@@ -179,7 +235,7 @@ class ClassroomDevice {
       ),
       const DeviceEvent(
         time: '08:58 AM',
-        title: 'Auto-powered ON via Timetable Schedule (Mesh synced)',
+        title: 'Synced with physical manual switch via MQTT',
         isHighlight: false,
       ),
       const DeviceEvent(
@@ -191,41 +247,62 @@ class ClassroomDevice {
   }
 
   int get gpioPinNumber {
-    final match = RegExp(r'GPIO\s*(\d+)', caseSensitive: false).firstMatch(relayChannel);
+    if (type == DeviceType.hvac) {
+      if (relayChannel.contains('12') ||
+          id.toLowerCase().endsWith('ac-2') ||
+          id.toLowerCase().endsWith('ac2') ||
+          name.contains('2')) {
+        return 12; // Gree AC #2 IR Transmitter/Receiver on GPIO 12
+      }
+      return 33; // Gree AC #1 IR Transmitter/Receiver on GPIO 33
+    }
+    final match = RegExp(r'(?:GPIO|D)\s*(\d+)', caseSensitive: false).firstMatch(relayChannel);
     if (match != null) {
       final p = int.tryParse(match.group(1) ?? '');
-      if (p != null && (p == 18 || p == 19 || p == 21 || p == 22)) {
+      if (p != null && p >= 0 && p <= 39) {
         return p;
       }
     }
-    return defaultGpioForRelay(relayNumber);
+    return defaultGpioForRelay(relayNumber, boardId: boardId);
+  }
+
+  int get switchGpioPinNumber {
+    if (type == DeviceType.hvac) return gpioPinNumber;
+    return defaultSwitchGpioForRelay(relayNumber, boardId: boardId);
   }
 
   int get relayNumber {
-    final match = RegExp(r'RELAY\s*(\d+)', caseSensitive: false).firstMatch(relayChannel);
+    if (type == DeviceType.hvac) {
+      return gpioPinNumber == 12 ? 2 : 1;
+    }
+    final match = RegExp(r'(?:RELAY|PAIR)\s*(\d+)', caseSensitive: false).firstMatch(relayChannel);
     if (match != null) {
       final parsed = int.tryParse(match.group(1) ?? '');
-      if (parsed != null && parsed >= 1 && parsed <= 4) {
+      if (parsed != null && parsed >= 1 && parsed <= 8) {
         return parsed;
       }
     }
-    final idMatch = RegExp(r'[-_](?:r|relay|l|f)?([1-4])(?:\b|_|$)', caseSensitive: false).firstMatch(id);
+    final idMatch = RegExp(r'[-_](?:r|relay|l|f|p)?([1-8])(?:\b|_|$)', caseSensitive: false).firstMatch(id);
     if (idMatch != null) {
       final parsedId = int.tryParse(idMatch.group(1) ?? '');
-      if (parsedId != null && parsedId >= 1 && parsedId <= 4) {
+      if (parsedId != null && parsedId >= 1 && parsedId <= 8) {
         return parsedId;
       }
     }
-    return ((deviceIndex - 1) % 4) + 1;
+    return ((deviceIndex - 1) % 8) + 1;
   }
 
   int get boardId {
-    // 1. Direct from Zone: "Zone 1" -> 1, "Zone 2" -> 2, etc.
+    if (type == DeviceType.hvac ||
+        zone.toLowerCase().contains('ac') ||
+        zone.toLowerCase().contains('standalone') ||
+        zigbeeOrBleNode.toLowerCase().contains('ac')) {
+      return 4;
+    }
     final zoneMatch = RegExp(r'Zone\s*(\d+)', caseSensitive: false).firstMatch(zone);
     if (zoneMatch != null) {
       return int.tryParse(zoneMatch.group(1) ?? '') ?? 1;
     }
-    // 2. Direct from zigbeeOrBleNode: "Switchboard #1" -> 1
     final nodeMatch = RegExp(r'(\d+)').firstMatch(zigbeeOrBleNode);
     if (nodeMatch != null) {
       return int.tryParse(nodeMatch.group(1) ?? '') ?? 1;
@@ -241,7 +318,6 @@ class ClassroomDevice {
     return 1;
   }
 
-  // Full local serialization (preserves runtime ON/OFF state in SharedPreferences)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -257,6 +333,7 @@ class ClassroomDevice {
       'ipAddress': ipAddress,
       'macAddress': macAddress,
       'protocol': protocol,
+      'zigbeeOrBleNode': zigbeeOrBleNode,
       'temperature': temperature,
       'hvacMode': hvacMode,
       'acSwing': acSwing,
@@ -279,8 +356,6 @@ class ClassroomDevice {
     };
   }
 
-  // Cloud catalog serialization: ONLY stores device id, name, type, zone, and relayNumber (what device is added where).
-  // Live power states and volatile hardware properties remain strictly on phone storage.
   Map<String, dynamic> toFirestoreMap() {
     return {
       'id': id,
@@ -288,10 +363,10 @@ class ClassroomDevice {
       'type': type.name,
       'zone': zone,
       'relayNumber': relayNumber,
+      'relayChannel': relayChannel,
     };
   }
 
-  // Full device state & configuration snapshot (synced to Firebase in 3 intervals per 50-minute class session)
   Map<String, dynamic> toStateAndConfigMap() {
     return {
       'id': id,
@@ -306,6 +381,7 @@ class ClassroomDevice {
       'ipAddress': ipAddress,
       'macAddress': macAddress,
       'protocol': protocol,
+      'zigbeeOrBleNode': zigbeeOrBleNode,
       'temperature': temperature,
       'hvacMode': hvacMode,
       'acSwing': acSwing,
@@ -345,57 +421,61 @@ class ClassroomDevice {
       type = DeviceType.lighting;
     }
 
+    final String zoneStr = map['zone']?.toString() ?? (type == DeviceType.hvac ? 'Standalone AC' : 'Zone 1');
+    final int bId = _boardIdFromZone(zoneStr);
+
     int? parsedRelayNum = (map['relayNumber'] as num?)?.toInt();
     String? rawRelayChannel = map['relayChannel']?.toString();
 
-    // If relayChannel exists and does not contain legacy GPIO 16/17 bugs, extract relay number from it
-    if (rawRelayChannel != null && !rawRelayChannel.contains('GPIO 16') && !rawRelayChannel.contains('GPIO 17')) {
-      final m = RegExp(r'RELAY\s*(\d+)', caseSensitive: false).firstMatch(rawRelayChannel);
+    if (rawRelayChannel != null) {
+      final m = RegExp(r'(?:RELAY|PAIR)\s*(\d+)', caseSensitive: false).firstMatch(rawRelayChannel);
       if (m != null) {
         final r = int.tryParse(m.group(1) ?? '');
-        if (r != null && r >= 1 && r <= 4) {
+        if (r != null && r >= 1 && r <= 8) {
           parsedRelayNum ??= r;
         }
       }
     }
 
-    // Check device id (e.g. dev-...-1, dev-...-2, dev-304-z1-l1, dev-304-z1-f2)
     if (parsedRelayNum == null) {
       final idStr = (map['id'] ?? '').toString();
-      final idMatch = RegExp(r'[-_](?:r|relay|l|f)?([1-4])(?:\b|_|$)', caseSensitive: false).firstMatch(idStr);
+      final idMatch = RegExp(r'[-_](?:r|relay|l|f|p)?([1-8])(?:\b|_|$)', caseSensitive: false).firstMatch(idStr);
       if (idMatch != null) {
         parsedRelayNum = int.tryParse(idMatch.group(1) ?? '');
       }
     }
 
-    final int rNum = (parsedRelayNum != null && parsedRelayNum >= 1 && parsedRelayNum <= 4)
+    final int rNum = (parsedRelayNum != null && parsedRelayNum >= 1 && parsedRelayNum <= 8)
         ? parsedRelayNum
         : 1;
 
+    final bool isAcUnit2 = type == DeviceType.hvac &&
+        ((rawRelayChannel != null && rawRelayChannel.contains('12')) ||
+            rNum == 2 ||
+            (map['name']?.toString().contains('2') == true));
+
     final String finalRelayChannel = (type == DeviceType.hvac)
-        ? 'IR TRANSMITTER (GPIO 4)'
-        : ((rawRelayChannel != null &&
-                !rawRelayChannel.contains('GPIO 16') &&
-                !rawRelayChannel.contains('GPIO 17') &&
-                rawRelayChannel.contains('GPIO'))
+        ? defaultAcChannelForUnit(isAcUnit2 ? 2 : 1)
+        : ((rawRelayChannel != null && rawRelayChannel.contains('GPIO'))
             ? rawRelayChannel
-            : defaultRelayChannelForRelay(rNum));
+            : defaultRelayChannelForRelay(rNum, boardId: bId));
 
     return ClassroomDevice(
       id: map['id'] ?? 'dev-${DateTime.now().millisecondsSinceEpoch}',
-      name: map['name'] ?? 'Device',
+      name: map['name'] ?? (type == DeviceType.hvac ? 'Standalone AC' : 'Device'),
       type: type,
       statusDescription: map['statusDescription'] ?? (map['isOn'] == true ? 'Active' : 'Standby'),
       isOn: map['isOn'] ?? false,
       manualOverrideOff: map['manualOverrideOff'] == true,
-      zone: map['zone'] ?? 'Zone 1',
+      zone: zoneStr,
       relayChannel: finalRelayChannel,
       hardwareModel: map['hardwareModel'] ?? _defaultHardwareModel(type),
       ipAddress: map['ipAddress'] ?? '192.168.0.100',
       macAddress: map['macAddress'] ?? 'AA:BB:CC:DD:EE:FF',
-      protocol: map['protocol'] ?? 'BLE / Wi-Fi',
-      temperature: (map['temperature'] as num?)?.toInt() ?? 22,
-      hvacMode: map['hvacMode'] ?? 'AUTO',
+      protocol: map['protocol'] ?? 'MQTT',
+      zigbeeOrBleNode: map['zigbeeOrBleNode'] ?? (type == DeviceType.hvac ? 'Standalone AC' : 'Switchboard #$bId'),
+      temperature: (map['temperature'] as num?)?.toInt() ?? 24,
+      hvacMode: map['hvacMode'] ?? 'COOL',
       acSwing: map['acSwing'] ?? false,
       fanSpeed: (map['fanSpeed'] as num?)?.toInt() ?? 3,
       fanReverse: map['fanReverse'] ?? false,

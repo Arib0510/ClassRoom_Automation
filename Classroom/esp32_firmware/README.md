@@ -1,95 +1,57 @@
-# ClassPulse IoT — ESP32 Quick Start Guide
+# ClassPulse IoT — Multi-Zone 8-Switch & Standalone AC ESP32 Guide
 
-Simple step-by-step instructions to flash the ESP32, add devices in the ClassPulse app, and control your hardware.
-
----
-
-## 🚀 Quick Start in 3 Easy Steps
-
-### Step 1: Flash the ESP32
-1. Open **Arduino IDE**.
-2. Open either:
-   - Full 6-Relay Controller: `esp32_firmware/smart_classroom_switchboard_mqtt/smart_classroom_switchboard_mqtt.ino`
-   - Single Relay Test: `test_setup/esp32_single_relay_test/esp32_single_relay_test.ino`
-3. Edit your Wi-Fi password (around line 44):
-   ```cpp
-   #define WIFI_SSID       "SWAPAN_CID"
-   #define WIFI_PASSWORD   "YOUR_WIFI_PASSWORD"
-   ```
-4. Connect ESP32 via USB.
-5. In Arduino IDE:
-   - Select Board: **Tools → Board → esp32 → ESP32 Dev Module**
-   - Select Port: **Tools → Port → COM...**
-6. Click **Upload (➡️)**.
-7. Open **Tools → Serial Monitor** (`115200 baud`) to verify:
-   ```text
-   [WiFi] Connected! IP: 192.168.x.x
-   [MQTT] Connecting to broker.emqx.io ... CONNECTED!
-   ```
+Complete hardware, firmware, and MQTT configuration guide for the 3 multi-switch zone boards (`zone_1`, `zone_2`, `zone_3`) and the independent Standalone AC controller (`zone_ac`).
 
 ---
 
-### Step 2: Add Device in the App
-1. Open the **ClassPulse IoT** app on your phone.
-2. Select your Classroom (or tap **+ Add Classroom** if you don't have one yet).
-3. Tap the **"+ Add Device"** button.
-4. Fill in the fields:
+## 1. Hardware & GPIO Mapping
 
-| Field | Example: Fan 1 | Example: Light 1 |
-| :--- | :--- | :--- |
-| **Category** | Select **Ceiling Fan** | Select **Light** |
-| **Device Name** | `Ceiling Fan 1` | `Classroom Light 1` |
-| **GPIO Pin** | `GPIO 18` | `GPIO 21` |
-| **Zone** | Zone 1 | Zone 1 |
-| **Protocol** | MQTT | MQTT |
+### Zone 1 (`ZONE_ID = 1`, `zone_1` — ESP32 30-Pin "1st Board")
+8 Relays (`OUTPUT`) and 8 Manual Switches (`INPUT_PULLUP`) linked in pairs:
 
-5. Tap **Save Device**.
+| Pair | Relay Label | Relay GPIO | Switch Label | Switch GPIO |
+| :---: | :---: | :---: | :---: | :---: |
+| **Pair 1** | `In4 [R]` | **D15** (`GPIO 15`) | `S1` | **D13** (`GPIO 13`) |
+| **Pair 2** | `In3 [R]` | **D2** (`GPIO 2`) | `S2` | **D12** (`GPIO 12`) |
+| **Pair 3** | `In2 [R]` | **D4** (`GPIO 4`) | `S3` | **D14** (`GPIO 14`) |
+| **Pair 4** | `In1 [R]` | **D5** (`GPIO 5`) | `S4` | **D27** (`GPIO 27`) |
+| **Pair 5** | `In4 [L]` | **D18** (`GPIO 18`) | `S5` | **D26** (`GPIO 26`) |
+| **Pair 6** | `In3 [L]` | **D19** (`GPIO 19`) | `S6` | **D25** (`GPIO 25`) |
+| **Pair 7** | `In2 [L]` | **D21** (`GPIO 21`) | `S7` | **D33** (`GPIO 33`) |
+| **Pair 8** | `In1 [L]` | **D22** (`GPIO 22`) | `S8` | **D32** (`GPIO 32`) |
 
----
+### Zone 2 (`ZONE_ID = 2`, `zone_2`) & Zone 3 (`ZONE_ID = 3`, `zone_3`)
+Both Zone 2 and Zone 3 share the same 8-pair pinout:
 
-### Step 3: Run & Test the Device!
-1. **Tap the switch card**: 
-   - The relay clicks physically (<10ms).
-   - ESP32 onboard blue LED (GPIO 2) illuminates.
-   - App card glows cyan showing **"MQTT Synced"**.
-2. **Fan Speed / Dimmer**: Drag the speed or brightness slider to adjust levels live.
-3. **Master Control**: Tap **"Turn Off All"** at the top of the room to power off all relays at once.
+| Pair | Relay Label | Relay GPIO | Switch Label | Switch GPIO |
+| :---: | :---: | :---: | :---: | :---: |
+| **Pair 1** | `In4 [R]` | **D15** (`GPIO 15`) | `SW1` | **D13** (`GPIO 13`) |
+| **Pair 2** | `In3 [R]` | **D2** (`GPIO 2`) | `SW2` | **D12** (`GPIO 12`) |
+| **Pair 3** | `In2 [R]` | **D4** (`GPIO 4`) | `SW3` | **D14** (`GPIO 14`) |
+| **Pair 4** | `In1 [R]` | **D16** (`GPIO 16`) | `SW4` | **D27** (`GPIO 27`) |
+| **Pair 5** | `In4 [L]` | **D5** (`GPIO 5`) | `SW5` | **D26** (`GPIO 26`) |
+| **Pair 6** | `In3 [L]` | **D18** (`GPIO 18`) | `SW6` | **D25** (`GPIO 25`) |
+| **Pair 7** | `In2 [L]` | **D19** (`GPIO 19`) | `SW7` | **D33** (`GPIO 33`) |
+| **Pair 8** | `In1 [L]` | **D21** (`GPIO 21`) | `SW8` | **D32** (`GPIO 32`) |
 
----
-
-## 🔌 Hardware Pin Mapping Reference
-
-### Full Switchboard Controller (Board 1):
-| Appliance | App Name | ESP32 GPIO Pin | Relay Channel |
-| :--- | :--- | :---: | :---: |
-| **Fan 1** | `Ceiling Fan 1` | `GPIO 18` | Relay 1 |
-| **Fan 2** | `Ceiling Fan 2` | `GPIO 19` | Relay 2 |
-| **Light 1** | `Classroom Light 1` | `GPIO 21` | Relay 3 |
-| **Light 2** | `Classroom Light 2` | `GPIO 22` | Relay 4 |
-| **Light 3** | `Classroom Light 3` | `GPIO 23` | Relay 5 |
-| **Light 4** | `Classroom Light 4` | `GPIO 25` | Relay 6 |
-
-### Single Relay Test:
-- **Relay Pin**: `GPIO 18` (Works as either `Ceiling Fan 1` or `Light 1`)
-- **Status LED**: `GPIO 2` (Onboard Blue LED)
+### Standalone Dual-AC IR Controller (`zone_ac` — Separate ESP32 Board)
+Runs on a dedicated ESP32 board isolated from the 8-switch zone boards, driving **two IR transmitter/receiver circuits** for the **two Gree Air Conditioners** in the classroom:
+- **Gree AC #1 (Front / Unit 1)**: IR Circuit on **GPIO 33**
+- **Gree AC #2 (Back / Unit 2)**: IR Circuit on **GPIO 12**
 
 ---
 
-## 📡 MQTT Topic Specification
+## 2. Firmware Files & MQTT Discovery
 
-- **Commands (App ➡️ ESP32)**:
-  - Fan: `ruet/classroom/{roomId}/command/fan/{number}`
-  - Light: `ruet/classroom/{roomId}/command/light/{number}`
-  - Master All: `ruet/classroom/{roomId}/command/all`
-  - Emergency Cutoff: `ruet/classroom/{roomId}/command/emergency`
-- **Feedback (ESP32 ➡️ App)**:
-  - Fan: `ruet/classroom/{roomId}/status/fan/{number}`
-  - Light: `ruet/classroom/{roomId}/status/light/{number}`
-  - Board Telemetry: `ruet/classroom/{roomId}/status/board/{boardId}`
-
----
-
-## 📦 Required Arduino Libraries
-Available in Arduino Library Manager (**Tools ➡️ Manage Libraries...**):
-1. **PubSubClient** by Nick O'Leary *(Pre-installed)*
-2. **ArduinoJson** by Benoit Blanchon *(v6 or v7 supported)*
+1. **8-Switchboard Firmware**: `smart_classroom_switchboard_mqtt/smart_classroom_switchboard_mqtt.ino`
+   - Set `#define ZONE_ID 1` (or `2`, or `3`) before flashing.
+   - Publishes discovery to `home/discovery`:
+     ```json
+     {"zone_id": "zone_1", "device_type": "switchboard", "ip": "192.168.X.X"}
+     ```
+2. **Standalone Dual-AC IR Controller Firmware**: `esp32_ac_ir_controller/esp32_ac_ir_controller.ino`
+   - Maps **GPIO 33** (Gree AC #1 IR circuit) and **GPIO 12** (Gree AC #2 IR circuit).
+   - Publishes discovery to `home/discovery`:
+     ```json
+     {"zone_id": "zone_ac", "device_type": "ac_unit", "ip": "192.168.X.X", "ac_count": 2, "ac1_gpio": 33, "ac2_gpio": 12, "protocol": "GREE"}
+     ```

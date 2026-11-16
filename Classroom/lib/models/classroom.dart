@@ -177,17 +177,21 @@ class Classroom {
       final zoneName = baseMap['zone']?.toString() ?? 'Zone 1';
       final count = (zoneDeviceCounter[zoneName] ?? 0) + 1;
       zoneDeviceCounter[zoneName] = count;
-      final autoRelay = ((count - 1) % 4) + 1;
+      final autoRelay = ((count - 1) % 8) + 1;
 
       final existingRelay = (baseMap['relayNumber'] as num?)?.toInt();
       final existingChannel = baseMap['relayChannel']?.toString() ?? '';
+      final zMatch = RegExp(r'(\d+)').firstMatch(zoneName);
+      final bId = zMatch != null ? (int.tryParse(zMatch.group(1) ?? '') ?? 1) : 1;
 
-      if (existingRelay == null || existingRelay < 1 || existingRelay > 4 || existingChannel.contains('GPIO 16') || existingChannel.contains('GPIO 17')) {
+      if (existingRelay == null || existingRelay < 1 || existingRelay > 8 || existingChannel.isEmpty) {
         final idStr = baseMap['id']?.toString() ?? '';
-        final idMatch = RegExp(r'[-_](?:r|relay|l|f)?([1-4])(?:\b|_|$)', caseSensitive: false).firstMatch(idStr);
+        final idMatch = RegExp(r'[-_](?:r|relay|l|f|p)?([1-8])(?:\b|_|$)', caseSensitive: false).firstMatch(idStr);
         final rNum = idMatch != null ? (int.tryParse(idMatch.group(1) ?? '') ?? autoRelay) : autoRelay;
         baseMap['relayNumber'] = rNum;
-        baseMap['relayChannel'] = ClassroomDevice.defaultRelayChannelForRelay(rNum);
+        if (existingChannel.isEmpty) {
+          baseMap['relayChannel'] = ClassroomDevice.defaultRelayChannelForRelay(rNum, boardId: bId);
+        }
       }
 
       return ClassroomDevice.fromMap(baseMap);

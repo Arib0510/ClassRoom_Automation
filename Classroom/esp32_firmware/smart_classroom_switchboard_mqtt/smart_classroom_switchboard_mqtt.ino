@@ -1,43 +1,50 @@
 /*
   =============================================================================
-  RUET Smart Classroom IoT - 4-Channel Switchboard Controller (MQTT Edition)
+  RUET Smart Classroom / Smart Home IoT - 8-Channel Switchboard Controller
   =============================================================================
-  Project: ClassPulse IoT (Smart Classroom Management System)
-  Target: ESP32 Dev Module / ESP32-WROOM-32 / ESP32-WROVER
+  Project: ClassPulse IoT (Multi-Zone Switchboard & Manual Switch Sync Edition)
+  Target:  ESP32 30-Pin Dev Module / ESP32-WROOM-32
 
-  System Architecture & Hierarchy:
-    Room (e.g. "room_304")
-      └── Zone (Zone 1, Zone 2, Zone 3)  <-- Physical Switchboard (ESP32)
-            └── Relay (Relays 1, 2, 3, 4)  <-- 4-Channel Relay Module
+  1. Hardware & Exact GPIO Mapping (8 Relays <-> 8 Manual Switches):
+  -----------------------------------------------------------------------------
+  • ZONE 1 (ESP32 30-Pin - "1st Board", ZONE_ID = 1):
+      Pair 1: Relay In4 [R] on D15 (GPIO 15) <-> Switch S1 on D13 (GPIO 13)
+      Pair 2: Relay In3 [R] on D2  (GPIO 2)  <-> Switch S2 on D12 (GPIO 12)
+      Pair 3: Relay In2 [R] on D4  (GPIO 4)  <-> Switch S3 on D14 (GPIO 14)
+      Pair 4: Relay In1 [R] on D5  (GPIO 5)  <-> Switch S4 on D27 (GPIO 27)
+      Pair 5: Relay In4 [L] on D18 (GPIO 18) <-> Switch S5 on D26 (GPIO 26)
+      Pair 6: Relay In3 [L] on D19 (GPIO 19) <-> Switch S6 on D25 (GPIO 25)
+      Pair 7: Relay In2 [L] on D21 (GPIO 21) <-> Switch S7 on D33 (GPIO 33)
+      Pair 8: Relay In1 [L] on D22 (GPIO 22) <-> Switch S8 on D32 (GPIO 32)
 
-  Hardware Setup:
-    • Exactly 3 Zones per Classroom (Zone 1, Zone 2, Zone 3)
-    • Each Zone represents 1 physical Switchboard driven by its own ESP32
-    • Each ESP32 drives a 4-channel relay module (4 devices per board)
-    • Total per room: 3 ESP32s and 12 controllable devices
+  • ZONE 2 (Unlabeled Board, ZONE_ID = 2) & ZONE 3 ("3rd One", ZONE_ID = 3):
+      Pair 1: Relay In4 [R] on D15 (GPIO 15) <-> Switch SW1 on D13 (GPIO 13)
+      Pair 2: Relay In3 [R] on D2  (GPIO 2)  <-> Switch SW2 on D12 (GPIO 12)
+      Pair 3: Relay In2 [R] on D4  (GPIO 4)  <-> Switch SW3 on D14 (GPIO 14)
+      Pair 4: Relay In1 [R] on D16 (GPIO 16) <-> Switch SW4 on D27 (GPIO 27)
+      Pair 5: Relay In4 [L] on D5  (GPIO 5)  <-> Switch SW5 on D26 (GPIO 26)
+      Pair 6: Relay In3 [L] on D18 (GPIO 18) <-> Switch SW6 on D25 (GPIO 25)
+      Pair 7: Relay In2 [L] on D19 (GPIO 19) <-> Switch SW7 on D33 (GPIO 33)
+      Pair 8: Relay In1 [L] on D21 (GPIO 21) <-> Switch SW8 on D32 (GPIO 32)
 
-  Cross-Talk & Room Isolation:
-    • Zone Isolation: Board 1 subscribes ONLY to .../zone/1/# and .../board/1/#.
-      Toggling switches in Zone 1 will NEVER affect Zone 2 or Zone 3.
-    • Room Isolation: Subscribes strictly to assigned CLASSROOM_ID.
-      No '+' wildcards. Room 101 will NEVER trigger Room 304.
+  • Standalone AC Controller runs on a separate ESP32 board (GPIO 33 Relay,
+    GPIO 13 Manual Button) — see esp32_ac_ir_controller.ino.
 
-  Required Arduino IDE Libraries:
-    1. PubSubClient by Nick O'Leary (Install via Arduino Library Manager)
-    2. ArduinoJson by Benoit Blanchon (v6 or v7)
-    3. IRremoteESP8266 by David Conran et al. (Install via Arduino Library Manager)
-    4. WiFi (ESP32 built-in)
+  2. Firmware Behavior:
+  -----------------------------------------------------------------------------
+  • Sets all 8 switch pins to INPUT_PULLUP and all 8 relay pins to OUTPUT.
+  • Hardware-interrupt / state-change listener on each switch pin: when a
+    physical switch toggles (HIGH <-> LOW), immediately inverts its paired
+    relay and publishes the updated state to MQTT so the mobile app stays in sync.
+  • Publishes MQTT discovery payload to `home/discovery` on boot and scan queries:
+    {"zone_id": "zone_1", "device_type": "switchboard", "ip": "192.168.X.X"}
   =============================================================================
 */
 
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <IRremoteESP8266.h>
-#include <IRsend.h>
-#include <ir_Gree.h>
 
-// Version-adaptive ArduinoJson macro
 #if ARDUINOJSON_VERSION_MAJOR >= 7
   #define JSON_DOC(name, size) JsonDocument name
 #else
@@ -45,62 +52,31 @@
 #endif
 
 // =============================================================================
-// IR TRANSMITTER (GREE AIR CONDITIONER DIRECT OPTICAL CONTROL)
+// 1. HARDWARE IDENTIFICATION & ZONE SELECTION
 // =============================================================================
-// Optical IR control directly operates the Gree AC and COMPLETELY BYPASSES mechanical relays.
-// Relays are never triggered or degraded by AC commands.
-const uint16_t IR_LED_PIN = 4; // GPIO 4 (IR Transmitter LED signal pin)
-IRGreeAC ac(IR_LED_PIN);
-
-// AC Live State tracking
-struct AcState {
-  bool   isOn;
-  int    temperature; // 16 - 30 °C
-  String mode;        // "COOL", "AUTO", "DRY", "FAN", "HEAT"
-  int    fanSpeed;    // 0 = Auto, 1 = Low, 2 = Med, 3 = High
-  bool   swing;       // true = Auto Vertical Swing, false = Fixed Upward
-};
-
-AcState acState = {
-  false,   // isOn
-  24,      // temperature (24°C default)
-  "COOL",  // mode
-  0,       // fanSpeed (0 = Auto)
-  false    // swing (false = Fixed Upward)
-};
-
-// =============================================================================
-// 1. HARDWARE IDENTIFICATION & ROOM CONFIGURATION
-// =============================================================================
-// Change ZONE_ID for each physical switchboard (Each switchboard powers 4 devices):
-//   1 = Switchboard #1 (Zone 1 in App)
-//   2 = Switchboard #2 (Zone 2 in App)
-//   3 = Switchboard #3 (Zone 3 in App)
-//   4 = Switchboard #4 (Zone 4 in App)
-//   5 = Switchboard #5 (Zone 5 in App)
+// Set ZONE_ID before flashing each physical ESP32 switchboard:
+//   1 = Zone 1 (ESP32 30-Pin - "1st Board")
+//   2 = Zone 2 (Unlabeled Board)
+//   3 = Zone 3 ("3rd One")
 #define ZONE_ID           1
 #define BOARD_ID          ZONE_ID
-
-// Physical Classroom ID where this switchboard is installed.
-// Must match the classroom in ClassPulse app.
-// To guarantee zero cross-talk between buildings (e.g. ETE Room 304 vs EEE Room 304):
-//   • For ETE Room 304: use "ete_room_304" (or "room_304" if single building)
-//   • For EEE Room 304: use "eee_room_304"
-//   • For CSE Room 304: use "cse_room_304"
 #define CLASSROOM_ID      "reb_room_301"
 
-// =============================================================================
-// PHASE 5 WIRE PROTOCOL (classroom-control-v1) IDENTITY & STATE
-// =============================================================================
-// Automatic controller mapping: Zone 1 -> "board01", Zone 2 -> "board02"
 #if ZONE_ID == 1
+  #define ZONE_ID_STR     "zone_1"
   #define CONTROLLER_ID   "board01"
 #elif ZONE_ID == 2
+  #define ZONE_ID_STR     "zone_2"
   #define CONTROLLER_ID   "board02"
 #else
+  #define ZONE_ID_STR     "zone_3"
   #define CONTROLLER_ID   "board03"
 #endif
+
+#define DEVICE_TYPE_STR   "switchboard"
+#define DISCOVERY_TOPIC   "home/discovery"
 #define PROTOCOL_NAME     "classroom-control-v1"
+
 char controllerBootId[33] = "";
 String activeSessionId   = "";
 String activeChallenge   = "";
@@ -108,323 +84,304 @@ int64_t lastCmdSequence  = 0;
 uint32_t phase5StatusSeq = 1;
 uint32_t phase5AckSeq    = 1;
 
-inline String getControllerPrefix() {
-  return "ruet/classroom/" + String(CLASSROOM_ID) + "/controllers/" + String(CONTROLLER_ID);
-}
-inline String getAltControllerPrefix() {
-  return "classpulse/" + String(CLASSROOM_ID) + "/controllers/" + String(CONTROLLER_ID);
-}
+// =============================================================================
+// 2. WI-FI & MQTT BROKER CONFIGURATION
+// =============================================================================
+#define WIFI_SSID         "S 23"
+#define WIFI_PASSWORD     "asdf1234"
 
-// =============================================================================
-// 2. WI-FI NETWORK CONFIGURATION (2.4 GHz)
-// =============================================================================
-#define WIFI_SSID         "S 23"     // Set your Wi-Fi SSID
-#define WIFI_PASSWORD     "asdf1234"  // <-- REPLACE WITH YOUR WI-FI PASSWORD
-
-// =============================================================================
-// 3. MQTT BROKER CONFIGURATION
-// =============================================================================
 const char* MQTT_BROKER   = "broker.emqx.io";
 const int   MQTT_PORT     = 1883;
-const char* MQTT_USER     = "";            // Leave empty if no authentication
-const char* MQTT_PASSWORD = "";            // Leave empty if no authentication
+const char* MQTT_USER     = "";
+const char* MQTT_PASSWORD = "";
 
 // =============================================================================
-// 4. CONFIGURABLE 4-CHANNEL UNIVERSAL RELAYS (ANY CHANNEL: FAN, LIGHT, OR AC)
+// 3. 8-PAIR RELAY & MANUAL SWITCH GPIO MAPPING
 // =============================================================================
-#define NUM_RELAYS 4
+#define NUM_RELAYS 8
 
-// Structure defining each relay channel on this board
-struct RelayConfig {
-  int pin;              // ESP32 GPIO pin number
-  const char* name;     // Channel label
-  bool defaultOn;       // Initial state at boot
+struct SwitchRelayPair {
+  int relayPin;           // ESP32 GPIO pin for Relay (OUTPUT)
+  int switchPin;          // ESP32 GPIO pin for Manual Switch (INPUT_PULLUP)
+  const char* relayLabel; // Hardware Relay label (e.g. "In4 [R]")
+  const char* switchName; // Hardware Switch label (e.g. "S1" or "SW1")
+  bool defaultOn;         // Boot relay state
 };
 
-// Universal GPIO assignment: Any channel (1-4) can be connected to ANY appliance!
-// (Ceiling Fan, Light, AC, or any electrical load)
-RelayConfig relayConfigs[NUM_RELAYS] = {
-  {18, "Channel 1", false}, // Relay 1 -> GPIO 18 (Fan, Light, or AC)
-  {19, "Channel 2", false}, // Relay 2 -> GPIO 19 (Fan, Light, or AC)
-  {21, "Channel 3", false}, // Relay 3 -> GPIO 21 (Fan, Light, or AC)
-  {22, "Channel 4", false}  // Relay 4 -> GPIO 22 (Fan, Light, or AC)
+#if ZONE_ID == 1
+// Zone 1 (ESP32 30-Pin - "1st Board") Exact Pin Pairs:
+SwitchRelayPair pairConfigs[NUM_RELAYS] = {
+  {15, 13, "In4 [R]", "S1", false}, // Pair 1: Relay In4 [R] (D15) <-> Switch S1 (D13)
+  { 2, 12, "In3 [R]", "S2", false}, // Pair 2: Relay In3 [R] (D2)  <-> Switch S2 (D12)
+  { 4, 14, "In2 [R]", "S3", false}, // Pair 3: Relay In2 [R] (D4)  <-> Switch S3 (D14)
+  { 5, 27, "In1 [R]", "S4", false}, // Pair 4: Relay In1 [R] (D5)  <-> Switch S4 (D27)
+  {18, 26, "In4 [L]", "S5", false}, // Pair 5: Relay In4 [L] (D18) <-> Switch S5 (D26)
+  {19, 25, "In3 [L]", "S6", false}, // Pair 6: Relay In3 [L] (D19) <-> Switch S6 (D25)
+  {21, 33, "In2 [L]", "S7", false}, // Pair 7: Relay In2 [L] (D21) <-> Switch S7 (D33)
+  {22, 32, "In1 [L]", "S8", false}  // Pair 8: Relay In1 [L] (D22) <-> Switch S8 (D32)
 };
+#else
+// Zone 2 (Unlabeled Board) & Zone 3 ("3rd One") Exact Pin Pairs:
+SwitchRelayPair pairConfigs[NUM_RELAYS] = {
+  {15, 13, "In4 [R]", "SW1", false}, // Pair 1: Relay In4 [R] (D15) <-> Switch SW1 (D13)
+  { 2, 12, "In3 [R]", "SW2", false}, // Pair 2: Relay In3 [R] (D2)  <-> Switch SW2 (D12)
+  { 4, 14, "In2 [R]", "SW3", false}, // Pair 3: Relay In2 [R] (D4)  <-> Switch SW3 (D14)
+  {16, 27, "In1 [R]", "SW4", false}, // Pair 4: Relay In1 [R] (D16) <-> Switch SW4 (D27)
+  { 5, 26, "In4 [L]", "SW5", false}, // Pair 5: Relay In4 [L] (D5)  <-> Switch SW5 (D26)
+  {18, 25, "In3 [L]", "SW6", false}, // Pair 6: Relay In3 [L] (D18) <-> Switch SW6 (D25)
+  {19, 33, "In2 [L]", "SW7", false}, // Pair 7: Relay In2 [L] (D19) <-> Switch SW7 (D33)
+  {21, 32, "In1 [L]", "SW8", false}  // Pair 8: Relay In1 [L] (D21) <-> Switch SW8 (D32)
+};
+#endif
 
-// Relay states and speed/brightness telemetry
-bool relayStates[NUM_RELAYS] = {false, false, false, false};
-int  fanSpeeds[NUM_RELAYS]   = {3, 3, 3, 3};         // For fan devices (1-5)
-int  brightness[NUM_RELAYS]  = {100, 100, 100, 100}; // For light devices (0-100)
+// Runtime states for all 8 pairs
+bool relayStates[NUM_RELAYS]        = {false, false, false, false, false, false, false, false};
+int  fanSpeeds[NUM_RELAYS]          = {3, 3, 3, 3, 3, 3, 3, 3};
+int  brightness[NUM_RELAYS]         = {100, 100, 100, 100, 100, 100, 100, 100};
 
-// Relay Trigger Logic: Most 4-channel relay modules are Active LOW (LOW = Relay ON)
+// Switch state-change tracking & hardware interrupt flags
+int  lastStableSwitchState[NUM_RELAYS];
+int  lastRawSwitchReading[NUM_RELAYS];
+unsigned long lastSwitchDebounceMs[NUM_RELAYS];
+volatile bool switchIrqTriggered[NUM_RELAYS] = {false, false, false, false, false, false, false, false};
+const unsigned long SWITCH_DEBOUNCE_MS = 45;
+
+// Relay Trigger Logic: Active LOW (LOW = Relay ON, HIGH = Relay OFF)
 const bool RELAY_ACTIVE_LOW = true;
 bool emergencyLocked = false;
 
 // =============================================================================
-// 5. GLOBAL OBJECTS & TELEMETRY TIMERS
+// 4. GLOBAL OBJECTS & TOPIC HELPERS
 // =============================================================================
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
 
 unsigned long lastHeartbeat = 0;
-const unsigned long HEARTBEAT_INTERVAL = 10000; // Heartbeat telemetry every 10 seconds
+const unsigned long HEARTBEAT_INTERVAL = 10000;
+unsigned long lastMqttRetry = 0;
 
-// Base topic: ruet/classroom/<CLASSROOM_ID>
 inline String getBaseTopic() {
   return "ruet/classroom/" + String(CLASSROOM_ID);
 }
 
-// Zone topic: ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>
 inline String getZoneTopic() {
   return getBaseTopic() + "/zone/" + String(ZONE_ID);
 }
 
-// Board topic alias: ruet/classroom/<CLASSROOM_ID>/board/<ZONE_ID>
 inline String getBoardTopic() {
   return getBaseTopic() + "/board/" + String(ZONE_ID);
 }
 
-// Relay logic converter with safety emergency cutoff
+inline String getControllerPrefix() {
+  return "ruet/classroom/" + String(CLASSROOM_ID) + "/controllers/" + String(CONTROLLER_ID);
+}
+
+inline String getAltControllerPrefix() {
+  return "classpulse/" + String(CLASSROOM_ID) + "/controllers/" + String(CONTROLLER_ID);
+}
+
 inline int relayLevel(bool on) {
   if (emergencyLocked) on = false;
   return RELAY_ACTIVE_LOW ? (on ? LOW : HIGH) : (on ? HIGH : LOW);
 }
 
 // =============================================================================
-// 6. HARDWARE INITIALIZATION (ZERO-GLITCH BOOT)
+// 5. HARDWARE ISR & PIN INITIALIZATION
 // =============================================================================
-void configureRelayPins() {
+void IRAM_ATTR onSwitch0Change() { switchIrqTriggered[0] = true; }
+void IRAM_ATTR onSwitch1Change() { switchIrqTriggered[1] = true; }
+void IRAM_ATTR onSwitch2Change() { switchIrqTriggered[2] = true; }
+void IRAM_ATTR onSwitch3Change() { switchIrqTriggered[3] = true; }
+void IRAM_ATTR onSwitch4Change() { switchIrqTriggered[4] = true; }
+void IRAM_ATTR onSwitch5Change() { switchIrqTriggered[5] = true; }
+void IRAM_ATTR onSwitch6Change() { switchIrqTriggered[6] = true; }
+void IRAM_ATTR onSwitch7Change() { switchIrqTriggered[7] = true; }
+
+void (*switchIsrTable[NUM_RELAYS])() = {
+  onSwitch0Change, onSwitch1Change, onSwitch2Change, onSwitch3Change,
+  onSwitch4Change, onSwitch5Change, onSwitch6Change, onSwitch7Change
+};
+
+void configureHardwarePins() {
+  unsigned long now = millis();
   for (int i = 0; i < NUM_RELAYS; i++) {
-    relayStates[i] = relayConfigs[i].defaultOn;
-    // Drive safe level before pinMode output transition to prevent boot relay chatter
-    digitalWrite(relayConfigs[i].pin, relayLevel(relayStates[i]));
-    pinMode(relayConfigs[i].pin, OUTPUT);
+    // 1. Configure Relay Pin as OUTPUT (drive safe initial level first to prevent boot chatter)
+    relayStates[i] = pairConfigs[i].defaultOn;
+    digitalWrite(pairConfigs[i].relayPin, relayLevel(relayStates[i]));
+    pinMode(pairConfigs[i].relayPin, OUTPUT);
+
+    // 2. Configure Manual Switch Pin as INPUT_PULLUP and attach state-change interrupt
+    pinMode(pairConfigs[i].switchPin, INPUT_PULLUP);
+    int initialReading = digitalRead(pairConfigs[i].switchPin);
+    lastStableSwitchState[i] = initialReading;
+    lastRawSwitchReading[i]  = initialReading;
+    lastSwitchDebounceMs[i]  = now;
+    attachInterrupt(digitalPinToInterrupt(pairConfigs[i].switchPin), switchIsrTable[i], CHANGE);
   }
 }
 
 void setRelay(int index, bool turnOn, bool publishFeedback = true);
 
 // =============================================================================
-// 7. MQTT STATUS & FEEDBACK PUBLISHING
+// 6. MQTT DISCOVERY & TELEMETRY PUBLISHING
 // =============================================================================
-void publishRelayStatus(int index) {
-  if (index < 0 || index >= NUM_RELAYS) return;
-  int relayNum = index + 1;
+void publishDiscovery() {
+  if (!mqtt.connected()) return;
 
-  JSON_DOC(doc, 256);
-  doc["room"]       = CLASSROOM_ID;
-  doc["zone"]       = ZONE_ID;
-  doc["board"]      = BOARD_ID;
-  doc["relay"]      = relayNum;
-  doc["state"]      = relayStates[index] ? "ON" : "OFF";
-  doc["gpio"]       = relayConfigs[index].pin;
-  doc["name"]       = relayConfigs[index].name;
-  doc["speed"]      = relayStates[index] ? fanSpeeds[index] : 0;
-  doc["brightness"] = relayStates[index] ? brightness[index] : 0;
+  JSON_DOC(doc, 384);
+  doc["zone_id"]     = ZONE_ID_STR;         // "zone_1", "zone_2", or "zone_3"
+  doc["device_type"] = DEVICE_TYPE_STR;     // "switchboard"
+  doc["ip"]          = WiFi.localIP().toString();
+  doc["room"]        = CLASSROOM_ID;
+  doc["zone"]        = ZONE_ID;
+  doc["board"]       = BOARD_ID;
+  doc["mac"]         = WiFi.macAddress();
+  doc["rssi"]        = WiFi.RSSI();
+  doc["relays"]      = NUM_RELAYS;
+  doc["status"]      = "ONLINE";
 
-  char buffer[256];
+  char buffer[384];
   serializeJson(doc, buffer, sizeof(buffer));
 
-  // 1. Hierarchical Topic: ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/relay/<N>/status
+  // Publish to unified discovery topic (home/discovery) and room discovery topic
+  mqtt.publish(DISCOVERY_TOPIC, buffer, false);
+  mqtt.publish((getBaseTopic() + "/discovery").c_str(), buffer, false);
+
+  Serial.printf("🔍 [DISCOVERY] Published to %s => %s\n", DISCOVERY_TOPIC, buffer);
+}
+
+void publishRelayStatus(int index) {
+  if (index < 0 || index >= NUM_RELAYS || !mqtt.connected()) return;
+  int relayNum = index + 1;
+
+  JSON_DOC(doc, 320);
+  doc["room"]        = CLASSROOM_ID;
+  doc["zone_id"]     = ZONE_ID_STR;
+  doc["device_type"] = DEVICE_TYPE_STR;
+  doc["zone"]        = ZONE_ID;
+  doc["board"]       = BOARD_ID;
+  doc["relay"]       = relayNum;
+  doc["state"]       = relayStates[index] ? "ON" : "OFF";
+  doc["gpio"]        = pairConfigs[index].relayPin;
+  doc["switch_gpio"] = pairConfigs[index].switchPin;
+  doc["name"]        = pairConfigs[index].relayLabel;
+  doc["switch_name"] = pairConfigs[index].switchName;
+  doc["speed"]       = relayStates[index] ? fanSpeeds[index] : 0;
+  doc["brightness"]  = relayStates[index] ? brightness[index] : 0;
+
+  char buffer[320];
+  serializeJson(doc, buffer, sizeof(buffer));
+
+  // 1. Hierarchical Zone Relay Topic: ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/relay/<1-8>/status
   String topicZoneRelay = getZoneTopic() + "/relay/" + String(relayNum) + "/status";
   mqtt.publish(topicZoneRelay.c_str(), buffer, false);
 
-  // 2. Board Status Alias: ruet/classroom/<CLASSROOM_ID>/status/board/<ZONE_ID>/relay/<N>
+  // 2. Board Status Alias: ruet/classroom/<CLASSROOM_ID>/status/board/<ZONE_ID>/relay/<1-8>
   String topicBoardRelay = getBaseTopic() + "/status/board/" + String(ZONE_ID) + "/relay/" + String(relayNum);
   mqtt.publish(topicBoardRelay.c_str(), buffer, false);
 
-  Serial.printf("📡 [MQTT] Zone %d Relay %d (%s) -> %s (GPIO %d)\n",
-                ZONE_ID, relayNum, relayConfigs[index].name,
-                relayStates[index] ? "ON" : "OFF", relayConfigs[index].pin);
+  // 3. Home Zone Status Alias: home/zone_<ZONE_ID>/relay/<1-8>/status
+  String topicHomeRelay = "home/" + String(ZONE_ID_STR) + "/relay/" + String(relayNum) + "/status";
+  mqtt.publish(topicHomeRelay.c_str(), buffer, false);
+
+  Serial.printf("📡 [MQTT SYNC] %s Pair %d (%s D%d <-> %s D%d) -> %s\n",
+                ZONE_ID_STR, relayNum,
+                pairConfigs[index].relayLabel, pairConfigs[index].relayPin,
+                pairConfigs[index].switchName, pairConfigs[index].switchPin,
+                relayStates[index] ? "ON" : "OFF");
 }
 
 void publishAllRelayStatus() {
   for (int i = 0; i < NUM_RELAYS; i++) {
     publishRelayStatus(i);
   }
-  publishAcStatus();
-}
-
-void publishAcStatus() {
-  JSON_DOC(doc, 256);
-  doc["room"]     = CLASSROOM_ID;
-  doc["zone"]     = ZONE_ID;
-  doc["board"]    = BOARD_ID;
-  doc["type"]     = "ac";
-  doc["state"]    = acState.isOn ? "ON" : "OFF";
-  doc["temp"]     = acState.temperature;
-  doc["mode"]     = acState.mode;
-  doc["fan"]      = acState.fanSpeed;
-  doc["swing"]    = acState.swing;
-  doc["gpio"]     = IR_LED_PIN;
-  doc["protocol"] = "GREE";
-
-  char buffer[256];
-  serializeJson(doc, buffer, sizeof(buffer));
-
-  // 1. Zone AC Status: ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/ac/status
-  String topicZoneAc = getZoneTopic() + "/ac/status";
-  mqtt.publish(topicZoneAc.c_str(), buffer, false);
-
-  // 2. Global AC Status: ruet/classroom/<CLASSROOM_ID>/status/ac
-  String topicRoomAc = getBaseTopic() + "/status/ac";
-  mqtt.publish(topicRoomAc.c_str(), buffer, false);
-
-  // 3. Board AC Status: ruet/classroom/<CLASSROOM_ID>/status/board/<ZONE_ID>/ac
-  String topicBoardAc = getBaseTopic() + "/status/board/" + String(ZONE_ID) + "/ac";
-  mqtt.publish(topicBoardAc.c_str(), buffer, false);
-
-  Serial.printf("📡 [MQTT] AC Status -> %s (%d°C, %s, Fan %d, Swing %s)\n",
-                acState.isOn ? "ON" : "OFF", acState.temperature, acState.mode.c_str(),
-                acState.fanSpeed, acState.swing ? "ON" : "OFF");
-}
-
-void executeAcControl(bool turnOn, int temp, String mode, int fan, bool swing, bool publishStatus = true) {
-  acState.isOn = turnOn;
-  acState.temperature = constrain(temp, 16, 30);
-  acState.mode = mode;
-  acState.fanSpeed = constrain(fan, 0, 3);
-  acState.swing = swing;
-
-  if (turnOn) {
-    ac.on();
-    ac.setTemp(acState.temperature);
-    if (mode.equalsIgnoreCase("COOL")) ac.setMode(kGreeCool);
-    else if (mode.equalsIgnoreCase("DRY")) ac.setMode(kGreeDry);
-    else if (mode.equalsIgnoreCase("FAN")) ac.setMode(kGreeFan);
-    else if (mode.equalsIgnoreCase("HEAT")) ac.setMode(kGreeHeat);
-    else ac.setMode(kGreeAuto);
-
-    ac.setFan(acState.fanSpeed); // 0 = Auto, 1 = Low, 2 = Med, 3 = High
-    if (acState.swing) {
-      ac.setSwingVertical(true, kGreeSwingAuto);
-    } else {
-      ac.setSwingVertical(false, kGreeSwingUp);
-    }
-    ac.setLight(true);
-    ac.send();
-    Serial.printf("❄️ [IR AC] Sent IR Command: ON, %d°C, %s, Fan %d, Swing %s via GPIO %d (RELAYS BYPASSED)\n",
-                  acState.temperature, acState.mode.c_str(), acState.fanSpeed,
-                  acState.swing ? "AUTO" : "FIXED", IR_LED_PIN);
-  } else {
-    ac.off();
-    ac.send();
-    Serial.printf("❄️ [IR AC] Sent IR Command: OFF via GPIO %d (RELAYS BYPASSED)\n", IR_LED_PIN);
-  }
-
-  if (publishStatus && mqtt.connected()) {
-    publishAcStatus();
-  }
-}
-
-void handleAcCommand(String msg) {
-  bool turnOn = acState.isOn;
-  int targetTemp = acState.temperature;
-  String targetMode = acState.mode;
-  int targetFan = acState.fanSpeed;
-  bool targetSwing = acState.swing;
-
-  if (msg.startsWith("{")) {
-    JSON_DOC(doc, 256);
-    DeserializationError err = deserializeJson(doc, msg);
-    if (!err) {
-      if (!doc["state"].isNull()) {
-        String st = doc["state"].as<String>();
-        st.toUpperCase();
-        turnOn = (st == "ON" || st == "1" || st == "TRUE");
-      }
-      if (!doc["temp"].isNull()) {
-        targetTemp = constrain(doc["temp"].as<int>(), 16, 30);
-      }
-      if (!doc["mode"].isNull()) {
-        targetMode = doc["mode"].as<String>();
-      }
-      if (!doc["fan"].isNull()) {
-        targetFan = constrain(doc["fan"].as<int>(), 0, 3);
-      }
-      if (!doc["speed"].isNull() && doc["fan"].isNull()) {
-        int spd = doc["speed"].as<int>();
-        targetFan = (spd == 0) ? 0 : constrain(spd - 1, 1, 3);
-      }
-      if (!doc["swing"].isNull()) {
-        targetSwing = doc["swing"].as<bool>();
-      }
-    }
-  } else {
-    if (msg.equalsIgnoreCase("ON") || msg == "1" || msg.equalsIgnoreCase("TRUE")) {
-      turnOn = true;
-    } else if (msg.equalsIgnoreCase("OFF") || msg == "0" || msg.equalsIgnoreCase("FALSE")) {
-      turnOn = false;
-    } else if (msg.equalsIgnoreCase("TOGGLE")) {
-      turnOn = !acState.isOn;
-    }
-  }
-
-  executeAcControl(turnOn, targetTemp, targetMode, targetFan, targetSwing);
 }
 
 void publishHeartbeat() {
-  JSON_DOC(doc, 384);
-  doc["status"]    = "ONLINE";
-  doc["room"]      = CLASSROOM_ID;
-  doc["zone"]      = ZONE_ID;
-  doc["board"]     = BOARD_ID;
-  doc["ip"]        = WiFi.localIP().toString();
-  doc["mac"]       = WiFi.macAddress();
-  doc["rssi"]      = WiFi.RSSI();
-  doc["uptimeSec"] = millis() / 1000;
-  doc["freeHeap"]  = ESP.getFreeHeap();
-  doc["emergency"] = emergencyLocked;
-  doc["acState"]   = acState.isOn ? "ON" : "OFF";
-  doc["acTemp"]    = acState.temperature;
-  doc["acMode"]    = acState.mode;
+  if (!mqtt.connected()) return;
+
+  JSON_DOC(doc, 512);
+  doc["status"]      = "ONLINE";
+  doc["zone_id"]     = ZONE_ID_STR;
+  doc["device_type"] = DEVICE_TYPE_STR;
+  doc["room"]        = CLASSROOM_ID;
+  doc["zone"]        = ZONE_ID;
+  doc["board"]       = BOARD_ID;
+  doc["ip"]          = WiFi.localIP().toString();
+  doc["mac"]         = WiFi.macAddress();
+  doc["rssi"]        = WiFi.RSSI();
+  doc["uptimeSec"]   = millis() / 1000;
+  doc["freeHeap"]    = ESP.getFreeHeap();
+  doc["emergency"]   = emergencyLocked;
 
   JsonArray rArr = doc.createNestedArray("relays");
   for (int i = 0; i < NUM_RELAYS; i++) {
     rArr.add(relayStates[i] ? 1 : 0);
   }
 
-  char buffer[384];
+  char buffer[512];
   serializeJson(doc, buffer, sizeof(buffer));
 
-  // Publish to both board and zone status topics
   String topicBoardStatus = getBaseTopic() + "/status/board/" + String(ZONE_ID);
   String topicZoneStatus  = getZoneTopic() + "/status";
   mqtt.publish(topicBoardStatus.c_str(), buffer, false);
   mqtt.publish(topicZoneStatus.c_str(), buffer, false);
-
-  Serial.printf("💓 [HEARTBEAT] Zone %d in %s ONLINE (IP: %s, RSSI: %d dBm) | AC: %s %d°C\n",
-                ZONE_ID, CLASSROOM_ID, WiFi.localIP().toString().c_str(), WiFi.RSSI(),
-                acState.isOn ? "ON" : "OFF", acState.temperature);
+  mqtt.publish(DISCOVERY_TOPIC, buffer, false);
 }
 
 void setRelay(int index, bool turnOn, bool publishFeedback) {
   if (index < 0 || index >= NUM_RELAYS) return;
   bool stateChanged = (relayStates[index] != turnOn);
   relayStates[index] = turnOn;
-  digitalWrite(relayConfigs[index].pin, relayLevel(relayStates[index]));
-  
+  digitalWrite(pairConfigs[index].relayPin, relayLevel(relayStates[index]));
+
   if (stateChanged) {
-    Serial.printf("⚡ [RELAY] Output %d (%s) changed -> %s\n",
-                  index + 1, relayConfigs[index].name,
-                  turnOn ? "ENERGIZED (ON)" : "DE-ENERGIZED (OFF)");
+    Serial.printf("⚡ [PAIR %d] Relay %s (D%d) -> %s\n",
+                  index + 1, pairConfigs[index].relayLabel,
+                  pairConfigs[index].relayPin,
+                  turnOn ? "ON" : "OFF");
   }
 
-  // Only broadcast status when state actually changes to eliminate infinite echo loops
   if (stateChanged && publishFeedback && mqtt.connected()) {
     publishRelayStatus(index);
   }
 }
 
 // =============================================================================
-// 8. MQTT INCOMING COMMAND HANDLER (STRICT HIERARCHICAL ISOLATION)
+// 7. PHYSICAL MANUAL SWITCH SCANNER (SERIAL LINKING: SWITCH <-> RELAY)
 // =============================================================================
+void pollManualSwitches() {
+  unsigned long now = millis();
+  for (int i = 0; i < NUM_RELAYS; i++) {
+    int currentReading = digitalRead(pairConfigs[i].switchPin);
+
+    if (currentReading != lastRawSwitchReading[i] || switchIrqTriggered[i]) {
+      switchIrqTriggered[i] = false;
+      lastRawSwitchReading[i] = currentReading;
+      lastSwitchDebounceMs[i] = now;
+    }
+
+    if ((now - lastSwitchDebounceMs[i]) >= SWITCH_DEBOUNCE_MS) {
+      if (currentReading != lastStableSwitchState[i]) {
+        lastStableSwitchState[i] = currentReading;
+        // Physical switch toggled (HIGH <-> LOW): invert paired relay state immediately!
+        bool newRelayState = !relayStates[i];
+        Serial.printf("🔘 [MANUAL SWITCH] %s (D%d) toggled -> Inverting Pair %d Relay %s (D%d) to %s\n",
+                      pairConfigs[i].switchName, pairConfigs[i].switchPin,
+                      i + 1, pairConfigs[i].relayLabel, pairConfigs[i].relayPin,
+                      newRelayState ? "ON" : "OFF");
+        setRelay(i, newRelayState, true);
+      }
+    }
+  }
+}
 
 // =============================================================================
-// 7B. PHASE 5 PROTOCOL IMPLEMENTATION (classroom-control-v1)
+// 8. PHASE 5 PROTOCOL IMPLEMENTATION (classroom-control-v1)
 // =============================================================================
 void publishPhase5Status() {
   if (!mqtt.connected() || activeChallenge.length() == 0) return;
-  JSON_DOC(doc, 512);
+  JSON_DOC(doc, 640);
   doc["protocol"]           = PROTOCOL_NAME;
   doc["kind"]               = "status";
   doc["controller_id"]      = CONTROLLER_ID;
@@ -444,7 +401,7 @@ void publishPhase5Status() {
   doc["sent_at_unix_ms"]    = (uint64_t)nowMs;
   doc["expires_at_unix_ms"] = (uint64_t)(nowMs + 4000);
 
-  char buf[512];
+  char buf[640];
   serializeJson(doc, buf, sizeof(buf));
   mqtt.publish((getControllerPrefix() + "/status").c_str(), buf, false);
   mqtt.publish((getAltControllerPrefix() + "/status").c_str(), buf, false);
@@ -452,49 +409,34 @@ void publishPhase5Status() {
 
 void handlePhase5Hello(String msg) {
   JSON_DOC(doc, 384);
-  DeserializationError err = deserializeJson(doc, msg);
-  if (err) return;
-  if (!doc["session_id"].isNull()) {
-    activeSessionId = doc["session_id"].as<String>();
-  }
-  if (!doc["challenge"].isNull()) {
-    activeChallenge = doc["challenge"].as<String>();
-  }
-  Serial.printf("🤝 [PHASE 5 HELLO] Session: %s, Challenge: %s\n", activeSessionId.c_str(), activeChallenge.c_str());
+  if (deserializeJson(doc, msg)) return;
+  if (!doc["session_id"].isNull()) activeSessionId = doc["session_id"].as<String>();
+  if (!doc["challenge"].isNull()) activeChallenge = doc["challenge"].as<String>();
   publishPhase5Status();
 }
 
 void handlePhase5Command(String msg, bool isDryRunTopic) {
   JSON_DOC(doc, 512);
-  DeserializationError err = deserializeJson(doc, msg);
-  if (err) return;
-
-  String proto = doc["protocol"].as<String>();
-  if (proto != PROTOCOL_NAME) return;
-
-  String cid = doc["controller_id"].as<String>();
-  if (cid != CONTROLLER_ID) return;
+  if (deserializeJson(doc, msg)) return;
+  if (doc["protocol"].as<String>() != PROTOCOL_NAME) return;
+  if (doc["controller_id"].as<String>() != CONTROLLER_ID) return;
 
   String sess = doc["session_id"].as<String>();
   String chal = doc["challenge"].as<String>();
-  if (activeSessionId.length() > 0 && sess != activeSessionId && chal != "authorized") {
-    Serial.println("⚠️ [PHASE 5 CMD] Session/challenge mismatch, ignoring");
-    return;
-  }
+  if (activeSessionId.length() > 0 && sess != activeSessionId && chal != "authorized") return;
 
   uint32_t seq = doc["sequence"].as<uint32_t>();
-  if (seq <= lastCmdSequence) {
-    Serial.printf("⚠️ [PHASE 5 CMD] Duplicate sequence, ignoring\n");
-    return;
-  }
+  if (seq <= lastCmdSequence) return;
   lastCmdSequence = seq;
 
   String channel = doc["channel"].as<String>();
   int relayIndex = -1;
-  if (channel.indexOf("1") != -1) relayIndex = 0;
-  else if (channel.indexOf("2") != -1) relayIndex = 1;
-  else if (channel.indexOf("3") != -1) relayIndex = 2;
-  else if (channel.indexOf("4") != -1) relayIndex = 3;
+  for (int i = 1; i <= NUM_RELAYS; i++) {
+    if (channel.indexOf(String(i)) != -1) {
+      relayIndex = i - 1;
+      break;
+    }
+  }
 
   String desired = doc["desired_state"].as<String>();
   String mode    = doc["mode"].as<String>();
@@ -505,42 +447,18 @@ void handlePhase5Command(String msg, bool isDryRunTopic) {
   String actualState = "UNKNOWN";
   String resultState = "SIMULATED";
 
-  bool isAcChannel = (channel.indexOf("AC") != -1 || channel.indexOf("ac") != -1 || appid.indexOf("ac") != -1);
-
-  if (isAcChannel) {
-    bool turnOn = desired.equalsIgnoreCase("ON");
-    if (isDryRun) {
-      actualState = acState.isOn ? "ON" : "OFF";
-      resultState = "SIMULATED";
-      Serial.printf("🔒 [PHASE 5 AC DRY-RUN] AC desired %s. IR TRANSMISSION SUPPRESSED.\n", desired.c_str());
-    } else {
-      if (!doc["ac"].isNull()) {
-        String acSub;
-        serializeJson(doc["ac"], acSub);
-        handleAcCommand(acSub);
-      } else {
-        executeAcControl(turnOn, acState.temperature, acState.mode, acState.fanSpeed, acState.swing, true);
-      }
-      actualState = acState.isOn ? "ON" : "OFF";
-      resultState = "APPLIED";
-    }
-  } else if (relayIndex >= 0 && relayIndex < NUM_RELAYS) {
+  if (relayIndex >= 0 && relayIndex < NUM_RELAYS) {
     if (isDryRun) {
       actualState = relayStates[relayIndex] ? "ON" : "OFF";
       resultState = "SIMULATED";
-      Serial.printf("🔒 [PHASE 5 DRY-RUN] %s desired %s. GPIO TRANSITION SUPPRESSED.\n",
-                    channel.c_str(), desired.c_str());
     } else {
       bool turnOn = desired.equalsIgnoreCase("ON");
-      setRelay(relayIndex, turnOn, false);
+      setRelay(relayIndex, turnOn, true);
       actualState = turnOn ? "ON" : "OFF";
       resultState = "APPLIED";
-      Serial.printf("⚡ [PHASE 5 LIVE] Applied %s -> %s on GPIO %d\n",
-                    channel.c_str(), desired.c_str(), relayConfigs[relayIndex].pin);
     }
   }
 
-  // Publish Phase 5 Application ACK
   JSON_DOC(ackDoc, 512);
   ackDoc["protocol"]           = PROTOCOL_NAME;
   ackDoc["kind"]               = "ack";
@@ -550,7 +468,7 @@ void handlePhase5Command(String msg, bool isDryRunTopic) {
   ackDoc["challenge"]          = activeChallenge;
   ackDoc["sequence"]           = phase5AckSeq++;
   ackDoc["command_id"]         = cmdId;
-  ackDoc["command_sequence"]    = seq;
+  ackDoc["command_sequence"]   = seq;
   ackDoc["appliance_id"]       = appid;
   ackDoc["desired_state"]      = desired;
   ackDoc["result"]             = resultState;
@@ -564,31 +482,27 @@ void handlePhase5Command(String msg, bool isDryRunTopic) {
   serializeJson(ackDoc, ackBuf, sizeof(ackBuf));
   mqtt.publish((getControllerPrefix() + "/ack").c_str(), ackBuf, false);
   mqtt.publish((getAltControllerPrefix() + "/ack").c_str(), ackBuf, false);
-
   publishPhase5Status();
 }
 
+// =============================================================================
+// 9. MQTT INCOMING COMMAND HANDLER
+// =============================================================================
 void onMqttMessage(char* topic, byte* payload, unsigned int length) {
   String strTopic = String(topic);
+  if (strTopic.endsWith("/status") || strTopic.indexOf("/status") != -1 || strTopic == DISCOVERY_TOPIC) {
+    return;
+  }
+
   String msg = "";
   for (unsigned int i = 0; i < length; i++) {
     msg += (char)payload[i];
   }
   msg.trim();
 
-  // ---------------------------------------------------------------------------
-  // CRITICAL SAFEGUARD: Drop all outbound status & feedback echoes immediately!
-  // Prevents infinite broker feedback loops that cause relays to toggle autonomously!
-  // ---------------------------------------------------------------------------
-  if (strTopic.endsWith("/status") || strTopic.indexOf("/status") != -1) {
-    return;
-  }
-
   Serial.printf("\n📩 [MQTT RX] %s => %s\n", topic, msg.c_str());
 
-  // ---------------------------------------------------------------------------
-  // Check -1: Phase 5 Wire Protocol (classroom-control-v1)
-  // ---------------------------------------------------------------------------
+  // 1. Phase 5 Wire Protocol
   if (strTopic == getControllerPrefix() + "/hello" || strTopic == getAltControllerPrefix() + "/hello") {
     handlePhase5Hello(msg);
     return;
@@ -602,65 +516,46 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-
-  // ---------------------------------------------------------------------------
-  // Check 0: Dedicated Optical IR AC Control (NO RELAYS TOUCHED!)
-  // Topics:
-  //   ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/ac/command
-  //   ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/ac/set
-  //   ruet/classroom/<CLASSROOM_ID>/board/<ZONE_ID>/ac/command
-  //   ruet/classroom/<CLASSROOM_ID>/ac/command
-  // ---------------------------------------------------------------------------
-  if (strTopic == getZoneTopic() + "/ac/command" ||
-      strTopic == getZoneTopic() + "/ac/set" ||
-      strTopic == getBoardTopic() + "/ac/command" ||
-      strTopic == getBaseTopic() + "/ac/command" ||
-      strTopic.endsWith("/ac/command") ||
-      strTopic.endsWith("/ac")) {
-    Serial.printf("❄️ [AC DISPATCH] Optical IR AC Command received on %s! Relays BYPASSED.\n", topic);
-    handleAcCommand(msg);
+  // 2. Discovery & Status Scan Query
+  if (strTopic == "home/discovery/query" ||
+      strTopic == getBaseTopic() + "/command/query" ||
+      strTopic == "ruet/classroom/all/command/query" ||
+      strTopic.endsWith("/query")) {
+    Serial.printf("🔍 [SCAN QUERY] Broadcasting discovery & 8-relay status for %s...\n", ZONE_ID_STR);
+    publishDiscovery();
+    publishHeartbeat();
+    publishAllRelayStatus();
     return;
   }
 
-  // ---------------------------------------------------------------------------
-  // Check 1: Zone Master Command (Targets ONLY this specific Switchboard/Zone!)
-  // Topics:
-  //   ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/command/all
-  //   ruet/classroom/<CLASSROOM_ID>/board/<ZONE_ID>/command/all
-  // ---------------------------------------------------------------------------
-  if (strTopic == getZoneTopic() + "/command/all" || strTopic == getBoardTopic() + "/command/all") {
+  // 3. Zone Master Command (ALL ON / ALL OFF for this 8-relay switchboard)
+  if (strTopic == getZoneTopic() + "/command/all" ||
+      strTopic == getBoardTopic() + "/command/all" ||
+      strTopic == "home/" + String(ZONE_ID_STR) + "/command/all") {
     bool turnOn = (msg.equalsIgnoreCase("ALL_ON") || msg.equalsIgnoreCase("ON") || msg == "1");
-    Serial.printf("⚡ [ZONE MASTER] Zone %d Switchboard: %s\n", ZONE_ID, turnOn ? "ALL ON" : "ALL OFF");
     for (int i = 0; i < NUM_RELAYS; i++) {
       setRelay(i, turnOn, true);
-    }
-    // Also power down AC if Zone Master OFF
-    if (!turnOn) {
-      executeAcControl(false, acState.temperature, acState.mode, acState.fanSpeed, acState.swing, true);
     }
     publishHeartbeat();
     return;
   }
 
-  // ---------------------------------------------------------------------------
-  // Check 2: Relay-Specific Command for THIS Switchboard/Zone
-  // Topics:
-  //   ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/relay/<1-4>
-  //   ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/relay/<1-4>/set
-  //   ruet/classroom/<CLASSROOM_ID>/board/<ZONE_ID>/relay/<1-4>
-  // ---------------------------------------------------------------------------
+  // 4. Individual Relay Command (Relays 1..8)
   int targetRelay = -1;
   String zoneRelayPrefix  = getZoneTopic() + "/relay/";
   String boardRelayPrefix = getBoardTopic() + "/relay/";
+  String homeRelayPrefix  = "home/" + String(ZONE_ID_STR) + "/relay/";
 
   if (strTopic.startsWith(zoneRelayPrefix)) {
     String sub = strTopic.substring(zoneRelayPrefix.length());
-    if (sub.endsWith("/status") || sub.indexOf("/status") != -1) return;
     int slash = sub.indexOf('/');
     targetRelay = (slash != -1 ? sub.substring(0, slash) : sub).toInt();
   } else if (strTopic.startsWith(boardRelayPrefix)) {
     String sub = strTopic.substring(boardRelayPrefix.length());
-    if (sub.endsWith("/status") || sub.indexOf("/status") != -1) return;
+    int slash = sub.indexOf('/');
+    targetRelay = (slash != -1 ? sub.substring(0, slash) : sub).toInt();
+  } else if (strTopic.startsWith(homeRelayPrefix)) {
+    String sub = strTopic.substring(homeRelayPrefix.length());
     int slash = sub.indexOf('/');
     targetRelay = (slash != -1 ? sub.substring(0, slash) : sub).toInt();
   }
@@ -671,22 +566,12 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
 
     if (msg.startsWith("{")) {
       JSON_DOC(doc, 256);
-      DeserializationError err = deserializeJson(doc, msg);
-      if (!err) {
-        // SAFEGUARD: If this channel is designated as AC, DISPATCH TO IR AND NEVER TOGGLE MECHANICAL RELAYS!
-        if ((!doc["type"].isNull() && doc["type"].as<String>().equalsIgnoreCase("ac")) ||
-            (!doc["protocol"].isNull() && doc["protocol"].as<String>().equalsIgnoreCase("gree")) ||
-            (!doc["id"].isNull() && doc["id"].as<String>().indexOf("ac") != -1)) {
-          Serial.printf("❄️ [AC DISPATCH] Relay %d payload identified as AC! Bypassing relay output, firing IR transmitter on GPIO %d...\n",
-                        targetRelay, IR_LED_PIN);
-          handleAcCommand(msg);
-          return;
-        }
-
+      if (!deserializeJson(doc, msg)) {
         if (!doc["state"].isNull()) {
           String st = doc["state"].as<String>();
           st.toUpperCase();
-          newState = (st == "ON" || st == "1" || st == "TRUE");
+          if (st == "TOGGLE") newState = !relayStates[idx];
+          else newState = (st == "ON" || st == "1" || st == "TRUE");
         }
         if (!doc["speed"].isNull()) {
           int spd = doc["speed"].as<int>();
@@ -715,55 +600,22 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  // ---------------------------------------------------------------------------
-  // Check 3: Classroom Master Power (All Switchboards in THIS Classroom)
-  // Topic: ruet/classroom/<CLASSROOM_ID>/command/all
-  // ---------------------------------------------------------------------------
+  // 5. Classroom Master Power (All Switchboards in Room)
   if (strTopic == getBaseTopic() + "/command/all") {
     bool turnOn = (msg.equalsIgnoreCase("ALL_ON") || msg.equalsIgnoreCase("ON") || msg == "1");
-    Serial.printf("🌐 [ROOM MASTER] %s Power: %s\n", CLASSROOM_ID, turnOn ? "ALL ON" : "ALL OFF");
     for (int i = 0; i < NUM_RELAYS; i++) {
       setRelay(i, turnOn, true);
     }
-    // Also power down AC via optical IR if room is powered down
-    if (!turnOn) {
-      executeAcControl(false, acState.temperature, acState.mode, acState.fanSpeed, acState.swing, true);
-    }
     publishHeartbeat();
     return;
   }
 
-  // ---------------------------------------------------------------------------
-  // Check 4: Query / Hardware Scan Telemetry Request (Telemetry only! Never toggle relays!)
-  // Topics:
-  //   ruet/classroom/<CLASSROOM_ID>/command/query
-  //   ruet/classroom/all/command/query
-  // ---------------------------------------------------------------------------
-  if (strTopic == getBaseTopic() + "/command/query" || 
-      strTopic == "ruet/classroom/all/command/query" ||
-      strTopic.endsWith("/query")) {
-    Serial.printf("🔍 [QUERY] Scan ping received for %s! Broadcasting heartbeat, relay states, and AC status...\n", CLASSROOM_ID);
-    publishHeartbeat();
-    publishAllRelayStatus();
-    return;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Check 5: Classroom Emergency Cutoff
-  // Topic: ruet/classroom/<CLASSROOM_ID>/command/emergency
-  // ---------------------------------------------------------------------------
+  // 6. Classroom Emergency Cutoff
   if (strTopic == getBaseTopic() + "/command/emergency") {
-    if (msg.equalsIgnoreCase("CUTOFF") || msg.equalsIgnoreCase("LOCK") || msg == "1") {
-      emergencyLocked = true;
-      // Shut down AC via IR immediately on emergency
-      executeAcControl(false, acState.temperature, acState.mode, acState.fanSpeed, acState.swing, false);
-      Serial.println("🚨 [EMERGENCY] Master safety cutoff tripped! Opening all 4 relays and turning OFF AC via IR.");
-    } else {
-      emergencyLocked = false;
-      Serial.println("✅ [EMERGENCY] Master cutoff cleared. Normal operation restored.");
+    emergencyLocked = (msg.equalsIgnoreCase("CUTOFF") || msg.equalsIgnoreCase("LOCK") || msg == "1");
+    for (int i = 0; i < NUM_RELAYS; i++) {
+      digitalWrite(pairConfigs[i].relayPin, relayLevel(relayStates[i]));
     }
-    configureRelayPins();
-  snprintf(controllerBootId, sizeof(controllerBootId), "boot_%08x%08x", (uint32_t)ESP.getEfuseMac(), (uint32_t)esp_random());
     publishAllRelayStatus();
     publishHeartbeat();
     return;
@@ -771,37 +623,36 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
 }
 
 // =============================================================================
-// 9. RECONNECT LOGIC (WI-FI & MQTT)
+// 10. WI-FI & MQTT CONNECTION MANAGEMENT
 // =============================================================================
 void connectWifi() {
   if (WiFi.status() == WL_CONNECTED) return;
-  Serial.printf("\n📶 [WiFi] Connecting to SSID '%s' ", WIFI_SSID);
+  Serial.printf("\n📶 [WiFi] Connecting to '%s' ", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   int retry = 0;
-  while (WiFi.status() != WL_CONNECTED && retry < 25) {
-    delay(500);
+  while (WiFi.status() != WL_CONNECTED && retry < 20) {
+    // Keep polling physical manual switches even while Wi-Fi connects!
+    pollManualSwitches();
+    delay(250);
     Serial.print(".");
     retry++;
   }
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("\n✅ [WiFi] Connected! IP: %s | RSSI: %d dBm\n",
                   WiFi.localIP().toString().c_str(), WiFi.RSSI());
-  } else {
-    Serial.println("\n⚠️ [WiFi] Connection pending. Retrying in loop...");
   }
 }
 
 void connectMqtt() {
-  if (mqtt.connected()) return;
-  if (WiFi.status() != WL_CONNECTED) return;
+  if (mqtt.connected() || WiFi.status() != WL_CONNECTED) return;
 
-  Serial.printf("🔄 [MQTT] Connecting to %s:%d ... ", MQTT_BROKER, MQTT_PORT);
-  String clientId = "ESP32_Zone_" + String(ZONE_ID) + "_" + String((uint32_t)ESP.getEfuseMac(), HEX);
+  String clientId = "ESP32_" + String(ZONE_ID_STR) + "_" + String((uint32_t)ESP.getEfuseMac(), HEX);
   String lwtTopic = getBaseTopic() + "/status/board/" + String(ZONE_ID);
-  String lwtMsg   = "{\"status\":\"OFFLINE\",\"zone\":" + String(ZONE_ID) + ",\"board\":" + String(BOARD_ID) + "}";
+  String lwtMsg   = "{\"status\":\"OFFLINE\",\"zone_id\":\"" + String(ZONE_ID_STR) +
+                    "\",\"device_type\":\"switchboard\",\"zone\":" + String(ZONE_ID) +
+                    ",\"board\":" + String(BOARD_ID) + "}";
 
-  // Connect with Last Will & Testament (LWT)
   bool success = false;
   if (strlen(MQTT_USER) > 0) {
     success = mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASSWORD, lwtTopic.c_str(), 1, true, lwtMsg.c_str());
@@ -810,30 +661,16 @@ void connectMqtt() {
   }
 
   if (success) {
-    Serial.println("CONNECTED! 🎉");
+    Serial.printf("🎉 [MQTT] Connected as %s (%s)\n", clientId.c_str(), ZONE_ID_STR);
 
-    // 1. Strict Zone Topic (Zone Isolation): ONLY receives commands for THIS switchboard!
-    String zoneSub  = getZoneTopic() + "/#";
-    String boardSub = getBoardTopic() + "/#";
-    mqtt.subscribe(zoneSub.c_str(), 1);
-    mqtt.subscribe(boardSub.c_str(), 1);
-
-    // 2. Strict Classroom Topic (Room Isolation): Room Master, Emergency, Query for THIS room only!
-    String roomSub = getBaseTopic() + "/command/#";
-    mqtt.subscribe(roomSub.c_str(), 1);
-
-    // 3. Dedicated AC Command Topics (Optical IR Control)
-    String zoneAcSub  = getZoneTopic() + "/ac/#";
-    String boardAcSub = getBoardTopic() + "/ac/#";
-    String roomAcSub  = getBaseTopic() + "/ac/#";
-    mqtt.subscribe(zoneAcSub.c_str(), 1);
-    mqtt.subscribe(boardAcSub.c_str(), 1);
-    mqtt.subscribe(roomAcSub.c_str(), 1);
-
-    // 4. Global Scan Query (For App's Hardware Discovery Ping)
+    mqtt.subscribe((getZoneTopic() + "/#").c_str(), 1);
+    mqtt.subscribe((getBoardTopic() + "/#").c_str(), 1);
+    mqtt.subscribe(("home/" + String(ZONE_ID_STR) + "/#").c_str(), 1);
+    mqtt.subscribe((getBaseTopic() + "/command/#").c_str(), 1);
+    mqtt.subscribe("home/discovery/query", 1);
     mqtt.subscribe("ruet/classroom/all/command/query", 1);
 
-    // Phase 5 Wire Protocol (classroom-control-v1) Subscriptions
+    // Phase 5 Subscriptions
     mqtt.subscribe((getControllerPrefix() + "/hello").c_str(), 1);
     mqtt.subscribe((getControllerPrefix() + "/command").c_str(), 1);
     mqtt.subscribe((getControllerPrefix() + "/dry_run/command").c_str(), 1);
@@ -841,68 +678,50 @@ void connectMqtt() {
     mqtt.subscribe((getAltControllerPrefix() + "/command").c_str(), 1);
     mqtt.subscribe((getAltControllerPrefix() + "/dry_run/command").c_str(), 1);
 
-    Serial.println("📥 [MQTT Subscriptions Active]:");
-    Serial.printf("  • %s (Zone-Isolated Channel)\n", zoneSub.c_str());
-    Serial.printf("  • %s (Board-Isolated Alias)\n", boardSub.c_str());
-    Serial.printf("  • %s (Classroom Master Channel)\n", roomSub.c_str());
-    Serial.printf("  • %s (Zone AC Optical Channel)\n", zoneAcSub.c_str());
-    Serial.printf("  • %s (Room AC Optical Channel)\n", roomAcSub.c_str());
-    Serial.printf("  • ruet/classroom/all/command/query (Discovery Ping)\n");
-
-    // Broadcast online telemetry and relay feedback immediately
+    // Broadcast Discovery, Heartbeat, and all 8 Relay states immediately upon boot/connect
+    publishDiscovery();
     publishHeartbeat();
     publishAllRelayStatus();
-    publishAcStatus();
-  } else {
-    Serial.printf("FAILED (rc=%d). Will retry in loop.\n", mqtt.state());
   }
 }
 
 // =============================================================================
-// 10. SETUP & MAIN LOOP
+// 11. SETUP & MAIN LOOP
 // =============================================================================
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(500);
+  snprintf(controllerBootId, sizeof(controllerBootId), "boot_%08x%08x",
+           (uint32_t)ESP.getEfuseMac(), (uint32_t)esp_random());
 
-  Serial.println("\n\n==========================================================");
-  Serial.printf("  RUET Smart Classroom - Switchboard #%d (Zone %d)\n", ZONE_ID, ZONE_ID);
-  Serial.printf("  Assigned Classroom: %s\n", CLASSROOM_ID);
-  Serial.println("  4-Channel Relays + Optical IR AC (Zero Relay Chatter)");
-  Serial.println("==========================================================");
+  Serial.println("\n==============================================================");
+  Serial.printf("  Smart Home / Classroom 8-Switchboard Controller (%s)\n", ZONE_ID_STR);
+  Serial.printf("  Classroom: %s | Board #%d | 8 Relays <-> 8 Manual Switches\n", CLASSROOM_ID, BOARD_ID);
+  Serial.println("==============================================================");
 
-  // Initialize 4 relay outputs (Zero-glitch, all safe at boot)
-  configureRelayPins();
+  configureHardwarePins();
+  for (int i = 0; i < NUM_RELAYS; i++) {
+    Serial.printf("  Pair %d: Relay %-7s (GPIO %2d) <-> Switch %-3s (GPIO %2d)\n",
+                  i + 1, pairConfigs[i].relayLabel, pairConfigs[i].relayPin,
+                  pairConfigs[i].switchName, pairConfigs[i].switchPin);
+  }
 
-  // Initialize IR Optical Transmitter for Gree AC (GPIO 4)
-  ac.begin();
-  ac.setMode(kGreeCool);
-  ac.setTemp(acState.temperature);
-  ac.setFan(acState.fanSpeed);
-  ac.setSwingVertical(false, kGreeSwingUp);
-  ac.setTurbo(false);
-  ac.setSleep(false);
-  ac.setLight(true);
-  Serial.printf("❄️ [IR AC] Gree AC Optical Controller initialized on GPIO %d (Relays Bypassed)\n", IR_LED_PIN);
-
-  // Network & MQTT initialization
   connectWifi();
   mqtt.setServer(MQTT_BROKER, MQTT_PORT);
   mqtt.setCallback(onMqttMessage);
-  mqtt.setBufferSize(512); // Support JSON payloads up to 512 bytes
+  mqtt.setBufferSize(768);
   mqtt.setKeepAlive(30);
   mqtt.setSocketTimeout(5);
 }
 
-unsigned long lastMqttRetry = 0;
-
 void loop() {
-  // 1. Maintain Wi-Fi link
+  // 1. Always poll manual physical switches first for instant (<1ms) hardware response
+  pollManualSwitches();
+
+  // 2. Maintain Wi-Fi & MQTT connectivity
   if (WiFi.status() != WL_CONNECTED) {
     connectWifi();
   }
-
-  // 2. Maintain MQTT session with 3-second backoff (prevents rapid broker reconnect rate-limiting)
   if (WiFi.status() == WL_CONNECTED && !mqtt.connected()) {
     unsigned long now = millis();
     if (now - lastMqttRetry >= 3000) {
@@ -911,10 +730,9 @@ void loop() {
     }
   }
 
-  // 3. Process MQTT incoming packet queues
   mqtt.loop();
 
-  // 4. Periodic heartbeat transmission
+  // 3. Periodic Heartbeat & Discovery keep-alive
   unsigned long now = millis();
   if (now - lastHeartbeat >= HEARTBEAT_INTERVAL) {
     lastHeartbeat = now;

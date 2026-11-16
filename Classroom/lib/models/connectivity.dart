@@ -44,6 +44,8 @@ class BleDeviceNode {
 
 class IpDeviceNode {
   final int boardId;
+  final String zoneId;     // e.g. 'zone_1', 'zone_2', 'zone_3', 'zone_ac'
+  final String deviceType; // e.g. 'switchboard', 'ac_unit'
   final String ip;
   final String name;
   final int port;
@@ -54,14 +56,23 @@ class IpDeviceNode {
 
   IpDeviceNode({
     this.boardId = 1,
+    String? zoneId,
+    this.deviceType = 'switchboard',
     required this.ip,
     required this.name,
-    this.port = 80,
-    this.status = 'ACTIVE',
-    this.responseTimeMs = 24,
+    this.port = 1883,
+    this.status = 'ONLINE',
+    this.responseTimeMs = -55,
     DateTime? lastSeen,
     this.roomId = '',
-  }) : lastSeen = lastSeen ?? DateTime.now();
+  })  : zoneId = zoneId ?? (deviceType == 'ac_unit' ? 'zone_ac' : 'zone_$boardId'),
+        lastSeen = lastSeen ?? DateTime.now();
 
-  bool get isOnline => status == 'ONLINE' && DateTime.now().difference(lastSeen).inSeconds <= 30;
+  bool get isAcUnit =>
+      deviceType.toLowerCase() == 'ac_unit' ||
+      zoneId.toLowerCase() == 'zone_ac' ||
+      boardId == 4;
+
+  bool get isOnline =>
+      status == 'ONLINE' && DateTime.now().difference(lastSeen).inSeconds <= 30;
 }

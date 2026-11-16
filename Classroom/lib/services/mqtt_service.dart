@@ -61,6 +61,16 @@ class MqttService {
     int rssi,
   )? onBoardTelemetryReceived;
 
+  // Unified MQTT Discovery callback (`home/discovery`): (zoneId, deviceType, ip, roomId, rssi, isOnline)
+  void Function(
+    String zoneId,
+    String deviceType,
+    String ip,
+    String roomId,
+    int rssi,
+    bool isOnline,
+  )? onDiscoveryReceived;
+
   // Switchboard-isolated relay status callback: (roomId, boardId, relayNumber, isOn, speed, brightness, gpio)
   void Function(
     String roomId,
@@ -180,7 +190,8 @@ class MqttService {
     });
   }
 
-  void requestHardwareSync([String roomId = 'room_304']) {
+  void requestHardwareSync([String roomId = 'reb_room_301']) {
+    _publish('home/discovery/query', 'QUERY', retain: false);
     _publish('$_baseTopic/all/command/query', 'QUERY', retain: false);
     _publish('$_baseTopic/$roomId/command/query', 'QUERY', retain: false);
     if (roomId.contains('_')) {
@@ -188,7 +199,7 @@ class MqttService {
     } else if (roomId.contains('-')) {
       _publish('$_baseTopic/${roomId.replaceAll('-', '_')}/command/query', 'QUERY', retain: false);
     }
-    debugPrint('[MQTT] Hardware sync queried for room: $roomId');
+    debugPrint('[MQTT] Hardware sync & discovery queried for room: $roomId');
   }
 
   // Deletes any old stale retained messages on the public EMQX broker
@@ -247,8 +258,14 @@ class MqttService {
   void _subscribeTopics() {
     if (!isConnected || _client == null) return;
 
-    // Listen strictly to physical switchboard telemetry & relay status channels (no catch-all wildcards)
-    // Supports both single-level (e.g. ruet/classroom/ete_room_304/...) and dual-level (ruet/classroom/ete/room_304/...)
+    // 1. Unified MQTT Discovery Topic (`home/discovery`) for Zones 1-3 and Standalone AC (`zone_ac`)
+    _client!.subscribe('home/discovery', MqttQos.atLeastOnce);
+    _client!.subscribe('$_baseTopic/+/discovery', MqttQos.atLeastOnce);
+    _client!.subscribe('$_baseTopic/+/+/discovery', MqttQos.atLeastOnce);
+    _client!.subscribe('home/+/relay/+/status', MqttQos.atLeastOnce);
+    _client!.subscribe('home/zone_ac/status', MqttQos.atLeastOnce);
+
+    // 2. Listen strictly to physical switchboard telemetry & relay status channels (Relays 1-8)
     _client!.subscribe('$_baseTopic/+/zone/+/status', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/zone/+/status', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/zone/+/relay/+/status', MqttQos.atLeastOnce);
@@ -258,7 +275,7 @@ class MqttService {
     _client!.subscribe('$_baseTopic/+/status/board/+/relay/+', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/status/board/+/relay/+', MqttQos.atLeastOnce);
 
-    // Optical AC status telemetry
+    // 3. Standalone AC status telemetry
     _client!.subscribe('$_baseTopic/+/zone/+/ac/status', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/zone/+/ac/status', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/status/ac', MqttQos.atLeastOnce);
@@ -266,11 +283,11 @@ class MqttService {
     _client!.subscribe('$_baseTopic/+/status/board/+/ac', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/status/board/+/ac', MqttQos.atLeastOnce);
 
-    // Listen to configuration acknowledgements
+    // 4. Listen to configuration acknowledgements
     _client!.subscribe('$_baseTopic/+/config/ack', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/config/ack', MqttQos.atLeastOnce);
 
-    // Phase 5 AppBridge (Decision Maker Telemetry & Results)
+    // 5. Phase 5 AppBridge (Decision Maker Telemetry & Results)
     _client!.subscribe('$_baseTopic/+/app/results', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/app/results', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/app/state', MqttQos.atLeastOnce);
@@ -335,6 +352,85 @@ class MqttService {
       return;
     }
 
+    // Unified Discovery Handling (`home/discovery` & `/discovery`):
+    if (topic == 'home/discovery' || topic.endsWith('/discovery')) {
+      try {
+        if (payload.trim().startsWith('{')) {
+          final data = jsonDecode(payload) as Map<String, dynamic>;
+          final zoneId = data['zone_id']?.toString() ??
+              (data['zone'] != null ? 'zone_${data['zone']}' : 'zone_1');
+          final deviceType = data['device_type']?.toString() ??
+              (zoneId == 'zone_ac' ? 'ac_unit' : 'switchboard');
+          final ip = data['ip']?.toString() ?? '192.168.1.x';
+          final roomId = data['room']?.toString() ?? 'reb_room_301';
+          final rssi = (data['rssi'] as num?)?.toInt() ?? -55;
+          final isOnline = (data['status']?.toString() ?? 'ONLINE').toUpperCase() != 'OFFLINE';
+
+          debugPrint('[MQTT DISCOVERY] zone_id=$zoneId, device_type=$deviceType, ip=$ip, room=$roomId');
+          onDiscoveryReceived?.call(zoneId, deviceType, ip, roomId, rssi, isOnline);
+
+          if (deviceType == 'ac_unit' || zoneId == 'zone_ac') {
+            if (data.containsKey('state')) {
+              final isOn = data['state'] == 'ON' || data['state'] == true || data['state'] == '1';
+              final temp = (data['temp'] as num?)?.toInt() ?? 24;
+              final mode = data['mode']?.toString() ?? 'COOL';
+              onAcStatusReceived?.call(roomId, 4, isOn, temp, mode, 0, false);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('[MQTT] Error parsing discovery payload: $e');
+      }
+      return;
+    }
+
+    // Home Standalone Dual-AC Status (`home/zone_ac/status`)
+    if (topic == 'home/zone_ac/status') {
+      try {
+        if (payload.trim().startsWith('{')) {
+          final data = jsonDecode(payload) as Map<String, dynamic>;
+          final roomId = data['room']?.toString() ?? 'reb_room_301';
+          final isOn = data['state'] == 'ON' || data['state'] == true || data['state'] == '1';
+          final temp = (data['temp'] as num?)?.toInt() ?? 24;
+          final mode = data['mode']?.toString() ?? 'COOL';
+          final fan = (data['fan'] as num?)?.toInt() ?? 0;
+          final swing = data['swing'] == true;
+          final gpio = (data['gpio'] as num?)?.toInt();
+          final acUnit = (data['ac_unit'] as num?)?.toInt() ??
+              (gpio == 12 ? 2 : ((data['zone'] as num?)?.toInt() ?? 1));
+          onAcStatusReceived?.call(roomId, acUnit, isOn, temp, mode, fan, swing);
+        }
+      } catch (e) {
+        debugPrint('[MQTT] Error parsing home/zone_ac/status: $e');
+      }
+      return;
+    }
+
+    // Home Switchboard Relay Status (`home/zone_<id>/relay/<num>/status`)
+    if (topic.startsWith('home/zone_') && topic.endsWith('/status') && topic.contains('/relay/')) {
+      try {
+        final parts = topic.split('/');
+        // home / zone_1 / relay / 1 / status
+        if (parts.length >= 5) {
+          final zoneStr = parts[1];
+          final bId = int.tryParse(zoneStr.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
+          final relayNum = int.tryParse(parts[3]) ?? 1;
+          if (payload.trim().startsWith('{')) {
+            final data = jsonDecode(payload) as Map<String, dynamic>;
+            final roomId = data['room']?.toString() ?? 'reb_room_301';
+            final isOn = data['state'] == 'ON' || data['state'] == true || data['state'] == '1';
+            final speed = (data['speed'] as num?)?.toInt();
+            final brightness = (data['brightness'] as num?)?.toDouble();
+            final gpio = (data['gpio'] as num?)?.toInt();
+            onRelayStatusReceived?.call(roomId, bId, relayNum, isOn, speed, brightness, gpio);
+          }
+        }
+      } catch (e) {
+        debugPrint('[MQTT] Error parsing home relay status: $e');
+      }
+      return;
+    }
+
     // Drop any messages that are not status/telemetry to avoid parsing commands as feedback
     if (!topic.endsWith('/status') && !topic.contains('/status/')) {
       return;
@@ -365,7 +461,9 @@ class MqttService {
 
       // Format: ruet/classroom/<roomId>/zone/<zoneId>/...
       if (section == 'zone' && parts.length >= (5 + offset)) {
-        final zoneId = int.tryParse(parts[4 + offset]) ?? 1;
+        final rawZonePart = parts[4 + offset];
+        final isAcZone = rawZonePart.toLowerCase() == 'ac' || rawZonePart == '4';
+        final zoneId = isAcZone ? 4 : (int.tryParse(rawZonePart) ?? 1);
 
         // Relay status: ruet/classroom/<roomId>/zone/<zoneId>/relay/<relayNum>/status
         if (parts.length >= (7 + offset) && parts[5 + offset] == 'relay') {
@@ -392,8 +490,9 @@ class MqttService {
           return;
         }
 
-        // Zone AC Status: ruet/classroom/<roomId>/zone/<zoneId>/ac/status
-        if (parts.length >= (6 + offset) && parts[5 + offset] == 'ac') {
+        // Zone AC Status: ruet/classroom/<roomId>/zone/<zoneId>/ac/status or .../zone/ac/status
+        if ((parts.length >= (6 + offset) && parts[5 + offset] == 'ac') ||
+            (isAcZone && parts.length >= (6 + offset) && parts[5 + offset] == 'status')) {
           try {
             if (payload.startsWith('{')) {
               final data = jsonDecode(payload) as Map<String, dynamic>;
@@ -421,6 +520,9 @@ class MqttService {
             final isOnline = data['status'] == 'ONLINE';
             final ip = data['ip']?.toString() ?? '192.168.0.x';
             final rssi = (data['rssi'] as num?)?.toInt() ?? -60;
+            final zStr = data['zone_id']?.toString() ?? (zoneId == 4 ? 'zone_ac' : 'zone_$zoneId');
+            final dType = data['device_type']?.toString() ?? (zoneId == 4 ? 'ac_unit' : 'switchboard');
+            onDiscoveryReceived?.call(zStr, dType, ip, roomId, rssi, isOnline);
             onBoardTelemetryReceived?.call(roomId, zoneId, isOnline, ip, rssi);
           } catch (_) {
             onBoardTelemetryReceived?.call(roomId, zoneId, false, '', 0);
@@ -472,6 +574,9 @@ class MqttService {
             final isOnline = data['status'] == 'ONLINE';
             final ip = data['ip']?.toString() ?? '192.168.0.x';
             final rssi = (data['rssi'] as num?)?.toInt() ?? -60;
+            final zStr = data['zone_id']?.toString() ?? (boardId == 4 ? 'zone_ac' : 'zone_$boardId');
+            final dType = data['device_type']?.toString() ?? (boardId == 4 ? 'ac_unit' : 'switchboard');
+            onDiscoveryReceived?.call(zStr, dType, ip, roomId, rssi, isOnline);
             onBoardTelemetryReceived?.call(roomId, boardId, isOnline, ip, rssi);
           } catch (_) {
             onBoardTelemetryReceived?.call(roomId, boardId, false, '', 0);
@@ -635,6 +740,8 @@ class MqttService {
 
     final Map<String, dynamic> payloadMap = {
       'room': roomId,
+      'zone_id': device.type == DeviceType.hvac ? 'zone_ac' : 'zone_$boardId',
+      'device_type': device.type == DeviceType.hvac ? 'ac_unit' : 'switchboard',
       'zone': boardId,
       'board': boardId,
       'relay': relayNum,
@@ -649,49 +756,68 @@ class MqttService {
     } else if (device.type == DeviceType.lighting) {
       payloadMap['brightness'] = turnOn ? device.brightness : 0;
     } else if (device.type == DeviceType.hvac) {
+      final acGpio = device.gpioPinNumber; // GPIO 33 (Gree AC #1) or GPIO 12 (Gree AC #2)
+      final acUnit = acGpio == 12 ? 2 : 1;
+      payloadMap['ac_unit'] = acUnit;
+      payloadMap['zone'] = acUnit;
+      payloadMap['board'] = acUnit;
       payloadMap['temp'] = device.temperature;
       payloadMap['mode'] = device.hvacMode;
       payloadMap['fan'] = device.fanSpeed;
       payloadMap['swing'] = device.acSwing;
-      payloadMap['gpio'] = 4;
+      payloadMap['gpio'] = acGpio;
       payloadMap['protocol'] = 'GREE';
     }
 
     final payloadStr = jsonEncode(payloadMap);
 
-    // Single high-speed targeted publish with QoS 0 (Instant TCP delivery, eliminates packet dropping during fast taps)
-    _publishToRoom(roomId, 'zone/$boardId/relay/$relayNum', payloadStr, retain: false, qos: MqttQos.atMostOnce);
     if (device.type == DeviceType.hvac) {
-      _publishToRoom(roomId, 'zone/$boardId/ac/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
+      final acUnit = device.gpioPinNumber == 12 ? 2 : 1;
+      // Standalone Dual-AC IR Controller (`zone_ac`: AC #1 on GPIO 33, AC #2 on GPIO 12)
+      _publishToRoom(roomId, 'ac/$acUnit/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
+      _publishToRoom(roomId, 'zone/$acUnit/ac/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
       _publishToRoom(roomId, 'ac/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
+      _publish('home/zone_ac/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
+    } else {
+      // 8-Switch Zone Switchboard (Zones 1, 2, 3, Relays 1..8)
+      _publishToRoom(roomId, 'zone/$boardId/relay/$relayNum', payloadStr, retain: false, qos: MqttQos.atMostOnce);
+      _publish('home/zone_$boardId/relay/$relayNum', payloadStr, retain: false, qos: MqttQos.atMostOnce);
     }
   }
 
-  // Dedicated Optical AC Command (Direct Gree IR signal, relays bypassed)
+  // Dedicated Standalone Dual-AC IR Command (Gree AC #1 on GPIO 33, Gree AC #2 on GPIO 12)
   void publishAcCommand(
     String roomId,
-    int boardId, {
+    int acUnitOrBoardId, {
     required bool isOn,
     required int temp,
     required String mode,
     required int fanSpeed,
     required bool swing,
+    int? irGpio,
   }) {
+    final int unitNum = (irGpio == 12 || acUnitOrBoardId == 2) ? 2 : 1;
+    final int resolvedGpio = irGpio ?? (unitNum == 2 ? 12 : 33);
     final payload = jsonEncode({
       'room': roomId,
-      'zone': boardId,
-      'board': boardId,
+      'zone_id': 'zone_ac',
+      'device_type': 'ac_unit',
+      'ac_unit': unitNum,
+      'zone': unitNum,
+      'board': unitNum,
       'type': 'ac',
       'state': isOn ? 'ON' : 'OFF',
       'temp': temp,
       'mode': mode,
       'fan': fanSpeed,
       'swing': swing,
-      'gpio': 4,
+      'gpio': resolvedGpio,
       'protocol': 'GREE',
     });
-    _publishToRoom(roomId, 'zone/$boardId/ac/command', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publishToRoom(roomId, 'ac/$unitNum/command', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publishToRoom(roomId, 'zone/$unitNum/ac/command', payload, retain: false, qos: MqttQos.atMostOnce);
     _publishToRoom(roomId, 'ac/command', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publish('home/zone_ac/command', payload, retain: false, qos: MqttQos.atMostOnce);
   }
 
   // 2. Zone All On / All Off (Targets ONLY this switchboard / zone!)
@@ -755,12 +881,12 @@ class MqttService {
     _publishToRoom(roomId, 'config/board/$boardId/gpio', payload, retain: true);
   }
 
-  // 8. Active Telemetry Ping / Hardware Scan Query
+  // 8. Active Telemetry Ping / Unified Hardware Discovery Scan Query
   void publishStatusQuery([String? roomId]) {
+    _publish('home/discovery/query', 'PING');
     if (roomId != null && roomId.isNotEmpty) {
       _publishToRoom(roomId, 'command/query', 'PING');
     }
-    // Also ping all rooms wildcard
     _publish('$_baseTopic/all/command/query', 'PING');
   }
 

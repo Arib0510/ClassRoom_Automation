@@ -309,6 +309,19 @@ class ClassroomState extends ChangeNotifier {
     // Connect to MQTT Broker in background
     mqtt.connect();
 
+    // Listen to unified MQTT discovery payloads (`home/discovery`) for Zones 1-3 & Standalone AC (`zone_ac`)
+    mqtt.onDiscoveryReceived = (zoneId, deviceType, ip, roomId, rssi, isOnline) {
+      debugPrint('[MQTT ➡️ State] Discovery: zone_id=$zoneId, device_type=$deviceType, ip=$ip, room=$roomId');
+      ConnectivityState().updateDiscoveredDevice(
+        zoneId: zoneId,
+        deviceType: deviceType,
+        ip: ip,
+        rssi: rssi,
+        roomId: roomId,
+        isOnline: isOnline,
+      );
+    };
+
     // Listen to real-time ESP32 microcontroller board health & diagnostics
     mqtt.onBoardTelemetryReceived = (roomId, boardId, isOnline, ip, rssi) {
       debugPrint('[MQTT ➡️ State] Board #$boardId Telemetry: room=$roomId, online=$isOnline, ip=$ip, rssi=$rssi dBm');
@@ -346,16 +359,19 @@ class ClassroomState extends ChangeNotifier {
       }
     };
 
-    // Listen to direct optical AC telemetry updates (Zero mechanical relay dependency)
-    mqtt.onAcStatusReceived = (roomId, boardId, isOn, temp, mode, fan, swing) {
+    // Listen to direct optical Dual-AC telemetry updates (AC #1 on GPIO 33, AC #2 on GPIO 12)
+    mqtt.onAcStatusReceived = (roomId, acUnitId, isOn, temp, mode, fan, swing) {
       final room = findRoom(roomId);
       if (room == null) return;
+      final expectedGpio = acUnitId == 2 ? 12 : 33;
       ClassroomDevice? targetAc;
       for (var d in room.devices) {
         if (d.type == DeviceType.hvac) {
-          if (d.boardId == boardId || targetAc == null) {
+          if (d.gpioPinNumber == expectedGpio || d.relayNumber == acUnitId) {
             targetAc = d;
+            break;
           }
+          targetAc ??= d;
         }
       }
       if (targetAc != null) {
@@ -368,8 +384,8 @@ class ClassroomState extends ChangeNotifier {
         targetAc.fanSpeed = fan;
         targetAc.acSwing = swing;
         targetAc.statusDescription = isOn
-            ? '$mode $temp°C · IR Linked'
-            : 'Standby · Off';
+            ? '$mode $temp°C · IR GPIO ${targetAc.gpioPinNumber}'
+            : 'Standby · IR GPIO ${targetAc.gpioPinNumber}';
         _persistDevicePower(targetAc, roomId: room.id);
         notifyListeners();
         _scheduleLocalStorageSave();
@@ -887,142 +903,170 @@ class ClassroomState extends ChangeNotifier {
         zoneCount: 3,
         zones: ['Zone 1', 'Zone 2', 'Zone 3'],
         devices: [
-          // Zone 1 (Switchboard #1: Relays 1-4 on GPIOs 18, 19, 21, 22)
+          // Zone 1 (ESP32 30-Pin - "1st Board": 8 Relays <-> S1..S8)
           ClassroomDevice(
-            id: 'dev-304-z1-l1',
-            name: 'Zone 1 Front Light',
+            id: 'dev-301-z1-r1',
+            name: 'Zone 1 Front Light 1',
             type: DeviceType.lighting,
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 1',
-            relayChannel: 'RELAY 1 (GPIO 18)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(1, boardId: 1),
             zigbeeOrBleNode: 'Switchboard #1',
             brightness: 100,
           ),
           ClassroomDevice(
-            id: 'dev-304-z1-l2',
-            name: 'Zone 1 Board Light',
+            id: 'dev-301-z1-r2',
+            name: 'Zone 1 Front Light 2',
             type: DeviceType.lighting,
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 1',
-            relayChannel: 'RELAY 2 (GPIO 19)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(2, boardId: 1),
             zigbeeOrBleNode: 'Switchboard #1',
             brightness: 100,
           ),
           ClassroomDevice(
-            id: 'dev-304-z1-f1',
+            id: 'dev-301-z1-r3',
             name: 'Zone 1 Ceiling Fan 1',
             type: DeviceType.fan,
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 1',
-            relayChannel: 'RELAY 3 (GPIO 21)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(3, boardId: 1),
             zigbeeOrBleNode: 'Switchboard #1',
             fanSpeed: 0,
           ),
           ClassroomDevice(
-            id: 'dev-304-z1-f2',
+            id: 'dev-301-z1-r4',
             name: 'Zone 1 Ceiling Fan 2',
             type: DeviceType.fan,
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 1',
-            relayChannel: 'RELAY 4 (GPIO 22)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(4, boardId: 1),
             zigbeeOrBleNode: 'Switchboard #1',
             fanSpeed: 0,
           ),
 
-          // Zone 2 (Switchboard #2: Relays 1-4 on GPIOs 18, 19, 21, 22)
+          // Zone 2 (Unlabeled Board: 8 Relays <-> SW1..SW8)
           ClassroomDevice(
-            id: 'dev-304-z2-l1',
+            id: 'dev-301-z2-r1',
             name: 'Zone 2 Center Light 1',
             type: DeviceType.lighting,
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 2',
-            relayChannel: 'RELAY 1 (GPIO 18)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(1, boardId: 2),
             zigbeeOrBleNode: 'Switchboard #2',
             brightness: 100,
           ),
           ClassroomDevice(
-            id: 'dev-304-z2-l2',
+            id: 'dev-301-z2-r2',
             name: 'Zone 2 Center Light 2',
             type: DeviceType.lighting,
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 2',
-            relayChannel: 'RELAY 2 (GPIO 19)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(2, boardId: 2),
             zigbeeOrBleNode: 'Switchboard #2',
             brightness: 100,
           ),
           ClassroomDevice(
-            id: 'dev-304-z2-f1',
+            id: 'dev-301-z2-r3',
             name: 'Zone 2 Center Fan 1',
             type: DeviceType.fan,
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 2',
-            relayChannel: 'RELAY 3 (GPIO 21)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(3, boardId: 2),
             zigbeeOrBleNode: 'Switchboard #2',
             fanSpeed: 0,
           ),
           ClassroomDevice(
-            id: 'dev-304-z2-f2',
+            id: 'dev-301-z2-r4',
             name: 'Zone 2 Center Fan 2',
             type: DeviceType.fan,
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 2',
-            relayChannel: 'RELAY 4 (GPIO 22)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(4, boardId: 2),
             zigbeeOrBleNode: 'Switchboard #2',
             fanSpeed: 0,
           ),
 
-          // Zone 3 (Switchboard #3: Relays 1-4 on GPIOs 18, 19, 21, 22)
+          // Zone 3 ("3rd One": 8 Relays <-> SW1..SW8)
           ClassroomDevice(
-            id: 'dev-304-z3-l1',
+            id: 'dev-301-z3-r1',
             name: 'Zone 3 Rear Light 1',
             type: DeviceType.lighting,
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 3',
-            relayChannel: 'RELAY 1 (GPIO 18)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(1, boardId: 3),
             zigbeeOrBleNode: 'Switchboard #3',
             brightness: 100,
           ),
           ClassroomDevice(
-            id: 'dev-304-z3-l2',
+            id: 'dev-301-z3-r2',
             name: 'Zone 3 Rear Light 2',
             type: DeviceType.lighting,
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 3',
-            relayChannel: 'RELAY 2 (GPIO 19)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(2, boardId: 3),
             zigbeeOrBleNode: 'Switchboard #3',
             brightness: 100,
           ),
           ClassroomDevice(
-            id: 'dev-304-z3-f1',
+            id: 'dev-301-z3-r3',
             name: 'Zone 3 Rear Fan 1',
             type: DeviceType.fan,
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 3',
-            relayChannel: 'RELAY 3 (GPIO 21)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(3, boardId: 3),
             zigbeeOrBleNode: 'Switchboard #3',
             fanSpeed: 0,
           ),
           ClassroomDevice(
-            id: 'dev-304-z3-f2',
+            id: 'dev-301-z3-r4',
             name: 'Zone 3 Rear Fan 2',
             type: DeviceType.fan,
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 3',
-            relayChannel: 'RELAY 4 (GPIO 22)',
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(4, boardId: 3),
             zigbeeOrBleNode: 'Switchboard #3',
             fanSpeed: 0,
+          ),
+
+          // Standalone Dual-AC IR Controller (Separate ESP32: Gree AC #1 on GPIO 33, Gree AC #2 on GPIO 12)
+          ClassroomDevice(
+            id: 'dev-301-ac-1',
+            name: 'Gree AC 1 (Front)',
+            type: DeviceType.hvac,
+            statusDescription: 'Standby · IR GPIO 33',
+            isOn: false,
+            zone: 'Standalone AC',
+            relayChannel: 'GREE AC #1 IR (GPIO 33)',
+            hardwareModel: 'Standalone Dual-Gree AC IR Controller (GPIO 33 / GPIO 12)',
+            zigbeeOrBleNode: 'Standalone AC',
+            temperature: 24,
+            hvacMode: 'COOL',
+          ),
+          ClassroomDevice(
+            id: 'dev-301-ac-2',
+            name: 'Gree AC 2 (Back)',
+            type: DeviceType.hvac,
+            statusDescription: 'Standby · IR GPIO 12',
+            isOn: false,
+            zone: 'Standalone AC',
+            relayChannel: 'GREE AC #2 IR (GPIO 12)',
+            hardwareModel: 'Standalone Dual-Gree AC IR Controller (GPIO 33 / GPIO 12)',
+            zigbeeOrBleNode: 'Standalone AC',
+            temperature: 24,
+            hvacMode: 'COOL',
           ),
         ],
       ),
@@ -1303,8 +1347,8 @@ class ClassroomState extends ChangeNotifier {
       device.statusDescription = device.isOn ? 'Active · Relay Closed' : 'Standby · Power Off';
     } else if (device.type == DeviceType.hvac) {
       device.statusDescription = device.isOn
-          ? '${device.hvacMode} ${device.temperature}°C · IR Linked'
-          : 'Standby · Off';
+          ? '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}'
+          : 'Standby · IR GPIO ${device.gpioPinNumber}';
     } else if (device.type == DeviceType.projector) {
       device.statusDescription = device.isOn ? 'Laser Projector · Active' : 'Standby · Lamp Off';
     } else if (device.type == DeviceType.powerStrip) {
@@ -1376,12 +1420,11 @@ class ClassroomState extends ChangeNotifier {
     final newTemp = (device.temperature + delta).clamp(16, 30);
     device.temperature = newTemp;
     if (!device.isOn) device.isOn = true;
-    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR Linked';
+    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
     _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
     _scheduleLocalStorageSave(immediate: true);
-    // Direct optical Gree IR command via MQTT (Relays bypassed)
     MqttService().publishDeviceCommand(room.scopedRoomId, device, device.isOn);
   }
 
@@ -1392,12 +1435,11 @@ class ClassroomState extends ChangeNotifier {
     if (device == null) return;
     device.hvacMode = mode;
     if (!device.isOn) device.isOn = true;
-    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR Linked';
+    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
     _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
     _scheduleLocalStorageSave(immediate: true);
-    // Direct optical Gree IR command via MQTT (Relays bypassed)
     MqttService().publishDeviceCommand(room.scopedRoomId, device, device.isOn);
   }
 
@@ -1408,7 +1450,7 @@ class ClassroomState extends ChangeNotifier {
     if (device == null) return;
     device.fanSpeed = fanSpeed.clamp(0, 3);
     if (!device.isOn) device.isOn = true;
-    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR Linked';
+    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
     _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();

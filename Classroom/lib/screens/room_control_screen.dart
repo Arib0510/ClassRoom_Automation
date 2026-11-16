@@ -670,10 +670,12 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                             : AppColors.outline,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        '${room.activeDeviceCount} ON · ${_normalizeRoomType(room.roomType)}',
-                        style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontSize: 11),
-                        overflow: TextOverflow.ellipsis,
+                      Flexible(
+                        child: Text(
+                          '${room.activeDeviceCount} ON · ${_normalizeRoomType(room.roomType)}',
+                          style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -817,61 +819,154 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
 
             const SizedBox(height: 18),
 
-            // Separated Zones Section Header with View Toggle
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'SEPARATED CONTROL ZONES',
-                      style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
+            // Conditional UI Rendering:
+            // When user selects 'AC', hide the Zone 1, 2, and 3 switchboard panels
+            // and display ONLY the Standalone AC control panel!
+            if (_selectedCategory == 'AC') ...[
+              _buildStandaloneAcSection(room),
+            ] else ...[
+              // Show Standalone AC Card at top if present and filter is 'All'
+              if (_selectedCategory == 'All' &&
+                  room.devices.any((d) => d.type == DeviceType.hvac || d.zone == 'Standalone AC'))
+                _buildStandaloneAcSection(room),
+
+              // Separated Zones Section Header with View Toggle
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'CONTROL ZONES',
+                            style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${room.zoneCount} ZONES',
+                            style: AppTypography.labelSm(color: AppColors.primary)
+                                .copyWith(fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${room.zoneCount} ZONES',
-                        style: AppTypography.labelSm(color: AppColors.primary)
-                            .copyWith(fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-                // View Mode Toggle (List vs Grid)
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(width: 8),
+                  // View Mode Toggle (List vs Grid)
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildViewModeToggle(Icons.view_agenda_rounded, false, 'List View'),
+                        _buildViewModeToggle(Icons.grid_view_rounded, true, 'Grid View'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // Display each separated 8-Switch Zone (Zone 1, Zone 2, Zone 3)
+              if (room.zones.isEmpty)
+                _buildEmptyDevicesState(room)
+              else
+                ...room.zones
+                    .where((z) => !z.toLowerCase().contains('ac'))
+                    .map((zoneName) => _buildZoneCard(room, zoneName)),
+            ],
+
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStandaloneAcSection(Classroom room) {
+    final acDevices = room.devices
+        .where((d) => d.type == DeviceType.hvac || d.zone == 'Standalone AC')
+        .toList();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surfaceContainerLow.withValues(alpha: 0.92),
+        border: Border.all(
+          color: acDevices.any((d) => d.isOn)
+              ? AppColors.secondary.withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              color: AppColors.surfaceContainerHigh.withValues(alpha: 0.55),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.secondary.withValues(alpha: 0.15),
+                    border: Border.all(color: AppColors.secondary.withValues(alpha: 0.35)),
+                  ),
+                  child: const Icon(Icons.ac_unit, size: 16, color: AppColors.secondary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildViewModeToggle(Icons.view_agenda_rounded, false, 'List View'),
-                      _buildViewModeToggle(Icons.grid_view_rounded, true, 'Grid View'),
+                      Text(
+                        'STANDALONE DUAL-GREE AC (zone_ac)',
+                        style: AppTypography.headlineSm(color: AppColors.onSurface)
+                            .copyWith(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Isolated ESP32 • Gree AC #1: IR GPIO 33 | Gree AC #2: IR GPIO 12',
+                        style: AppTypography.labelSm(color: AppColors.secondary).copyWith(fontSize: 10),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 10),
-
-            // Display each separated Zone
-            if (room.zones.isEmpty)
-              _buildEmptyDevicesState(room)
-            else
-              ...room.zones.map((zoneName) => _buildZoneCard(room, zoneName)),
-
-            const SizedBox(height: 24),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: acDevices.isEmpty
+                ? Text(
+                    'No Standalone AC paired yet. Tap "+ Add Device" and select Standalone AC.',
+                    style: AppTypography.bodySm(color: AppColors.onSurfaceVariant),
+                  )
+                : Column(
+                    children: acDevices.map((dev) => _buildDeviceCard(dev)).toList(),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -1948,7 +2043,7 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                         ),
                       ),
                     ),
-                    // IR Badge
+                    // Standalone AC IR Circuit Badge (GPIO 33 for AC #1, GPIO 13 for AC #2)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
@@ -1956,9 +2051,9 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                         color: AppColors.primary.withValues(alpha: 0.12),
                         border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                       ),
-                      child: const Text(
-                        'IR: GPIO 4',
-                        style: TextStyle(
+                      child: Text(
+                        'GREE IR: GPIO ${device.gpioPinNumber}',
+                        style: const TextStyle(
                           fontSize: 8.5,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
