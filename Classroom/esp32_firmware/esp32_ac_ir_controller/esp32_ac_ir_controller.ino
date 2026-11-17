@@ -119,13 +119,11 @@ void connectMqtt() {
 
   String clientId = "ESP32_Standalone_DualAC_" + String((uint32_t)ESP.getEfuseMac(), HEX);
   String lwtTopic = getBaseTopic() + "/status/board/" + String(AC_BOARD_ID);
-  String lwtMsg   = "{\"status\":\"OFFLINE\",\"zone_id\":\"zone_ac\",\"device_type\":\"ac_unit\",\"board\":4}";
+  String lwtMsg   = "{\"status\":\"OFFLINE\",\"online\":false,\"zone_id\":\"zone_ac\",\"device_type\":\"ac_unit\",\"board\":4}";
 
   if (mqtt.connect(clientId.c_str(), CLASSROOM_MQTT_USER_AC, CLASSROOM_MQTT_PASSWORD_AC,
                    lwtTopic.c_str(), 1, true, lwtMsg.c_str())) {
     mqtt.subscribe("home/discovery/query", 1);
-    mqtt.subscribe("home/zone_ac/#", 1);
-    mqtt.subscribe("home/command/#", 1);
     mqtt.subscribe((getBaseTopic() + "/ac/#").c_str(), 1);
     mqtt.subscribe((getBaseTopic() + "/zone/ac/#").c_str(), 1);
     mqtt.subscribe((getBaseTopic() + "/zone/1/ac/#").c_str(), 1);
@@ -135,9 +133,8 @@ void connectMqtt() {
     mqtt.subscribe((getBaseTopic() + "/zone/4/#").c_str(), 1);
     mqtt.subscribe((getBaseTopic() + "/board/4/#").c_str(), 1);
     mqtt.subscribe((getBaseTopic() + "/command/#").c_str(), 1);
-    mqtt.subscribe("ruet/classroom/all/command/query", 1);
 
-    // Publish MQTT Discovery (`home/discovery`) and live AC Status for both Gree ACs on connect
+    // Publish MQTT Discovery (`home/discovery`), retained availability, and live AC Status
     acController.publishDiscovery(mqtt, CLASSROOM_ID, AC_BOARD_ID);
     acController.publishAllStatus(mqtt, CLASSROOM_ID);
   }
@@ -156,6 +153,7 @@ void setup() {
   mqtt.setServer(MQTT_BROKER, MQTT_PORT);
   mqtt.setCallback(onMqttMessage);
   mqtt.setBufferSize(512);
+  mqtt.setKeepAlive(30);
 }
 
 void loop() {

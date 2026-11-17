@@ -113,6 +113,8 @@ public:
     doc["ac1_state"]   = units[0].isOn ? "ON" : "OFF";
     doc["ac2_state"]   = units[1].isOn ? "ON" : "OFF";
     doc["status"]      = "ONLINE";
+    doc["online"]      = true;
+    doc["uptime"]      = millis();
 
     char buffer[512];
     serializeJson(doc, buffer, sizeof(buffer));
@@ -120,7 +122,7 @@ public:
     String baseTopic = "ruet/classroom/" + String(classroomId);
     mqtt.publish(AC_DISCOVERY_TOPIC, buffer, false);
     mqtt.publish((baseTopic + "/discovery").c_str(), buffer, false);
-    mqtt.publish((baseTopic + "/status/board/" + String(boardId)).c_str(), buffer, false);
+    mqtt.publish((baseTopic + "/status/board/" + String(boardId)).c_str(), buffer, true);
 
     Serial.printf("🔍 [AC DISCOVERY] Published to %s => %s\n", AC_DISCOVERY_TOPIC, buffer);
   }
@@ -145,17 +147,17 @@ public:
     doc["turbo"]       = u.turbo;
     doc["gpio"]        = u.irPin;
     doc["protocol"]    = "GREE";
+    doc["uptime"]      = millis();
 
     char buffer[384];
     serializeJson(doc, buffer, sizeof(buffer));
 
     String baseTopic = "ruet/classroom/" + String(classroomId);
-    // 1. Unit-specific status: ruet/classroom/<room>/zone/<1|2>/ac/status
-    mqtt.publish((baseTopic + "/zone/" + String(u.unitId) + "/ac/status").c_str(), buffer, false);
-    mqtt.publish((baseTopic + "/status/board/" + String(u.unitId) + "/ac").c_str(), buffer, false);
-    // 2. Global AC status & home/zone_ac/status
-    mqtt.publish((baseTopic + "/status/ac").c_str(), buffer, false);
-    mqtt.publish("home/zone_ac/status", buffer, false);
+    // 1. Unit-specific status (retained): ruet/classroom/<room>/zone/<1|2>/ac/status
+    mqtt.publish((baseTopic + "/zone/" + String(u.unitId) + "/ac/status").c_str(), buffer, true);
+    mqtt.publish((baseTopic + "/status/board/" + String(u.unitId) + "/ac").c_str(), buffer, true);
+    // 2. Global AC status (ACL-authorized for esp32-ac)
+    mqtt.publish((baseTopic + "/status/ac").c_str(), buffer, true);
 
     Serial.printf("📡 [MQTT AC #%d SYNC] Gree IR on GPIO %d -> %s (%d°C, %s, Fan %d, Swing %s)\n",
                   u.unitId, u.irPin, u.isOn ? "ON" : "OFF",
@@ -236,7 +238,7 @@ public:
       JSON_DOC(doc, 512);
       DeserializationError err = deserializeJson(doc, msg);
       if (!err) {
-        JsonVariant src = doc["ac"].is<JsonObject>() ? doc["ac"] : doc.as<JsonVariant>();
+        JsonVariant src = doc["ac"].is<JsonObject>() ? doc["ac"].as<JsonVariant>() : doc.as<JsonVariant>();
 
         // Determine whether this command targets AC #1 (GPIO 33) or AC #2 (GPIO 12)
         int gpio = src["gpio"] | (doc["gpio"] | 0);

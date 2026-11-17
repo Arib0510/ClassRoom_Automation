@@ -1112,8 +1112,12 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
     final topicController = TextEditingController(
       text: MqttService().baseTopic,
     );
-    final usernameController = TextEditingController();
-    final passwordController = TextEditingController();
+    final usernameController = TextEditingController(
+      text: MqttService().username,
+    );
+    final passwordController = TextEditingController(
+      text: MqttService().password,
+    );
 
     showDialog(
       context: context,

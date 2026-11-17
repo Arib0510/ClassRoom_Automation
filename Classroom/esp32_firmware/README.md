@@ -12,21 +12,19 @@ by Git.
 ## 1. Hardware & GPIO Mapping
 
 ### Zone 1 (`ZONE_ID = 1`, `zone_1` — ESP32 30-Pin "1st Board")
-8 Relays (`OUTPUT`) and 8 Manual Switches (`INPUT_PULLUP`) linked in pairs:
+6 active Relays (`OUTPUT`) and 6 Manual Switches linked in pairs (Left starts `In1`, Right starts `In5`):
 
 | Pair | Relay Label | Relay GPIO | Switch Label | Switch GPIO |
 | :---: | :---: | :---: | :---: | :---: |
-| **Pair 1** | `In4 [R]` | **D15** (`GPIO 15`) | `S1` | **D13** (`GPIO 13`) |
-| **Pair 2** | `In3 [R]` | **D2** (`GPIO 2`) | `S2` | **D12** (`GPIO 12`) |
-| **Pair 3** | `In2 [R]` | **D4** (`GPIO 4`) | `S3` | **D14** (`GPIO 14`) |
-| **Pair 4** | `In1 [R]` | **D5** (`GPIO 5`) | `S4` | **D27** (`GPIO 27`) |
-| **Pair 5** | `In4 [L]` | **D18** (`GPIO 18`) | `S5` | **D26** (`GPIO 26`) |
-| **Pair 6** | `In3 [L]` | **D19** (`GPIO 19`) | `S6` | **D25** (`GPIO 25`) |
-| **Pair 7** | `In2 [L]` | **D21** (`GPIO 21`) | `S7` | **D33** (`GPIO 33`) |
-| **Pair 8** | `In1 [L]` | **D22** (`GPIO 22`) | `S8` | **D32** (`GPIO 32`) |
+| **Pair 1** | `In1 [L]` | **D16** (`GPIO 16`) | `S1` | **D14** (`GPIO 14`) |
+| **Pair 2** | `In2 [L]` | **D4** (`GPIO 4`) | `S2` | **D27** (`GPIO 27`) |
+| **Pair 3** | `In3 [L]` | **D2** (`GPIO 2`) | `S3` | **D26** (`GPIO 26`) |
+| **Pair 4** | `In4 [L]` | **D15** (`GPIO 15`) | `S4` | **D25** (`GPIO 25`) |
+| **Pair 5** | `In5 [R]` | **D21** (`GPIO 21`) | `S5` | **D33** (`GPIO 33`) |
+| **Pair 6** | `In6 [R]` | **D19** (`GPIO 19`) | `S6` | **D34** (`GPIO 34`, `INPUT` only) |
 
-### Zone 2 (`ZONE_ID = 2`, `zone_2`) & Zone 3 (`ZONE_ID = 3`, `zone_3`)
-Both Zone 2 and Zone 3 share the same 8-pair pinout:
+### Zone 2 (`ZONE_ID = 2`, `zone_2` — Unlabeled Board)
+8 Relays (`OUTPUT`) and 8 Manual Switches (`INPUT_PULLUP`):
 
 | Pair | Relay Label | Relay GPIO | Switch Label | Switch GPIO |
 | :---: | :---: | :---: | :---: | :---: |
@@ -38,6 +36,17 @@ Both Zone 2 and Zone 3 share the same 8-pair pinout:
 | **Pair 6** | `In3 [L]` | **D18** (`GPIO 18`) | `SW6` | **D25** (`GPIO 25`) |
 | **Pair 7** | `In2 [L]` | **D19** (`GPIO 19`) | `SW7` | **D33** (`GPIO 33`) |
 | **Pair 8** | `In1 [L]` | **D21** (`GPIO 21`) | `SW8` | **D32** (`GPIO 32`) |
+
+### Zone 3 (`ZONE_ID = 3`, `zone_3` — "3rd One")
+5 active Relays (`OUTPUT`) and 5 Manual Switches (`INPUT_PULLUP`):
+
+| Pair | Relay Label | Relay GPIO | Switch Label | Switch GPIO |
+| :---: | :---: | :---: | :---: | :---: |
+| **Pair 1** | `In1` | **D5** (`GPIO 5`) | `SW1` | **D32** (`GPIO 32`) |
+| **Pair 2** | `In2` | **D4** (`GPIO 4`) | `SW2` | **D33** (`GPIO 33`) |
+| **Pair 3** | `In3` | **D2** (`GPIO 2`) | `SW3` | **D25** (`GPIO 25`) |
+| **Pair 4** | `In4` | **D15** (`GPIO 15`) | `SW4` | **D26** (`GPIO 26`) |
+| **Pair 5** | `In5` | **D18** (`GPIO 18`) | `SW5` | **D27** (`GPIO 27`) |
 
 ### Standalone Dual-AC IR Controller (`zone_ac` — Separate ESP32 Board)
 Runs on a dedicated ESP32 board isolated from the 8-switch zone boards, driving **two IR transmitter/receiver circuits** for the **two Gree Air Conditioners** in the classroom:

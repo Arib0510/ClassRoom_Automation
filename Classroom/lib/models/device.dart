@@ -27,6 +27,10 @@ class ClassroomDevice {
   bool isOn;
   bool manualOverrideOff;
 
+  // Runtime MQTT confirmation state (Pending until ESP32 reports applied state)
+  bool isPendingConfirmation;
+  bool? pendingTargetOn;
+
   // Hardware & ESP32 Relay / Switch mapping
   String relayChannel; // e.g. "RELAY 1 [In4 R] (D15) ↔ S1 (D13)" or "GREE AC #1 IR (GPIO 33)"
   String hardwareModel;
@@ -81,6 +85,8 @@ class ClassroomDevice {
     required this.statusDescription,
     this.isOn = true,
     this.manualOverrideOff = false,
+    this.isPendingConfirmation = false,
+    this.pendingTargetOn,
     this.zone = 'Zone 1',
     this.temperature = 24,
     this.hvacMode = 'COOL',
@@ -115,23 +121,21 @@ class ClassroomDevice {
         eventLog = eventLog ?? _defaultEventLog(type);
 
   // ===========================================================================
-  // EXACT 8-PAIR HARDWARE GPIO MAPPING (ZONE 1 vs ZONE 2 & ZONE 3)
+  // EXACT HARDWARE GPIO MAPPING (ZONE 1 [6], ZONE 2 [8], ZONE 3 [5])
   // ===========================================================================
   static List<Map<String, dynamic>> switchRelayPairsForZone(int boardId) {
     if (boardId == 1) {
-      // Zone 1 (ESP32 30-Pin - "1st Board"):
+      // Zone 1 (ESP32 30-Pin - "1st Board"): Left starts In1 (1-4), Right starts In5 (5-6)
       return const [
-        {'relay': 1, 'relayLabel': 'In4 [R]', 'gpio': 15, 'switchName': 'S1', 'switchGpio': 13},
-        {'relay': 2, 'relayLabel': 'In3 [R]', 'gpio': 2,  'switchName': 'S2', 'switchGpio': 12},
-        {'relay': 3, 'relayLabel': 'In2 [R]', 'gpio': 4,  'switchName': 'S3', 'switchGpio': 14},
-        {'relay': 4, 'relayLabel': 'In1 [R]', 'gpio': 5,  'switchName': 'S4', 'switchGpio': 27},
-        {'relay': 5, 'relayLabel': 'In4 [L]', 'gpio': 18, 'switchName': 'S5', 'switchGpio': 26},
-        {'relay': 6, 'relayLabel': 'In3 [L]', 'gpio': 19, 'switchName': 'S6', 'switchGpio': 25},
-        {'relay': 7, 'relayLabel': 'In2 [L]', 'gpio': 21, 'switchName': 'S7', 'switchGpio': 33},
-        {'relay': 8, 'relayLabel': 'In1 [L]', 'gpio': 22, 'switchName': 'S8', 'switchGpio': 32},
+        {'relay': 1, 'relayLabel': 'In1 [L]', 'gpio': 16, 'switchName': 'S1', 'switchGpio': 14},
+        {'relay': 2, 'relayLabel': 'In2 [L]', 'gpio': 4,  'switchName': 'S2', 'switchGpio': 27},
+        {'relay': 3, 'relayLabel': 'In3 [L]', 'gpio': 2,  'switchName': 'S3', 'switchGpio': 26},
+        {'relay': 4, 'relayLabel': 'In4 [L]', 'gpio': 15, 'switchName': 'S4', 'switchGpio': 25},
+        {'relay': 5, 'relayLabel': 'In5 [R]', 'gpio': 21, 'switchName': 'S5', 'switchGpio': 33},
+        {'relay': 6, 'relayLabel': 'In6 [R]', 'gpio': 19, 'switchName': 'S6', 'switchGpio': 34},
       ];
-    } else {
-      // Zone 2 (Unlabeled Board) & Zone 3 ("3rd One"):
+    } else if (boardId == 2) {
+      // Zone 2 (Unlabeled Board): 8 pairs
       return const [
         {'relay': 1, 'relayLabel': 'In4 [R]', 'gpio': 15, 'switchName': 'SW1', 'switchGpio': 13},
         {'relay': 2, 'relayLabel': 'In3 [R]', 'gpio': 2,  'switchName': 'SW2', 'switchGpio': 12},
@@ -142,12 +146,22 @@ class ClassroomDevice {
         {'relay': 7, 'relayLabel': 'In2 [L]', 'gpio': 19, 'switchName': 'SW7', 'switchGpio': 33},
         {'relay': 8, 'relayLabel': 'In1 [L]', 'gpio': 21, 'switchName': 'SW8', 'switchGpio': 32},
       ];
+    } else {
+      // Zone 3 ("3rd One"): 5 pairs
+      return const [
+        {'relay': 1, 'relayLabel': 'In1', 'gpio': 5,  'switchName': 'SW1', 'switchGpio': 32},
+        {'relay': 2, 'relayLabel': 'In2', 'gpio': 4,  'switchName': 'SW2', 'switchGpio': 33},
+        {'relay': 3, 'relayLabel': 'In3', 'gpio': 2,  'switchName': 'SW3', 'switchGpio': 25},
+        {'relay': 4, 'relayLabel': 'In4', 'gpio': 15, 'switchName': 'SW4', 'switchGpio': 26},
+        {'relay': 5, 'relayLabel': 'In5', 'gpio': 18, 'switchName': 'SW5', 'switchGpio': 27},
+      ];
     }
   }
 
   static Map<String, dynamic> pairInfoForRelay(int relayNum, {int boardId = 1}) {
     final pairs = switchRelayPairsForZone(boardId);
-    final idx = ((relayNum - 1) % 8).clamp(0, 7);
+    final count = pairs.length;
+    final idx = ((relayNum - 1) % count).clamp(0, count - 1);
     return pairs[idx];
   }
 
@@ -162,7 +176,8 @@ class ClassroomDevice {
   }
 
   static String defaultRelayChannelForRelay(int relayNum, {int boardId = 1}) {
-    final validRelay = ((relayNum - 1) % 8) + 1;
+    final count = switchRelayPairsForZone(boardId).length;
+    final validRelay = ((relayNum - 1) % count) + 1;
     final info = pairInfoForRelay(validRelay, boardId: boardId);
     final rLabel = info['relayLabel'];
     final gpio = info['gpio'];
@@ -454,9 +469,16 @@ class ClassroomDevice {
             rNum == 2 ||
             (map['name']?.toString().contains('2') == true));
 
+    final bool isAutoMappedSwitch = rawRelayChannel != null &&
+        rawRelayChannel.contains('↔') &&
+        type != DeviceType.telemetry &&
+        (bId >= 1 && bId <= 3);
+
     final String finalRelayChannel = (type == DeviceType.hvac)
         ? defaultAcChannelForUnit(isAcUnit2 ? 2 : 1)
-        : ((rawRelayChannel != null && rawRelayChannel.contains('GPIO'))
+        : ((!isAutoMappedSwitch &&
+                rawRelayChannel != null &&
+                rawRelayChannel.contains('GPIO'))
             ? rawRelayChannel
             : defaultRelayChannelForRelay(rNum, boardId: bId));
 

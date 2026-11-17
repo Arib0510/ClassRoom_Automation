@@ -91,8 +91,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final brokerController = TextEditingController(text: mqtt.broker);
     final portController = TextEditingController(text: mqtt.port.toString());
     final topicController = TextEditingController(text: mqtt.baseTopic);
-    final usernameController = TextEditingController();
-    final passwordController = TextEditingController();
+    final usernameController = TextEditingController(text: mqtt.username);
+    final passwordController = TextEditingController(text: mqtt.password);
 
     showDialog(
       context: context,

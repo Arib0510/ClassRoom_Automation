@@ -1375,7 +1375,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isOn = dev.isOn;
 
     String detail;
-    if (!isOn) {
+    if (dev.isPendingConfirmation) {
+      detail = 'Pending…';
+    } else if (!isOn) {
       detail = 'Off';
     } else if (dev.type == DeviceType.fan) {
       detail = 'Speed ${dev.fanSpeed}';

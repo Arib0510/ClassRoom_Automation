@@ -184,21 +184,14 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   }
 
   void _refreshBatchChannelPinsForBoard(int boardId) {
-    final pairs = ClassroomDevice.switchRelayPairsForZone(boardId);
-    for (int i = 0; i < _batchChannels.length && i < pairs.length; i++) {
-      final p = pairs[i];
-      final ch = _batchChannels[i];
-      ch.gpio = p['gpio'] as int;
-      ch.switchGpio = p['switchGpio'] as int;
-      ch.relayLabel = p['relayLabel'] as String;
-      ch.switchName = p['switchName'] as String;
-      if (ch.category == 'Light') {
-        ch.nameController.text = '$_selectedZone Light ${ch.relayNumber}';
-      } else {
-        ch.nameController.text = '$_selectedZone Fan ${ch.relayNumber}';
-      }
+    final oldChannels = _batchChannels;
+    _initBatchChannelsForBoard(boardId);
+    for (final ch in oldChannels) {
+      ch.nameController.dispose();
     }
-    _syncSinglePairSelection(_selectedRelayNumber);
+    final pairCount = ClassroomDevice.switchRelayPairsForZone(boardId).length;
+    final clampedRelay = _selectedRelayNumber.clamp(1, pairCount);
+    _syncSinglePairSelection(clampedRelay);
   }
 
   void _syncSinglePairSelection(int relayNum) {
@@ -1217,9 +1210,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _selectedBoardId == 1
-                          ? 'Zone 1 ("1st Board" 30-Pin ESP32): Relays D15, D2, D4, D5, D18, D19, D21, D22 ↔ Switches S1–S8'
-                          : '$_selectedZone (${_selectedBoardId == 2 ? "Unlabeled Board" : "3rd Board"}): Relays D15, D2, D4, D16, D5, D18, D19, D21 ↔ Switches SW1–SW8',
+                      '$_selectedZone (${_selectedBoardId == 1 ? "1st Board" : (_selectedBoardId == 2 ? "Unlabeled Board" : "3rd Board")}): Relays ${currentPairs.map((p) => "D${p['gpio']}").join(", ")} ↔ Switches ${currentPairs.first['switchName']}–${currentPairs.last['switchName']}',
                       style: AppTypography.bodySm(color: AppColors.outline).copyWith(fontSize: 10.5),
                     ),
                     const SizedBox(height: 10),
@@ -1295,7 +1286,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Quickly set up 8 switches for $_selectedZone',
+                                    'Quickly set up ${_batchChannels.length} switches for $_selectedZone',
                                     style: AppTypography.labelMd(color: AppColors.onSurface)
                                         .copyWith(fontSize: 12.5, fontWeight: FontWeight.w600),
                                   ),
@@ -1555,13 +1546,13 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'SELECT RELAY ↔ SWITCH PAIR ($_selectedZone · 8 Pairs):',
+                              'SELECT RELAY ↔ SWITCH PAIR ($_selectedZone · ${currentPairs.length} Pairs):',
                               style: AppTypography.labelSm(color: AppColors.primary)
                                   .copyWith(fontWeight: FontWeight.bold, fontSize: 10.5),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Selected: Pair $_selectedRelayNumber — GPIO $_selectedGpio (OUTPUT) ↔ Switch D$_selectedSwitchGpio (INPUT_PULLUP)',
+                              'Selected: Pair $_selectedRelayNumber — GPIO $_selectedGpio (OUTPUT) ↔ Switch D$_selectedSwitchGpio (${_selectedSwitchGpio >= 34 ? "INPUT" : "INPUT_PULLUP"})',
                               style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 11),
                             ),
                             const SizedBox(height: 10),

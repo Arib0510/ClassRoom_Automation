@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/device.dart';
 
 enum MqttConnectionStatus { disconnected, connecting, connected, error }
@@ -41,19 +42,38 @@ class MqttService {
 
   MqttServerClient? _client;
 
-  // Deployment-specific host is supplied at build time; credentials are entered locally.
+  static const String _kBrokerKey = 'classpulse_mqtt_broker_v1';
+  static const String _kPortKey = 'classpulse_mqtt_port_v1';
+  static const String _kTopicKey = 'classpulse_mqtt_topic_v1';
+  static const String _kUserKey = 'classpulse_mqtt_user_v1';
+  static const String _kPassKey = 'classpulse_mqtt_pass_v1';
+
+  // Deployment-specific host & optional credentials are supplied at build time or persisted locally.
   String _broker = const String.fromEnvironment(
     'MQTT_BROKER_HOST',
     defaultValue: '10.247.68.155',
   );
-  int _port = 1883;
+  int _port = int.tryParse(
+        const String.fromEnvironment('MQTT_PORT', defaultValue: '1883'),
+      ) ??
+      1883;
   String _baseTopic = 'ruet/classroom';
-  String _username = '';
-  String _password = '';
+  String _username = const String.fromEnvironment(
+    'MQTT_USERNAME',
+    defaultValue: 'flutter-app',
+  );
+  String _password = const String.fromEnvironment(
+    'MQTT_PASSWORD',
+    defaultValue: '',
+  );
+  bool _configLoaded = false;
 
   String get broker => _broker;
   int get port => _port;
   String get baseTopic => _baseTopic;
+  String get username => _username;
+  String get password => _password;
+  bool get hasCredentials => _username.isNotEmpty && _password.isNotEmpty;
 
   MqttConnectionStatus _status = MqttConnectionStatus.disconnected;
   MqttConnectionStatus get status => _status;
@@ -129,31 +149,78 @@ class MqttService {
   )?
   onAppStateReceived;
 
+  Future<void> loadSavedConfig() async {
+    if (_configLoaded) return;
+    _configLoaded = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedBroker = prefs.getString(_kBrokerKey);
+      final savedPort = prefs.getInt(_kPortKey);
+      final savedTopic = prefs.getString(_kTopicKey);
+      final savedUser = prefs.getString(_kUserKey);
+      final savedPass = prefs.getString(_kPassKey);
+      if (savedBroker != null && savedBroker.trim().isNotEmpty) {
+        _broker = savedBroker.trim();
+      }
+      if (savedPort != null && savedPort > 0) {
+        _port = savedPort;
+      }
+      if (savedTopic != null && savedTopic.trim().isNotEmpty) {
+        _baseTopic = savedTopic.trim();
+      }
+      if (savedUser != null && savedUser.trim().isNotEmpty) {
+        _username = savedUser.trim();
+      }
+      if (savedPass != null && savedPass.isNotEmpty) {
+        _password = savedPass;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveConfig() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kBrokerKey, _broker);
+      await prefs.setInt(_kPortKey, _port);
+      await prefs.setString(_kTopicKey, _baseTopic);
+      await prefs.setString(_kUserKey, _username);
+      await prefs.setString(_kPassKey, _password);
+    } catch (_) {}
+  }
+
   void configure({
     String? broker,
     int? port,
     String? baseTopic,
     String? username,
     String? password,
+    bool persist = true,
   }) {
-    if (broker != null) _broker = broker.trim();
-    if (port != null) _port = port;
-    if (baseTopic != null) _baseTopic = baseTopic.trim();
+    _configLoaded = true;
+    if (broker != null && broker.trim().isNotEmpty) _broker = broker.trim();
+    if (port != null && port > 0) _port = port;
+    if (baseTopic != null && baseTopic.trim().isNotEmpty) {
+      _baseTopic = baseTopic.trim();
+    }
     if (username != null) _username = username.trim();
     if (password != null) _password = password.trim();
+    if (persist) {
+      _saveConfig();
+    }
   }
 
   Future<bool> connect() async {
     _explicitDisconnect = false;
     if (_status == MqttConnectionStatus.connecting) return false;
     _setStatus(MqttConnectionStatus.connecting);
+    await loadSavedConfig();
 
     final clientId =
         'ClassPulseApp_${DateTime.now().millisecondsSinceEpoch}_${(100 + (DateTime.now().microsecond % 900))}';
 
     _client = MqttServerClient.withPort(_broker, clientId, _port);
     _client!.logging(on: false);
-    _client!.keepAlivePeriod = 20;
+    _client!.keepAlivePeriod = 30;
     _client!.connectTimeoutPeriod = 8000;
     _client!.autoReconnect = true;
     _client!.setProtocolV311();
@@ -203,11 +270,9 @@ class MqttService {
   }
 
   void _onConnected() {
-    debugPrint('[MQTT] Connected successfully to $_broker:$_port');
+    debugPrint('[MQTT] Connected successfully to $_broker:$_port as $_username');
     _setStatus(MqttConnectionStatus.connected);
-    // 1. Clear legacy retained status records in this app's configured room.
-    clearLegacyRetainedStatus();
-    // 2. Query actual live hardware states from all active ESP32 switchboards
+    // Query actual live hardware states from all active ESP32 switchboards
     Timer(const Duration(milliseconds: 350), () {
       requestHardwareSync();
     });
@@ -215,21 +280,7 @@ class MqttService {
 
   void requestHardwareSync([String roomId = 'reb_room_301']) {
     _publish('home/discovery/query', 'QUERY', retain: false);
-    _publish('$_baseTopic/all/command/query', 'QUERY', retain: false);
     _publish('$_baseTopic/$roomId/command/query', 'QUERY', retain: false);
-    if (roomId.contains('_')) {
-      _publish(
-        '$_baseTopic/${roomId.replaceAll('_', '-')}/command/query',
-        'QUERY',
-        retain: false,
-      );
-    } else if (roomId.contains('-')) {
-      _publish(
-        '$_baseTopic/${roomId.replaceAll('-', '_')}/command/query',
-        'QUERY',
-        retain: false,
-      );
-    }
     debugPrint('[MQTT] Hardware sync & discovery queried for room: $roomId');
   }
 
@@ -366,16 +417,25 @@ class MqttService {
         // Retained messages must NEVER overwrite
         // active user states or mimic phantom hardware toggles.
         if (isRetained) {
-          if (topic.endsWith('/app/state') && _isOfflineState(payload)) {
+          if (payload.isEmpty) continue;
+          if (topic.endsWith('/app/state')) {
+            if (_isOfflineState(payload)) {
+              _handleMessage(topic, payload);
+            } else {
+              _handleMessage(topic, payload);
+            }
+            continue;
+          }
+          // Process retained board availability / LWT and reported hardware status.
+          if (topic.endsWith('/status') || topic.contains('/status/')) {
             _handleMessage(topic, payload);
             continue;
           }
-          if (payload.isNotEmpty) {
-            debugPrint(
-              '[MQTT] Discarding stale retained broker message on $topic - purging from broker',
-            );
-            _publish(topic, '', retain: true);
-          }
+          // Never execute or keep stale retained control commands.
+          debugPrint(
+            '[MQTT] Discarding stale retained command on $topic - purging from broker',
+          );
+          _publish(topic, '', retain: true);
           continue;
         }
 
@@ -613,12 +673,15 @@ class MqttService {
                   (data['state'] == 'ON' ||
                   data['state'] == true ||
                   data['state'] == '1');
-              if (data.containsKey('speed'))
+              if (data.containsKey('speed')) {
                 speed = (data['speed'] as num?)?.toInt();
-              if (data.containsKey('brightness'))
+              }
+              if (data.containsKey('brightness')) {
                 brightness = (data['brightness'] as num?)?.toDouble();
-              if (data.containsKey('gpio'))
+              }
+              if (data.containsKey('gpio')) {
                 gpio = (data['gpio'] as num?)?.toInt();
+              }
             } else {
               isOn =
                   (payload.trim().toUpperCase() == 'ON' ||
@@ -679,7 +742,8 @@ class MqttService {
               return;
             }
             final data = jsonDecode(payload) as Map<String, dynamic>;
-            final isOnline = data['status'] == 'ONLINE';
+            final isOnline = data['online'] == true ||
+                data['status']?.toString().toUpperCase() == 'ONLINE';
             final ip = data['ip']?.toString() ?? '192.168.0.x';
             final rssi = (data['rssi'] as num?)?.toInt() ?? -60;
             final zStr =
@@ -720,12 +784,15 @@ class MqttService {
                     (data['state'] == 'ON' ||
                     data['state'] == true ||
                     data['state'] == '1');
-                if (data.containsKey('speed'))
+                if (data.containsKey('speed')) {
                   speed = (data['speed'] as num?)?.toInt();
-                if (data.containsKey('brightness'))
+                }
+                if (data.containsKey('brightness')) {
                   brightness = (data['brightness'] as num?)?.toDouble();
-                if (data.containsKey('gpio'))
+                }
+                if (data.containsKey('gpio')) {
                   gpio = (data['gpio'] as num?)?.toInt();
+                }
               } else {
                 isOn =
                     (payload.trim().toUpperCase() == 'ON' ||
@@ -753,7 +820,8 @@ class MqttService {
               return;
             }
             final data = jsonDecode(payload) as Map<String, dynamic>;
-            final isOnline = data['status'] == 'ONLINE';
+            final isOnline = data['online'] == true ||
+                data['status']?.toString().toUpperCase() == 'ONLINE';
             final ip = data['ip']?.toString() ?? '192.168.0.x';
             final rssi = (data['rssi'] as num?)?.toInt() ?? -60;
             final zStr =
@@ -816,12 +884,15 @@ class MqttService {
                 (data['state'] == 'ON' ||
                 data['state'] == true ||
                 data['state'] == '1');
-            if (data.containsKey('speed'))
+            if (data.containsKey('speed')) {
               speed = (data['speed'] as num?)?.toInt();
-            if (data.containsKey('brightness'))
+            }
+            if (data.containsKey('brightness')) {
               brightness = (data['brightness'] as num?)?.toDouble();
-            if (data.containsKey('gpio'))
+            }
+            if (data.containsKey('gpio')) {
               gpio = (data['gpio'] as num?)?.toInt();
+            }
           } else {
             isOn =
                 (payload.trim().toUpperCase() == 'ON' || payload.trim() == '1');
@@ -992,6 +1063,8 @@ class MqttService {
       'gpio': gpio,
       'id': device.id,
       'type': typeStr,
+      'cmd_id': 'cmd-${DateTime.now().millisecondsSinceEpoch}',
+      'sent_at_unix_ms': DateTime.now().millisecondsSinceEpoch,
     };
 
     if (device.type == DeviceType.fan) {
@@ -1025,27 +1098,27 @@ class MqttService {
         'ac/$acUnit/command',
         payloadStr,
         retain: false,
-        qos: MqttQos.atMostOnce,
+        qos: MqttQos.atLeastOnce,
       );
       _publishToRoom(
         roomId,
         'zone/$acUnit/ac/command',
         payloadStr,
         retain: false,
-        qos: MqttQos.atMostOnce,
+        qos: MqttQos.atLeastOnce,
       );
       _publishToRoom(
         roomId,
         'ac/command',
         payloadStr,
         retain: false,
-        qos: MqttQos.atMostOnce,
+        qos: MqttQos.atLeastOnce,
       );
       _publish(
         'home/zone_ac/command',
         payloadStr,
         retain: false,
-        qos: MqttQos.atMostOnce,
+        qos: MqttQos.atLeastOnce,
       );
     } else {
       // 8-Switch Zone Switchboard (Zones 1, 2, 3, Relays 1..8)
@@ -1054,13 +1127,13 @@ class MqttService {
         'zone/$boardId/relay/$relayNum',
         payloadStr,
         retain: false,
-        qos: MqttQos.atMostOnce,
+        qos: MqttQos.atLeastOnce,
       );
       _publish(
         'home/zone_$boardId/relay/$relayNum',
         payloadStr,
         retain: false,
-        qos: MqttQos.atMostOnce,
+        qos: MqttQos.atLeastOnce,
       );
     }
   }
@@ -1093,33 +1166,35 @@ class MqttService {
       'swing': swing,
       'gpio': resolvedGpio,
       'protocol': 'GREE',
+      'cmd_id': 'cmd-${DateTime.now().millisecondsSinceEpoch}',
+      'sent_at_unix_ms': DateTime.now().millisecondsSinceEpoch,
     });
     _publishToRoom(
       roomId,
       'ac/$unitNum/command',
       payload,
       retain: false,
-      qos: MqttQos.atMostOnce,
+      qos: MqttQos.atLeastOnce,
     );
     _publishToRoom(
       roomId,
       'zone/$unitNum/ac/command',
       payload,
       retain: false,
-      qos: MqttQos.atMostOnce,
+      qos: MqttQos.atLeastOnce,
     );
     _publishToRoom(
       roomId,
       'ac/command',
       payload,
       retain: false,
-      qos: MqttQos.atMostOnce,
+      qos: MqttQos.atLeastOnce,
     );
     _publish(
       'home/zone_ac/command',
       payload,
       retain: false,
-      qos: MqttQos.atMostOnce,
+      qos: MqttQos.atLeastOnce,
     );
   }
 
@@ -1131,7 +1206,13 @@ class MqttService {
       'zone/$boardId/command/all',
       payload,
       retain: false,
-      qos: MqttQos.atMostOnce,
+      qos: MqttQos.atLeastOnce,
+    );
+    _publish(
+      'home/zone_$boardId/command/all',
+      payload,
+      retain: false,
+      qos: MqttQos.atLeastOnce,
     );
   }
 
@@ -1144,13 +1225,20 @@ class MqttService {
       'relay': relayNumber,
       'state': speed > 0 ? 'ON' : 'OFF',
       'speed': speed,
+      'sent_at_unix_ms': DateTime.now().millisecondsSinceEpoch,
     });
     _publishToRoom(
       roomId,
       'zone/$boardId/relay/$relayNumber',
       payload,
       retain: false,
-      qos: MqttQos.atMostOnce,
+      qos: MqttQos.atLeastOnce,
+    );
+    _publish(
+      'home/zone_$boardId/relay/$relayNumber',
+      payload,
+      retain: false,
+      qos: MqttQos.atLeastOnce,
     );
   }
 
@@ -1168,11 +1256,18 @@ class MqttService {
       'relay': relayNumber,
       'state': brightness > 0 ? 'ON' : 'OFF',
       'brightness': brightness.round(),
+      'sent_at_unix_ms': DateTime.now().millisecondsSinceEpoch,
     });
     // Throttled to prevent flooding ESP32 PWM during continuous touch drag
     _publishThrottledToRoom(
       roomId,
       'zone/$boardId/relay/$relayNumber',
+      payload,
+      duration: const Duration(milliseconds: 75),
+      retain: false,
+    );
+    _publishThrottled(
+      'home/zone_$boardId/relay/$relayNumber',
       payload,
       duration: const Duration(milliseconds: 75),
       retain: false,
@@ -1187,15 +1282,19 @@ class MqttService {
       'command/all',
       payload,
       retain: false,
-      qos: MqttQos.atMostOnce,
+      qos: MqttQos.atLeastOnce,
     );
   }
 
   // 6. Emergency Cutoff / Trip All Relays
   void publishEmergencyCutoff(String roomId, bool cutoff) {
     final payload = cutoff ? 'CUTOFF' : 'RESTORE';
-    _publishToRoom(roomId, 'command/emergency', payload);
-    _publish('home/command/emergency', payload);
+    _publishToRoom(
+      roomId,
+      'command/emergency',
+      payload,
+      qos: MqttQos.atLeastOnce,
+    );
   }
 
   // 6b. Toggle Vision Control vs Direct App Control on Pi Vision Model
@@ -1250,7 +1349,6 @@ class MqttService {
     if (roomId != null && roomId.isNotEmpty) {
       _publishToRoom(roomId, 'command/query', 'PING');
     }
-    _publish('$_baseTopic/all/command/query', 'PING');
   }
 
   // 8. Clear retained board status

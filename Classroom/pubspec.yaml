@@ -2,7 +2,7 @@ name: smart_classroom_iot
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.10+11
+version: 1.0.11+12
 
 environment:
   sdk: ^3.8.1

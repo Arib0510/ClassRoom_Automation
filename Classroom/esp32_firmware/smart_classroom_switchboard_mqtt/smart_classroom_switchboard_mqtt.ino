@@ -5,19 +5,18 @@
   Project: ClassPulse IoT (Multi-Zone Switchboard & Manual Switch Sync Edition)
   Target:  ESP32 30-Pin Dev Module / ESP32-WROOM-32
 
-  1. Hardware & Exact GPIO Mapping (8 Relays <-> 8 Manual Switches):
+  1. Hardware & Exact GPIO Mapping (Relays <-> Manual Switches):
   -----------------------------------------------------------------------------
-  • ZONE 1 (ESP32 30-Pin - "1st Board", ZONE_ID = 1):
-      Pair 1: Relay In4 [R] on D15 (GPIO 15) <-> Switch S1 on D13 (GPIO 13)
-      Pair 2: Relay In3 [R] on D2  (GPIO 2)  <-> Switch S2 on D12 (GPIO 12)
-      Pair 3: Relay In2 [R] on D4  (GPIO 4)  <-> Switch S3 on D14 (GPIO 14)
-      Pair 4: Relay In1 [R] on D5  (GPIO 5)  <-> Switch S4 on D27 (GPIO 27)
-      Pair 5: Relay In4 [L] on D18 (GPIO 18) <-> Switch S5 on D26 (GPIO 26)
-      Pair 6: Relay In3 [L] on D19 (GPIO 19) <-> Switch S6 on D25 (GPIO 25)
-      Pair 7: Relay In2 [L] on D21 (GPIO 21) <-> Switch S7 on D33 (GPIO 33)
-      Pair 8: Relay In1 [L] on D22 (GPIO 22) <-> Switch S8 on D32 (GPIO 32)
+  • ZONE 1 (ESP32 30-Pin - "1st Board", ZONE_ID = 1, 6 Active Pairs):
+      Left starts In1 (Pairs 1-4), Right starts In5 (Pairs 5-6):
+      Pair 1: Relay In1 [L] on D16 (GPIO 16) <-> Switch S1 on D14 (GPIO 14)
+      Pair 2: Relay In2 [L] on D4  (GPIO 4)  <-> Switch S2 on D27 (GPIO 27)
+      Pair 3: Relay In3 [L] on D2  (GPIO 2)  <-> Switch S3 on D26 (GPIO 26)
+      Pair 4: Relay In4 [L] on D15 (GPIO 15) <-> Switch S4 on D25 (GPIO 25)
+      Pair 5: Relay In5 [R] on D21 (GPIO 21) <-> Switch S5 on D33 (GPIO 33)
+      Pair 6: Relay In6 [R] on D19 (GPIO 19) <-> Switch S6 on D34 (GPIO 34, input-only)
 
-  • ZONE 2 (Unlabeled Board, ZONE_ID = 2) & ZONE 3 ("3rd One", ZONE_ID = 3):
+  • ZONE 2 (Unlabeled Board, ZONE_ID = 2, 8 Active Pairs):
       Pair 1: Relay In4 [R] on D15 (GPIO 15) <-> Switch SW1 on D13 (GPIO 13)
       Pair 2: Relay In3 [R] on D2  (GPIO 2)  <-> Switch SW2 on D12 (GPIO 12)
       Pair 3: Relay In2 [R] on D4  (GPIO 4)  <-> Switch SW3 on D14 (GPIO 14)
@@ -26,6 +25,13 @@
       Pair 6: Relay In3 [L] on D18 (GPIO 18) <-> Switch SW6 on D25 (GPIO 25)
       Pair 7: Relay In2 [L] on D19 (GPIO 19) <-> Switch SW7 on D33 (GPIO 33)
       Pair 8: Relay In1 [L] on D21 (GPIO 21) <-> Switch SW8 on D32 (GPIO 32)
+
+  • ZONE 3 ("3rd One", ZONE_ID = 3, 5 Active Pairs):
+      Pair 1: Relay In1 on D5  (GPIO 5)  <-> Switch SW1 on D32 (GPIO 32)
+      Pair 2: Relay In2 on D4  (GPIO 4)  <-> Switch SW2 on D33 (GPIO 33)
+      Pair 3: Relay In3 on D2  (GPIO 2)  <-> Switch SW3 on D25 (GPIO 25)
+      Pair 4: Relay In4 on D15 (GPIO 15) <-> Switch SW4 on D26 (GPIO 26)
+      Pair 5: Relay In5 on D18 (GPIO 18) <-> Switch SW5 on D27 (GPIO 27)
 
   • Standalone Dual-Gree AC Controller runs on a separate ESP32 board
     (AC #1 IR on GPIO 33, AC #2 IR on GPIO 12) — see esp32_ac_ir_controller.ino.
@@ -44,7 +50,6 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include "secrets.h"  // Copy secrets.example.h to secrets.h and fill locally; never commit it.
 
 #if ARDUINOJSON_VERSION_MAJOR >= 7
   #define JSON_DOC(name, size) JsonDocument name
@@ -59,9 +64,13 @@
 //   1 = Zone 1 (ESP32 30-Pin - "1st Board")
 //   2 = Zone 2 (Unlabeled Board)
 //   3 = Zone 3 ("3rd One")
+#ifndef ZONE_ID
 #define ZONE_ID           1
+#endif
 #define BOARD_ID          ZONE_ID
 #define CLASSROOM_ID      "reb_room_301"
+
+#include "secrets.h"  // Copy secrets.example.h to secrets.h and fill locally; never commit it.
 
 #if ZONE_ID == 1
   #define ZONE_ID_STR     "zone_1"
@@ -96,32 +105,30 @@ const char* MQTT_USER     = CLASSROOM_MQTT_USERNAME;
 const char* MQTT_PASSWORD = CLASSROOM_MQTT_PASSWORD;
 
 // =============================================================================
-// 3. 8-PAIR RELAY & MANUAL SWITCH GPIO MAPPING
+// 3. RELAY & MANUAL SWITCH GPIO MAPPING
 // =============================================================================
-#define NUM_RELAYS 8
-
 struct SwitchRelayPair {
   int relayPin;           // ESP32 GPIO pin for Relay (OUTPUT)
-  int switchPin;          // ESP32 GPIO pin for Manual Switch (INPUT_PULLUP)
-  const char* relayLabel; // Hardware Relay label (e.g. "In4 [R]")
+  int switchPin;          // ESP32 GPIO pin for Manual Switch (INPUT_PULLUP / INPUT for >=34)
+  const char* relayLabel; // Hardware Relay label (e.g. "In1 [L]")
   const char* switchName; // Hardware Switch label (e.g. "S1" or "SW1")
   bool defaultOn;         // Boot relay state
 };
 
 #if ZONE_ID == 1
-// Zone 1 (ESP32 30-Pin - "1st Board") Exact Pin Pairs:
+#define NUM_RELAYS 6
+// Zone 1 (ESP32 30-Pin - "1st Board"): Left starts In1 (Pairs 1-4), Right starts In5 (Pairs 5-6)
 SwitchRelayPair pairConfigs[NUM_RELAYS] = {
-  {15, 13, "In4 [R]", "S1", false}, // Pair 1: Relay In4 [R] (D15) <-> Switch S1 (D13)
-  { 2, 12, "In3 [R]", "S2", false}, // Pair 2: Relay In3 [R] (D2)  <-> Switch S2 (D12)
-  { 4, 14, "In2 [R]", "S3", false}, // Pair 3: Relay In2 [R] (D4)  <-> Switch S3 (D14)
-  { 5, 27, "In1 [R]", "S4", false}, // Pair 4: Relay In1 [R] (D5)  <-> Switch S4 (D27)
-  {18, 26, "In4 [L]", "S5", false}, // Pair 5: Relay In4 [L] (D18) <-> Switch S5 (D26)
-  {19, 25, "In3 [L]", "S6", false}, // Pair 6: Relay In3 [L] (D19) <-> Switch S6 (D25)
-  {21, 33, "In2 [L]", "S7", false}, // Pair 7: Relay In2 [L] (D21) <-> Switch S7 (D33)
-  {22, 32, "In1 [L]", "S8", false}  // Pair 8: Relay In1 [L] (D22) <-> Switch S8 (D32)
+  {16, 14, "In1 [L]", "S1", false}, // Pair 1: Relay In1 [L] (D16) <-> Switch S1 (D14)
+  { 4, 27, "In2 [L]", "S2", false}, // Pair 2: Relay In2 [L] (D4)  <-> Switch S2 (D27)
+  { 2, 26, "In3 [L]", "S3", false}, // Pair 3: Relay In3 [L] (D2)  <-> Switch S3 (D26)
+  {15, 25, "In4 [L]", "S4", false}, // Pair 4: Relay In4 [L] (D15) <-> Switch S4 (D25)
+  {21, 33, "In5 [R]", "S5", false}, // Pair 5: Relay In5 [R] (D21) <-> Switch S5 (D33)
+  {19, 34, "In6 [R]", "S6", false}  // Pair 6: Relay In6 [R] (D19) <-> Switch S6 (D34, input-only)
 };
-#else
-// Zone 2 (Unlabeled Board) & Zone 3 ("3rd One") Exact Pin Pairs:
+#elif ZONE_ID == 2
+#define NUM_RELAYS 8
+// Zone 2 (Unlabeled Board) Exact 8-Pair Pins:
 SwitchRelayPair pairConfigs[NUM_RELAYS] = {
   {15, 13, "In4 [R]", "SW1", false}, // Pair 1: Relay In4 [R] (D15) <-> Switch SW1 (D13)
   { 2, 12, "In3 [R]", "SW2", false}, // Pair 2: Relay In3 [R] (D2)  <-> Switch SW2 (D12)
@@ -132,18 +139,28 @@ SwitchRelayPair pairConfigs[NUM_RELAYS] = {
   {19, 33, "In2 [L]", "SW7", false}, // Pair 7: Relay In2 [L] (D19) <-> Switch SW7 (D33)
   {21, 32, "In1 [L]", "SW8", false}  // Pair 8: Relay In1 [L] (D21) <-> Switch SW8 (D32)
 };
+#else
+#define NUM_RELAYS 5
+// Zone 3 ("3rd One") Exact 5-Pair Pins:
+SwitchRelayPair pairConfigs[NUM_RELAYS] = {
+  { 5, 32, "In1", "SW1", false}, // Pair 1: Relay In1 (D5)  <-> Switch SW1 (D32)
+  { 4, 33, "In2", "SW2", false}, // Pair 2: Relay In2 (D4)  <-> Switch SW2 (D33)
+  { 2, 25, "In3", "SW3", false}, // Pair 3: Relay In3 (D2)  <-> Switch SW3 (D25)
+  {15, 26, "In4", "SW4", false}, // Pair 4: Relay In4 (D15) <-> Switch SW4 (D26)
+  {18, 27, "In5", "SW5", false}  // Pair 5: Relay In5 (D18) <-> Switch SW5 (D27)
+};
 #endif
 
-// Runtime states for all 8 pairs
-bool relayStates[NUM_RELAYS]        = {false, false, false, false, false, false, false, false};
-int  fanSpeeds[NUM_RELAYS]          = {3, 3, 3, 3, 3, 3, 3, 3};
-int  brightness[NUM_RELAYS]         = {100, 100, 100, 100, 100, 100, 100, 100};
+// Runtime states for all configured pairs
+bool relayStates[NUM_RELAYS]        = {};
+int  fanSpeeds[NUM_RELAYS];
+int  brightness[NUM_RELAYS];
 
 // Switch state-change tracking & hardware interrupt flags
 int  lastStableSwitchState[NUM_RELAYS];
 int  lastRawSwitchReading[NUM_RELAYS];
 unsigned long lastSwitchDebounceMs[NUM_RELAYS];
-volatile bool switchIrqTriggered[NUM_RELAYS] = {false, false, false, false, false, false, false, false};
+volatile bool switchIrqTriggered[NUM_RELAYS] = {};
 const unsigned long SWITCH_DEBOUNCE_MS = 45;
 
 // Relay Trigger Logic: Active LOW (LOW = Relay ON, HIGH = Relay OFF)
@@ -197,7 +214,7 @@ void IRAM_ATTR onSwitch5Change() { switchIrqTriggered[5] = true; }
 void IRAM_ATTR onSwitch6Change() { switchIrqTriggered[6] = true; }
 void IRAM_ATTR onSwitch7Change() { switchIrqTriggered[7] = true; }
 
-void (*switchIsrTable[NUM_RELAYS])() = {
+void (*switchIsrTable[8])() = {
   onSwitch0Change, onSwitch1Change, onSwitch2Change, onSwitch3Change,
   onSwitch4Change, onSwitch5Change, onSwitch6Change, onSwitch7Change
 };
@@ -207,11 +224,14 @@ void configureHardwarePins() {
   for (int i = 0; i < NUM_RELAYS; i++) {
     // 1. Configure Relay Pin as OUTPUT (drive safe initial level first to prevent boot chatter)
     relayStates[i] = pairConfigs[i].defaultOn;
+    fanSpeeds[i]   = 3;
+    brightness[i]  = 100;
     digitalWrite(pairConfigs[i].relayPin, relayLevel(relayStates[i]));
     pinMode(pairConfigs[i].relayPin, OUTPUT);
 
-    // 2. Configure Manual Switch Pin as INPUT_PULLUP and attach state-change interrupt
-    pinMode(pairConfigs[i].switchPin, INPUT_PULLUP);
+    // 2. Configure Manual Switch Pin (GPIO 34-39 are input-only with no internal pull-up)
+    int switchMode = (pairConfigs[i].switchPin >= 34) ? INPUT : INPUT_PULLUP;
+    pinMode(pairConfigs[i].switchPin, switchMode);
     int initialReading = digitalRead(pairConfigs[i].switchPin);
     lastStableSwitchState[i] = initialReading;
     lastRawSwitchReading[i]  = initialReading;
@@ -268,17 +288,18 @@ void publishRelayStatus(int index) {
   doc["switch_name"] = pairConfigs[index].switchName;
   doc["speed"]       = relayStates[index] ? fanSpeeds[index] : 0;
   doc["brightness"]  = relayStates[index] ? brightness[index] : 0;
+  doc["uptime"]      = millis();
 
-  char buffer[320];
+  char buffer[352];
   serializeJson(doc, buffer, sizeof(buffer));
 
-  // 1. Hierarchical Zone Relay Topic: ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/relay/<1-8>/status
+  // 1. Hierarchical Zone Relay Topic (retained reported state): ruet/classroom/<CLASSROOM_ID>/zone/<ZONE_ID>/relay/<1-8>/status
   String topicZoneRelay = getZoneTopic() + "/relay/" + String(relayNum) + "/status";
-  mqtt.publish(topicZoneRelay.c_str(), buffer, false);
+  mqtt.publish(topicZoneRelay.c_str(), buffer, true);
 
   // 2. Board Status Alias: ruet/classroom/<CLASSROOM_ID>/status/board/<ZONE_ID>/relay/<1-8>
   String topicBoardRelay = getBaseTopic() + "/status/board/" + String(ZONE_ID) + "/relay/" + String(relayNum);
-  mqtt.publish(topicBoardRelay.c_str(), buffer, false);
+  mqtt.publish(topicBoardRelay.c_str(), buffer, true);
 
   // 3. Home Zone Status Alias: home/zone_<ZONE_ID>/relay/<1-8>/status
   String topicHomeRelay = "home/" + String(ZONE_ID_STR) + "/relay/" + String(relayNum) + "/status";
@@ -302,6 +323,7 @@ void publishHeartbeat() {
 
   JSON_DOC(doc, 512);
   doc["status"]      = "ONLINE";
+  doc["online"]      = true;
   doc["zone_id"]     = ZONE_ID_STR;
   doc["device_type"] = DEVICE_TYPE_STR;
   doc["room"]        = CLASSROOM_ID;
@@ -310,6 +332,7 @@ void publishHeartbeat() {
   doc["ip"]          = WiFi.localIP().toString();
   doc["mac"]         = WiFi.macAddress();
   doc["rssi"]        = WiFi.RSSI();
+  doc["uptime"]      = millis();
   doc["uptimeSec"]   = millis() / 1000;
   doc["freeHeap"]    = ESP.getFreeHeap();
   doc["emergency"]   = emergencyLocked;
@@ -324,8 +347,8 @@ void publishHeartbeat() {
 
   String topicBoardStatus = getBaseTopic() + "/status/board/" + String(ZONE_ID);
   String topicZoneStatus  = getZoneTopic() + "/status";
-  mqtt.publish(topicBoardStatus.c_str(), buffer, false);
-  mqtt.publish(topicZoneStatus.c_str(), buffer, false);
+  mqtt.publish(topicBoardStatus.c_str(), buffer, true);
+  mqtt.publish(topicZoneStatus.c_str(), buffer, true);
   mqtt.publish(DISCOVERY_TOPIC, buffer, false);
 }
 
@@ -521,7 +544,7 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
       strTopic == getBaseTopic() + "/command/query" ||
       strTopic == "ruet/classroom/all/command/query" ||
       strTopic.endsWith("/query")) {
-    Serial.printf("🔍 [SCAN QUERY] Broadcasting discovery & 8-relay status for %s...\n", ZONE_ID_STR);
+    Serial.printf("🔍 [SCAN QUERY] Broadcasting discovery & %d-relay status for %s...\n", NUM_RELAYS, ZONE_ID_STR);
     publishDiscovery();
     publishHeartbeat();
     publishAllRelayStatus();
@@ -567,6 +590,20 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
     if (msg.startsWith("{")) {
       JSON_DOC(doc, 256);
       if (!deserializeJson(doc, msg)) {
+        if (!doc["room"].isNull()) {
+          String targetRoom = doc["room"].as<String>();
+          if (targetRoom.length() > 0 && targetRoom != String(CLASSROOM_ID)) {
+            Serial.printf("⚠️ [VALIDATION] Ignored command addressed to room '%s'\n", targetRoom.c_str());
+            return;
+          }
+        }
+        if (!doc["zone"].isNull() && doc["zone"].is<int>()) {
+          int targetZone = doc["zone"].as<int>();
+          if (targetZone > 0 && targetZone != ZONE_ID) {
+            Serial.printf("⚠️ [VALIDATION] Ignored command addressed to zone %d\n", targetZone);
+            return;
+          }
+        }
         if (!doc["state"].isNull()) {
           String st = doc["state"].as<String>();
           st.toUpperCase();
@@ -649,7 +686,7 @@ void connectMqtt() {
 
   String clientId = "ESP32_" + String(ZONE_ID_STR) + "_" + String((uint32_t)ESP.getEfuseMac(), HEX);
   String lwtTopic = getBaseTopic() + "/status/board/" + String(ZONE_ID);
-  String lwtMsg   = "{\"status\":\"OFFLINE\",\"zone_id\":\"" + String(ZONE_ID_STR) +
+  String lwtMsg   = "{\"status\":\"OFFLINE\",\"online\":false,\"zone_id\":\"" + String(ZONE_ID_STR) +
                     "\",\"device_type\":\"switchboard\",\"zone\":" + String(ZONE_ID) +
                     ",\"board\":" + String(BOARD_ID) + "}";
 
@@ -661,15 +698,15 @@ void connectMqtt() {
   }
 
   if (success) {
-    Serial.printf("🎉 [MQTT] Connected as %s (%s)\n", clientId.c_str(), ZONE_ID_STR);
+    Serial.printf("🎉 [MQTT] Connected as %s (%s) to %s:%d\n",
+                  clientId.c_str(), ZONE_ID_STR, MQTT_BROKER, MQTT_PORT);
 
+    // Subscribe strictly to ACL-authorized topics for this board
     mqtt.subscribe((getZoneTopic() + "/#").c_str(), 1);
     mqtt.subscribe((getBoardTopic() + "/#").c_str(), 1);
     mqtt.subscribe(("home/" + String(ZONE_ID_STR) + "/#").c_str(), 1);
-    mqtt.subscribe("home/command/#", 1);
     mqtt.subscribe((getBaseTopic() + "/command/#").c_str(), 1);
     mqtt.subscribe("home/discovery/query", 1);
-    mqtt.subscribe("ruet/classroom/all/command/query", 1);
 
     // Phase 5 Subscriptions
     mqtt.subscribe((getControllerPrefix() + "/hello").c_str(), 1);
@@ -679,7 +716,7 @@ void connectMqtt() {
     mqtt.subscribe((getAltControllerPrefix() + "/command").c_str(), 1);
     mqtt.subscribe((getAltControllerPrefix() + "/dry_run/command").c_str(), 1);
 
-    // Broadcast Discovery, Heartbeat, and all 8 Relay states immediately upon boot/connect
+    // Broadcast Discovery, retained Heartbeat, and retained 8-Relay states immediately upon boot/connect
     publishDiscovery();
     publishHeartbeat();
     publishAllRelayStatus();
@@ -697,7 +734,7 @@ void setup() {
 
   Serial.println("\n==============================================================");
   Serial.printf("  Smart Home / Classroom 8-Switchboard Controller (%s)\n", ZONE_ID_STR);
-  Serial.printf("  Classroom: %s | Board #%d | 8 Relays <-> 8 Manual Switches\n", CLASSROOM_ID, BOARD_ID);
+  Serial.printf("  Classroom: %s | Board #%d | %d Relays <-> %d Manual Switches\n", CLASSROOM_ID, BOARD_ID, NUM_RELAYS, NUM_RELAYS);
   Serial.println("==============================================================");
 
   configureHardwarePins();

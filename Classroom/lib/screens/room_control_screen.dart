@@ -1591,17 +1591,22 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          device.type == DeviceType.hvac && !isOn
-                              ? 'Off · IR GPIO ${device.gpioPinNumber}'
-                              : _deviceStatusText(device),
+                          device.isPendingConfirmation
+                              ? 'Pending…'
+                              : (device.type == DeviceType.hvac && !isOn
+                                  ? 'Off · IR GPIO ${device.gpioPinNumber}'
+                                  : _deviceStatusText(device)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.bodySm(
-                            color: isOn ? accent : AppColors.outline,
+                            color: device.isPendingConfirmation
+                                ? AppColors.telemetryAmber
+                                : (isOn ? accent : AppColors.outline),
                           ).copyWith(
                             fontSize: 12,
-                            fontWeight:
-                                isOn ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: (isOn || device.isPendingConfirmation)
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                       ],
@@ -1964,6 +1969,9 @@ class _RoomControlScreenState extends State<RoomControlScreen> {
   }
 
   String _deviceStatusText(ClassroomDevice device) {
+    if (device.isPendingConfirmation) {
+      return 'Pending…';
+    }
     if (!device.isOn) return 'Off';
     switch (device.type) {
       case DeviceType.fan:

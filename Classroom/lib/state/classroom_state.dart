@@ -26,6 +26,7 @@ class ClassroomState extends ChangeNotifier {
   StreamSubscription<List<Classroom>>? _classroomsStreamSub;
   final Map<String, int> _lastKnownFrontOcc = {};
   final Map<String, int> _lastKnownBackOcc = {};
+  final Map<String, Timer> _pendingConfirmationTimers = {};
   Timer? _visionWatchdogTimer;
 
   ClassroomState._internal() {
@@ -314,6 +315,24 @@ class ClassroomState extends ChangeNotifier {
             }
           }
           _classrooms = loadedRooms;
+          if (prefs.getBool('migrated_reb_301_pins_v2') != true) {
+            final rebIdx = _classrooms.indexWhere(
+              (r) => r.id == 'reb_room_301' || r.scopedRoomId == 'reb_room_301',
+            );
+            if (rebIdx != -1) {
+              final reb = _classrooms[rebIdx];
+              for (final extra in _extraReb301Devices()) {
+                if (!reb.devices.any((d) => d.id == extra.id)) {
+                  reb.devices.add(extra);
+                }
+              }
+            }
+            await prefs.setBool('migrated_reb_301_pins_v2', true);
+            await prefs.setString(
+              _storageKeyClassrooms,
+              jsonEncode(_classrooms.map((c) => c.toMap()).toList()),
+            );
+          }
           final savedRoomId = prefs.getString(_storageKeySelectedRoom);
           if (savedRoomId != null &&
               _classrooms.any((r) => r.id == savedRoomId)) {
@@ -334,6 +353,55 @@ class ClassroomState extends ChangeNotifier {
     } catch (e) {
       debugPrint('[ClassroomState] Error loading cached storage: $e');
     }
+  }
+
+  static ClassroomDevice _reb301ExtraLight({
+    required String id,
+    required String name,
+    required String zone,
+    required int boardId,
+    required int relay,
+  }) {
+    return ClassroomDevice(
+      id: id,
+      name: name,
+      type: DeviceType.lighting,
+      statusDescription: 'Standby · Power Off',
+      isOn: false,
+      zone: zone,
+      relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+        relay,
+        boardId: boardId,
+      ),
+      zigbeeOrBleNode: 'Switchboard #$boardId',
+      brightness: 100,
+    );
+  }
+
+  static List<ClassroomDevice> _extraReb301Devices() {
+    return [
+      _reb301ExtraLight(
+        id: 'dev-301-z1-r5',
+        name: 'Zone 1 Right Light 1',
+        zone: 'Zone 1',
+        boardId: 1,
+        relay: 5,
+      ),
+      _reb301ExtraLight(
+        id: 'dev-301-z1-r6',
+        name: 'Zone 1 Right Light 2',
+        zone: 'Zone 1',
+        boardId: 1,
+        relay: 6,
+      ),
+      _reb301ExtraLight(
+        id: 'dev-301-z3-r5',
+        name: 'Zone 3 Rear Light 3',
+        zone: 'Zone 3',
+        boardId: 3,
+        relay: 5,
+      ),
+    ];
   }
 
   // Debounced local persistence prevents heavy disk I/O micro-stutters during rapid interactions
@@ -430,8 +498,11 @@ class ClassroomState extends ChangeNotifier {
             }
           }
           if (targetDevice != null) {
+            final confirmedPending = targetDevice.isPendingConfirmation &&
+                targetDevice.pendingTargetOn == isOn;
             // Drop outdated incoming status if user toggled this device recently and state disagrees
-            if (_isRecentlyToggled(roomId, targetDevice.id) &&
+            if (!confirmedPending &&
+                _isRecentlyToggled(roomId, targetDevice.id) &&
                 targetDevice.isOn != isOn) {
               debugPrint(
                 '[MQTT ➡️ State] Suppressed stale incoming relay status for ${targetDevice.name}',
@@ -439,6 +510,9 @@ class ClassroomState extends ChangeNotifier {
               return;
             }
 
+            _clearPendingConfirmation(targetDevice.id);
+            targetDevice.isPendingConfirmation = false;
+            targetDevice.pendingTargetOn = null;
             targetDevice.isOn = isOn;
             if (speed != null && targetDevice.type == DeviceType.fan) {
               targetDevice.fanSpeed = speed;
@@ -446,6 +520,15 @@ class ClassroomState extends ChangeNotifier {
             if (brightness != null &&
                 targetDevice.type == DeviceType.lighting) {
               targetDevice.brightness = brightness;
+            }
+            if (targetDevice.type == DeviceType.fan) {
+              targetDevice.statusDescription = isOn
+                  ? 'Speed ${targetDevice.fanSpeed} · Active'
+                  : 'Standby · Array Off';
+            } else if (targetDevice.type == DeviceType.lighting) {
+              targetDevice.statusDescription = isOn
+                  ? 'Active · Relay Closed'
+                  : 'Standby · Power Off';
             }
             _persistDevicePower(targetDevice, roomId: room.id);
             notifyListeners();
@@ -469,9 +552,16 @@ class ClassroomState extends ChangeNotifier {
         }
       }
       if (targetAc != null) {
-        if (_isRecentlyToggled(roomId, targetAc.id) && targetAc.isOn != isOn) {
+        final confirmedPending = targetAc.isPendingConfirmation &&
+            targetAc.pendingTargetOn == isOn;
+        if (!confirmedPending &&
+            _isRecentlyToggled(roomId, targetAc.id) &&
+            targetAc.isOn != isOn) {
           return;
         }
+        _clearPendingConfirmation(targetAc.id);
+        targetAc.isPendingConfirmation = false;
+        targetAc.pendingTargetOn = null;
         targetAc.isOn = isOn;
         targetAc.temperature = temp;
         targetAc.hvacMode = mode;
@@ -803,10 +893,12 @@ class ClassroomState extends ChangeNotifier {
         } else if (curDev != null) {
           // Active teacher tapping on this device right now: keep local UI state
           incomingDev.isOn = curDev.isOn;
-          if (incomingDev.type == DeviceType.fan)
+          if (incomingDev.type == DeviceType.fan) {
             incomingDev.fanSpeed = curDev.fanSpeed;
-          if (incomingDev.type == DeviceType.lighting)
+          }
+          if (incomingDev.type == DeviceType.lighting) {
             incomingDev.brightness = curDev.brightness;
+          }
         }
 
         // Update status description
@@ -921,7 +1013,44 @@ class ClassroomState extends ChangeNotifier {
     _localSaveDebounce?.cancel();
     _classIntervalSyncTimer?.cancel();
     _classroomsStreamSub?.cancel();
+    for (final timer in _pendingConfirmationTimers.values) {
+      timer.cancel();
+    }
+    _pendingConfirmationTimers.clear();
     MqttService().disconnect();
+  }
+
+  void _clearPendingConfirmation(String deviceId) {
+    _pendingConfirmationTimers.remove(deviceId)?.cancel();
+  }
+
+  void _beginPendingConfirmation(
+    Classroom room,
+    ClassroomDevice device, {
+    required bool desiredOn,
+    required bool previousOn,
+  }) {
+    _clearPendingConfirmation(device.id);
+    if (!MqttService().isConnected) {
+      device.isPendingConfirmation = false;
+      device.pendingTargetOn = null;
+      return;
+    }
+    device.isPendingConfirmation = true;
+    device.pendingTargetOn = desiredOn;
+    device.statusDescription = 'Pending ${desiredOn ? "ON" : "OFF"}…';
+    _pendingConfirmationTimers[device.id] = Timer(
+      const Duration(seconds: 5),
+      () {
+        _pendingConfirmationTimers.remove(device.id);
+        if (!device.isPendingConfirmation) return;
+        device.isPendingConfirmation = false;
+        device.pendingTargetOn = null;
+        device.isOn = previousOn;
+        device.statusDescription = 'No ESP32 response';
+        notifyListeners();
+      },
+    );
   }
 
   void _triggerClassIntervalSync() {
@@ -1057,7 +1186,7 @@ class ClassroomState extends ChangeNotifier {
         zoneCount: 3,
         zones: ['Zone 1', 'Zone 2', 'Zone 3'],
         devices: [
-          // Zone 1 (ESP32 30-Pin - "1st Board": 8 Relays <-> S1..S8)
+          // Zone 1 (ESP32 30-Pin - "1st Board": 6 Relays <-> S1..S6)
           ClassroomDevice(
             id: 'dev-301-z1-r1',
             name: 'Zone 1 Front Light 1',
@@ -1113,6 +1242,20 @@ class ClassroomState extends ChangeNotifier {
             ),
             zigbeeOrBleNode: 'Switchboard #1',
             fanSpeed: 0,
+          ),
+          _reb301ExtraLight(
+            id: 'dev-301-z1-r5',
+            name: 'Zone 1 Right Light 1',
+            zone: 'Zone 1',
+            boardId: 1,
+            relay: 5,
+          ),
+          _reb301ExtraLight(
+            id: 'dev-301-z1-r6',
+            name: 'Zone 1 Right Light 2',
+            zone: 'Zone 1',
+            boardId: 1,
+            relay: 6,
           ),
 
           // Zone 2 (Unlabeled Board: 8 Relays <-> SW1..SW8)
@@ -1173,7 +1316,7 @@ class ClassroomState extends ChangeNotifier {
             fanSpeed: 0,
           ),
 
-          // Zone 3 ("3rd One": 8 Relays <-> SW1..SW8)
+          // Zone 3 ("3rd One": 5 Relays <-> SW1..SW5)
           ClassroomDevice(
             id: 'dev-301-z3-r1',
             name: 'Zone 3 Rear Light 1',
@@ -1229,6 +1372,13 @@ class ClassroomState extends ChangeNotifier {
             ),
             zigbeeOrBleNode: 'Switchboard #3',
             fanSpeed: 0,
+          ),
+          _reb301ExtraLight(
+            id: 'dev-301-z3-r5',
+            name: 'Zone 3 Rear Light 3',
+            zone: 'Zone 3',
+            boardId: 3,
+            relay: 5,
           ),
 
           // Standalone Dual-AC IR Controller (Separate ESP32: Gree AC #1 on GPIO 33, Gree AC #2 on GPIO 12)
@@ -1540,6 +1690,7 @@ class ClassroomState extends ChangeNotifier {
       );
     }
 
+    final previousOn = device.isOn;
     device.isOn = willTurnOn;
 
     if (device.type == DeviceType.fan) {
@@ -1567,6 +1718,12 @@ class ClassroomState extends ChangeNotifier {
           : 'Relays Disengaged';
     }
 
+    _beginPendingConfirmation(
+      room,
+      device,
+      desiredOn: willTurnOn,
+      previousOn: previousOn,
+    );
     _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
@@ -1745,10 +1902,12 @@ class ClassroomState extends ChangeNotifier {
     for (var device in room.devices) {
       device.isOn = powerOn;
       if (powerOn) {
-        if (device.type == DeviceType.fan && device.fanSpeed == 0)
+        if (device.type == DeviceType.fan && device.fanSpeed == 0) {
           device.fanSpeed = 3;
-        if (device.type == DeviceType.lighting && device.brightness == 0)
+        }
+        if (device.type == DeviceType.lighting && device.brightness == 0) {
           device.brightness = 85;
+        }
       }
     }
     room.isOccupied = powerOn;
@@ -1769,10 +1928,12 @@ class ClassroomState extends ChangeNotifier {
       for (var device in room.devices) {
         device.isOn = allOn;
         if (allOn) {
-          if (device.type == DeviceType.fan && device.fanSpeed == 0)
+          if (device.type == DeviceType.fan && device.fanSpeed == 0) {
             device.fanSpeed = 3;
-          if (device.type == DeviceType.lighting && device.brightness == 0)
+          }
+          if (device.type == DeviceType.lighting && device.brightness == 0) {
             device.brightness = 85;
+          }
         }
       }
       room.isOccupied = allOn;
@@ -2146,8 +2307,9 @@ class ClassroomState extends ChangeNotifier {
       d.isOn = willTurnOn;
       if (willTurnOn) {
         if (d.type == DeviceType.fan && d.fanSpeed == 0) d.fanSpeed = 3;
-        if (d.type == DeviceType.lighting && d.brightness == 0)
+        if (d.type == DeviceType.lighting && d.brightness == 0) {
           d.brightness = 85;
+        }
       }
     }
 
