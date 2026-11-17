@@ -384,7 +384,12 @@ def test_shutdown_on_failed_startup_cleans_transport(phase5_factory, tmp_path, m
 
     monkeypatch.setattr(workers, "BoundedWorker", FailureWorker)
     cfg = phase5_factory("OBSERVE")
-    assert run_service(cfg, tmp_path / "failure-run", input_folder="sample_images") == 1
+    images = tmp_path / "empty-image-folder"
+    images.mkdir()
+    from PIL import Image
+
+    Image.new("RGB", (4, 4), color="white").save(images / "startup.png")
+    assert run_service(cfg, tmp_path / "failure-run", input_folder=images) == 1
     assert closed
     records = [
         json.loads(line)

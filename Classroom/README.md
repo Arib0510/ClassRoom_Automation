@@ -1,5 +1,8 @@
 # smart_classroom_iot
 
+For the laptop-hosted authenticated MQTT broker setup, client configuration, and
+deployment commands, see [MQTT laptop broker migration](docs/mqtt_laptop_broker_migration.md).
+
 A new Flutter project.
 
 ## Getting Started

@@ -339,7 +339,8 @@ state; no Pi GPIO or relay is switched by this module.
 ## 10. MQTT message format, safety defaults and limits
 
 Implementation: [src/mqtt_client.py](../src/mqtt_client.py) and `main.run`.
-Defaults: broker **192.168.1.10:1883** (example address), client/device ID
+Defaults: loopback development broker (deployment host supplied through
+`CLASSROOM_MQTT_HOST`), client/device ID
 `classroom-01-vision`, MQTT 3.1.1, clean session, keepalive **10 seconds**,
 reconnect backoff **1–10 seconds**, heartbeat interval setting **2 seconds**,
 expiry ceiling **8 seconds**, TLS **false**, CA path null. Credentials are optional

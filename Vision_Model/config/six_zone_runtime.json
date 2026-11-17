@@ -1,0 +1,17 @@
+{
+  "source": "scripts/run_classroom_vision.py defaults and ClassroomMotionTracker",
+  "runtime_mode": "six_zone_grid",
+  "zone_ids": [
+    "left_near",
+    "left_far",
+    "centre_near",
+    "centre_far",
+    "right_near",
+    "right_far"
+  ],
+  "split_y": 0.48,
+  "column_boundaries_x": [0.34, 0.66],
+  "invert_zones": true,
+  "camera_rotation": "180 degrees",
+  "physical_calibration": "NOT VERIFIED ON PI CAMERA"
+}

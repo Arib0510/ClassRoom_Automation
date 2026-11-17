@@ -1,6 +1,9 @@
 # ClassPulse IoT: Autonomous University Classroom Management System
 > **Closed-Loop Cyber-Physical Automation with Tri-State Synchronization & Vision-Driven Occupancy Optimization**
 
+For laptop-hosted, authenticated MQTT broker setup and Pi/ESP32/Flutter deployment
+steps, see [MQTT laptop broker migration](Classroom/docs/mqtt_laptop_broker_migration.md).
+
 ---
 
 ## 1. Executive System Overview
@@ -274,9 +277,7 @@ All nodes communicate via an isolated MQTT hierarchy scoped by campus building a
    ```cpp
    #define ZONE_ID           1             // 1 for Switchboard 1, 2 for 2, etc.
    #define CLASSROOM_ID      "rcb_room_304"// Unique scoped Room ID
-   #define WIFI_SSID         "YourSSID"
-   #define WIFI_PASSWORD     "YourPassword"
-   #define MQTT_BROKER       "broker.emqx.io"
+   // Copy secrets.example.h to secrets.h and set Wi-Fi and private broker credentials there.
    ```
 3. Flash the firmware using the Arduino IDE with `ESP32 Dev Module` selected.
 4. Verify serial monitor output: confirm Wi-Fi connection and MQTT subscription.

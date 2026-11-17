@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -57,7 +58,7 @@ class OccupancyConfig:
 
 @dataclass(frozen=True)
 class MQTTConfig:
-    host: str = "192.168.1.10"
+    host: str = "127.0.0.1"
     port: int = 1883
     client_id: str = "classroom-01-vision"
     topic_prefix: str = "classroom/classroom-01/vision"
@@ -131,6 +132,12 @@ def load_config(path: Path | str = REPO_ROOT / "config/config.yaml") -> AppConfi
             raise ValueError(f"detector.{key} must be a path string")
         detector[key] = (base / detector[key]).resolve()
     mqtt = dict(data["mqtt"])
+    # Host is deployment-specific; keep it outside the checked-in application config.
+    if mqtt.get("host_env"):
+        env_name = mqtt.pop("host_env")
+        if not isinstance(env_name, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]*", env_name):
+            raise ValueError("mqtt.host_env must be an uppercase environment variable name")
+        mqtt["host"] = os.environ.get(env_name, mqtt.get("host", "127.0.0.1"))
     if mqtt.get("ca_path") is not None:
         if not isinstance(mqtt["ca_path"], str) or not mqtt["ca_path"]:
             raise ValueError("mqtt.ca_path must be null or a nonempty path string")

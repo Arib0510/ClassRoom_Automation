@@ -91,6 +91,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final brokerController = TextEditingController(text: mqtt.broker);
     final portController = TextEditingController(text: mqtt.port.toString());
     final topicController = TextEditingController(text: mqtt.baseTopic);
+    final usernameController = TextEditingController();
+    final passwordController = TextEditingController();
 
     showDialog(
       context: context,
@@ -107,82 +109,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(width: 8),
               Text(
                 'MQTT Broker Configuration',
-                style: AppTypography.headlineSm(color: AppColors.onSurface, fontSize: 16),
+                style: AppTypography.headlineSm(
+                  color: AppColors.onSurface,
+                  fontSize: 16,
+                ),
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Connect to public broker or local RUET lab Mosquitto server:',
-                style: AppTypography.bodySm(color: AppColors.onSurfaceVariant),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: brokerController,
-                style: AppTypography.bodyMd(color: AppColors.onSurface),
-                decoration: InputDecoration(
-                  labelText: 'Broker Host / IP',
-                  hintText: 'e.g. broker.emqx.io or 192.168.0.x',
-                  filled: true,
-                  fillColor: AppColors.surfaceContainerLowest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enter the laptop broker and the MQTT account provisioned for this app.',
+                  style: AppTypography.bodySm(
+                    color: AppColors.onSurfaceVariant,
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: portController,
-                keyboardType: TextInputType.number,
-                style: AppTypography.bodyMd(color: AppColors.onSurface),
-                decoration: InputDecoration(
-                  labelText: 'Port',
-                  hintText: '1883',
-                  filled: true,
-                  fillColor: AppColors.surfaceContainerLowest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: topicController,
-                style: AppTypography.bodyMd(color: AppColors.onSurface),
-                decoration: InputDecoration(
-                  labelText: 'Base Topic',
-                  hintText: 'ruet/classroom',
-                  filled: true,
-                  fillColor: AppColors.surfaceContainerLowest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: brokerController,
+                  style: AppTypography.bodyMd(color: AppColors.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Broker Host / IP',
+                    hintText: 'e.g. broker.emqx.io or 192.168.0.x',
+                    filled: true,
+                    fillColor: AppColors.surfaceContainerLowest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.primary),
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                TextField(
+                  controller: usernameController,
+                  style: AppTypography.bodyMd(color: AppColors.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'MQTT username',
+                    filled: true,
+                    fillColor: AppColors.surfaceContainerLowest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  style: AppTypography.bodyMd(color: AppColors.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'MQTT password',
+                    filled: true,
+                    fillColor: AppColors.surfaceContainerLowest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: portController,
+                  keyboardType: TextInputType.number,
+                  style: AppTypography.bodyMd(color: AppColors.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Port',
+                    hintText: '1883',
+                    filled: true,
+                    fillColor: AppColors.surfaceContainerLowest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: topicController,
+                  style: AppTypography.bodyMd(color: AppColors.onSurface),
+                  decoration: InputDecoration(
+                    labelText: 'Base Topic',
+                    hintText: 'ruet/classroom',
+                    filled: true,
+                    fillColor: AppColors.surfaceContainerLowest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('CANCEL', style: AppTypography.labelMd(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold)),
+              child: Text(
+                'CANCEL',
+                style: AppTypography.labelMd(
+                  color: AppColors.onSurface,
+                ).copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -195,6 +242,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   broker: brokerController.text,
                   port: port,
                   baseTopic: topicController.text,
+                  username: usernameController.text,
+                  password: passwordController.text,
                 );
                 mqtt.connect();
                 Navigator.pop(context);
@@ -209,7 +258,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 );
               },
-              child: Text('SAVE & CONNECT', style: AppTypography.labelMd(color: AppColors.surfaceContainerLowest).copyWith(fontWeight: FontWeight.bold)),
+              child: Text(
+                'SAVE & CONNECT',
+                style: AppTypography.labelMd(
+                  color: AppColors.surfaceContainerLowest,
+                ).copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -235,7 +289,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(width: 8),
               Text(
                 'Modify Profile Name',
-                style: AppTypography.headlineSm(color: AppColors.onSurface, fontSize: 17),
+                style: AppTypography.headlineSm(
+                  color: AppColors.onSurface,
+                  fontSize: 17,
+                ),
               ),
             ],
           ),
@@ -257,7 +314,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   fillColor: AppColors.surfaceContainerLowest,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                    borderSide: BorderSide(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -271,7 +330,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('CANCEL', style: AppTypography.labelMd(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold)),
+              child: Text(
+                'CANCEL',
+                style: AppTypography.labelMd(
+                  color: AppColors.onSurface,
+                ).copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -298,7 +362,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               child: Text(
                 'SAVE CHANGES',
-                style: AppTypography.labelMd(color: AppColors.surfaceContainerLowest).copyWith(fontWeight: FontWeight.bold),
+                style: AppTypography.labelMd(
+                  color: AppColors.surfaceContainerLowest,
+                ).copyWith(fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -338,19 +404,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.surfaceContainerLowest,
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                    ),
                   ),
-                  child: Center(child: Icon(Icons.account_circle, color: AppColors.primary, size: 20)),
+                  child: Center(
+                    child: Icon(
+                      Icons.account_circle,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
                 ),
-                title: Text(AuthState().userName, style: AppTypography.bodySm(color: AppColors.onSurface)),
-                subtitle: Text(AuthState().userEmail, style: AppTypography.labelSm(color: AppColors.outline)),
-                trailing: Icon(Icons.check, color: AppColors.onlineMint, size: 18),
+                title: Text(
+                  AuthState().userName,
+                  style: AppTypography.bodySm(color: AppColors.onSurface),
+                ),
+                subtitle: Text(
+                  AuthState().userEmail,
+                  style: AppTypography.labelSm(color: AppColors.outline),
+                ),
+                trailing: Icon(
+                  Icons.check,
+                  color: AppColors.onlineMint,
+                  size: 18,
+                ),
               ),
               Divider(color: AppColors.overlay(0.12)),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.add_circle_outline, color: AppColors.secondaryLight, size: 22),
-                title: Text('Sign in with another Google Account', style: AppTypography.bodySm(color: AppColors.onSurface)),
+                leading: Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.secondaryLight,
+                  size: 22,
+                ),
+                title: Text(
+                  'Sign in with another Google Account',
+                  style: AppTypography.bodySm(color: AppColors.onSurface),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _signOut();
@@ -398,7 +489,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: AppColors.errorContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 22),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.error,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -415,7 +510,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 'Are you sure you want to wipe all classroom records?',
-                style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.w600),
+                style: AppTypography.bodySm(
+                  color: AppColors.onSurface,
+                ).copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Text(
@@ -436,7 +533,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: AppColors.onError,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 elevation: 0,
               ),
               onPressed: () async {
@@ -451,16 +550,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
+                      side: BorderSide(
+                        color: AppColors.error.withValues(alpha: 0.4),
+                      ),
                     ),
                     content: Row(
                       children: [
-                        Icon(Icons.check_circle_outline, color: AppColors.error, size: 20),
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: AppColors.error,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Classroom records cleared from local storage and Firebase.',
-                            style: AppTypography.bodySm(color: AppColors.onSurface),
+                            style: AppTypography.bodySm(
+                              color: AppColors.onSurface,
+                            ),
                           ),
                         ),
                       ],
@@ -469,7 +576,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 );
               },
-              child: const Text('Wipe All Records', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Wipe All Records',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -495,10 +605,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: AppColors.primaryContainer.withValues(alpha: 0.3),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Center(
-                  child: Icon(Icons.hub_rounded, color: AppColors.primary, size: 24),
+                  child: Icon(
+                    Icons.hub_rounded,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -508,11 +624,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       'ClassPulse IoT',
-                      style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.bold),
+                      style: AppTypography.headlineSm(
+                        color: AppColors.onSurface,
+                      ).copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       'Smart Classroom Platform',
-                      style: AppTypography.labelSm(color: AppColors.secondaryLight),
+                      style: AppTypography.labelSm(
+                        color: AppColors.secondaryLight,
+                      ),
                     ),
                   ],
                 ),
@@ -525,7 +645,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               // App Info Card
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: AppColors.surfaceContainerLowest,
@@ -556,38 +679,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: AppColors.surfaceContainerLowest,
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.code_rounded, size: 16, color: AppColors.primary),
+                        Icon(
+                          Icons.code_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'DEVELOPER',
-                          style: AppTypography.labelSm(color: AppColors.outline).copyWith(
-                            fontSize: 10,
-                            letterSpacing: 0.8,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: AppTypography.labelSm(color: AppColors.outline)
+                              .copyWith(
+                                fontSize: 10,
+                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(6),
                             color: AppColors.secondary.withValues(alpha: 0.15),
-                            border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4)),
+                            border: Border.all(
+                              color: AppColors.secondary.withValues(alpha: 0.4),
+                            ),
                           ),
                           child: Text(
                             'ETE-23',
-                            style: AppTypography.labelSm(color: AppColors.secondaryLight).copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                              letterSpacing: 0.5,
-                            ),
+                            style:
+                                AppTypography.labelSm(
+                                  color: AppColors.secondaryLight,
+                                ).copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                  letterSpacing: 0.5,
+                                ),
                           ),
                         ),
                       ],
@@ -595,27 +733,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 10),
                     Text(
                       'Fayem Muktadir Rahman',
-                      style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.3,
-                      ),
+                      style:
+                          AppTypography.headlineSm(
+                            color: AppColors.onSurface,
+                          ).copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
+                          ),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(Icons.badge_outlined, size: 14, color: AppColors.outline),
+                        Icon(
+                          Icons.badge_outlined,
+                          size: 14,
+                          color: AppColors.outline,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'Roll: ',
-                          style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 12),
+                          style: AppTypography.bodySm(
+                            color: AppColors.onSurfaceVariant,
+                          ).copyWith(fontSize: 12),
                         ),
                         Text(
                           '2304005',
-                          style: AppTypography.bodySm(color: AppColors.primaryLight).copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
+                          style: AppTypography.bodySm(
+                            color: AppColors.primaryLight,
+                          ).copyWith(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ],
                     ),
@@ -631,27 +777,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
-                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.5),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onPressed: () {
                       Navigator.pop(context);
                       CyberUpdateDialog.show(context);
                     },
-                    child: const Text('Check Updates', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Check Updates',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryContainer.withValues(alpha: 0.4),
+                      backgroundColor: AppColors.primaryContainer.withValues(
+                        alpha: 0.4,
+                      ),
                       foregroundColor: AppColors.primary,
-                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.5),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Close',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -670,15 +832,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: highlightValue ? AppColors.secondaryLight : AppColors.outline),
+        Icon(
+          icon,
+          size: 18,
+          color: highlightValue ? AppColors.secondaryLight : AppColors.outline,
+        ),
         const SizedBox(width: 10),
-        Text(label, style: AppTypography.bodySm(color: AppColors.onSurfaceVariant)),
+        Text(
+          label,
+          style: AppTypography.bodySm(color: AppColors.onSurfaceVariant),
+        ),
         const Spacer(),
         Text(
           value,
-          style: AppTypography.bodySm(
-            color: highlightValue ? AppColors.secondaryLight : AppColors.onSurface,
-          ).copyWith(fontWeight: highlightValue ? FontWeight.bold : FontWeight.w600),
+          style:
+              AppTypography.bodySm(
+                color: highlightValue
+                    ? AppColors.secondaryLight
+                    : AppColors.onSurface,
+              ).copyWith(
+                fontWeight: highlightValue ? FontWeight.bold : FontWeight.w600,
+              ),
         ),
       ],
     );
@@ -702,7 +876,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Icon(Icons.manage_accounts_rounded, color: AppColors.primary),
                   const SizedBox(width: 10),
-                  Text('Console Role & Privileges', style: AppTypography.headlineSm(fontSize: 16)),
+                  Text(
+                    'Console Role & Privileges',
+                    style: AppTypography.headlineSm(fontSize: 16),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -712,38 +889,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                tileColor: AuthState().isAdmin ? AppColors.primary.withValues(alpha: 0.15) : AppColors.surfaceContainerLowest,
-                leading: Icon(Icons.admin_panel_settings_rounded, color: AppColors.primary),
-                title: Text('Administrator Mode', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                subtitle: Text('Full layout, hardware provisioning, pin mapping & cloud directory', style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
-                trailing: AuthState().isAdmin ? Icon(Icons.check_circle, color: AppColors.primary) : null,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                tileColor: AuthState().isAdmin
+                    ? AppColors.primary.withValues(alpha: 0.15)
+                    : AppColors.surfaceContainerLowest,
+                leading: Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: AppColors.primary,
+                ),
+                title: Text(
+                  'Administrator Mode',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                subtitle: Text(
+                  'Full layout, hardware provisioning, pin mapping & cloud directory',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                trailing: AuthState().isAdmin
+                    ? Icon(Icons.check_circle, color: AppColors.primary)
+                    : null,
                 onTap: () async {
                   Navigator.pop(ctx);
                   await AuthState().setUserRole(UserRole.admin);
                   setState(() {});
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Switched to Administrator Mode. Role synced to Firebase.'), backgroundColor: AppColors.primary),
+                      SnackBar(
+                        content: Text(
+                          'Switched to Administrator Mode. Role synced to Firebase.',
+                        ),
+                        backgroundColor: AppColors.primary,
+                      ),
                     );
                   }
                 },
               ),
               const SizedBox(height: 8),
               ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                tileColor: AuthState().isTeacher ? AppColors.onlineMint.withValues(alpha: 0.15) : AppColors.surfaceContainerLowest,
-                leading: Icon(Icons.school_rounded, color: AppColors.onlineMint),
-                title: Text('Teacher Mode', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onlineMint)),
-                subtitle: Text('Classroom monitoring and live appliance controls only', style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
-                trailing: AuthState().isTeacher ? Icon(Icons.check_circle, color: AppColors.onlineMint) : null,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                tileColor: AuthState().isTeacher
+                    ? AppColors.onlineMint.withValues(alpha: 0.15)
+                    : AppColors.surfaceContainerLowest,
+                leading: Icon(
+                  Icons.school_rounded,
+                  color: AppColors.onlineMint,
+                ),
+                title: Text(
+                  'Teacher Mode',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.onlineMint,
+                  ),
+                ),
+                subtitle: Text(
+                  'Classroom monitoring and live appliance controls only',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                trailing: AuthState().isTeacher
+                    ? Icon(Icons.check_circle, color: AppColors.onlineMint)
+                    : null,
                 onTap: () async {
                   Navigator.pop(ctx);
                   await AuthState().setUserRole(UserRole.teacher);
                   setState(() {});
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Switched to Teacher Mode. Role synced to Firebase.'), backgroundColor: AppColors.onlineMint),
+                      SnackBar(
+                        content: Text(
+                          'Switched to Teacher Mode. Role synced to Firebase.',
+                        ),
+                        backgroundColor: AppColors.onlineMint,
+                      ),
                     );
                   }
                 },
@@ -769,17 +998,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Row(
-                children: [
-                  Icon(Icons.hub_rounded, size: 16, color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Flexible(child: Text(
-                    'Campus Directory & Roles',
-                    style: AppTypography.bodySm(color: AppColors.onSurface)
-                        .copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis,
-                  )),
-                ],
-              )),
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.hub_rounded, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Campus Directory & Roles',
+                        style: AppTypography.bodySm(
+                          color: AppColors.onSurface,
+                        ).copyWith(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -789,12 +1024,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.cloud_done_rounded, size: 10, color: AppColors.primary),
+                    Icon(
+                      Icons.cloud_done_rounded,
+                      size: 10,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'FIREBASE',
-                      style: AppTypography.labelSm(color: AppColors.primary)
-                          .copyWith(fontSize: 9.5, fontWeight: FontWeight.bold),
+                      style: AppTypography.labelSm(
+                        color: AppColors.primary,
+                      ).copyWith(fontSize: 9.5, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -804,7 +1044,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 4),
           Text(
             'Accounts registered in Firebase cloud database. Assign roles and filter by department.',
-            style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 10.5),
+            style: AppTypography.bodySm(
+              color: AppColors.onSurfaceVariant,
+            ).copyWith(fontSize: 10.5),
           ),
           const SizedBox(height: 10),
 
@@ -820,25 +1062,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: _userSearchController,
               textAlignVertical: TextAlignVertical.center,
               onChanged: (val) => setState(() => _userSearchQuery = val.trim()),
-              style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(fontSize: 12.5),
+              style: AppTypography.bodySm(
+                color: AppColors.onSurface,
+              ).copyWith(fontSize: 12.5),
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'Search by name, email, or dept...',
-                hintStyle: AppTypography.bodySm(color: AppColors.outline).copyWith(fontSize: 12),
-                prefixIconConstraints: const BoxConstraints(minWidth: 38, minHeight: 38, maxWidth: 38, maxHeight: 38),
-                prefixIcon: Icon(Icons.search, size: 16, color: AppColors.outline),
-                suffixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 34, maxWidth: 34, maxHeight: 34),
+                hintStyle: AppTypography.bodySm(
+                  color: AppColors.outline,
+                ).copyWith(fontSize: 12),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 38,
+                  minHeight: 38,
+                  maxWidth: 38,
+                  maxHeight: 38,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 16,
+                  color: AppColors.outline,
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 34,
+                  minHeight: 34,
+                  maxWidth: 34,
+                  maxHeight: 34,
+                ),
                 suffixIcon: _userSearchQuery.isNotEmpty
                     ? IconButton(
                         padding: EdgeInsets.zero,
-                        icon: Icon(Icons.close, size: 14, color: AppColors.outline),
+                        icon: Icon(
+                          Icons.close,
+                          size: 14,
+                          color: AppColors.outline,
+                        ),
                         onPressed: () {
                           _userSearchController.clear();
                           setState(() => _userSearchQuery = '');
                         },
                       )
                     : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
                 border: InputBorder.none,
               ),
             ),
@@ -855,16 +1122,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     color: AppColors.errorContainer.withValues(alpha: 0.2),
-                    border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.error.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, size: 16, color: AppColors.error),
+                      Icon(
+                        Icons.error_outline,
+                        size: 16,
+                        color: AppColors.error,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Firestore stream error: ${snapshot.error}',
-                          style: AppTypography.bodySm(color: AppColors.error).copyWith(fontSize: 10),
+                          style: AppTypography.bodySm(
+                            color: AppColors.error,
+                          ).copyWith(fontSize: 10),
                         ),
                       ),
                     ],
@@ -879,7 +1154,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                 );
@@ -896,7 +1174,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Center(
                     child: Text(
                       'No accounts registered in Firebase users collection yet.',
-                      style: AppTypography.bodySm(color: AppColors.outline).copyWith(fontSize: 11),
+                      style: AppTypography.bodySm(
+                        color: AppColors.outline,
+                      ).copyWith(fontSize: 11),
                     ),
                   ),
                 );
@@ -906,7 +1186,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final Set<String> deptSet = {};
               for (final doc in docs) {
                 final data = doc.data() as Map<String, dynamic>? ?? {};
-                final d = (data['department']?.toString().trim().isNotEmpty ?? false)
+                final d =
+                    (data['department']?.toString().trim().isNotEmpty ?? false)
                     ? data['department'].toString().trim()
                     : 'General Administration';
                 deptSet.add(d);
@@ -919,7 +1200,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ...allDepts.map((d) {
                   final count = docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>? ?? {};
-                    final dept = (data['department']?.toString().trim().isNotEmpty ?? false)
+                    final dept =
+                        (data['department']?.toString().trim().isNotEmpty ??
+                            false)
                         ? data['department'].toString().trim()
                         : 'General Administration';
                     return dept == d;
@@ -933,15 +1216,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // Filter docs by search and selected department
               final filteredDocs = docs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>? ?? {};
-                final name = (data['displayName'] ?? '').toString().toLowerCase();
+                final name = (data['displayName'] ?? '')
+                    .toString()
+                    .toLowerCase();
                 final email = (data['email'] ?? '').toString().toLowerCase();
-                final dept = (data['department'] ?? 'General Administration').toString();
+                final dept = (data['department'] ?? 'General Administration')
+                    .toString();
                 final q = _userSearchQuery.toLowerCase();
-                final matchesQuery = q.isEmpty ||
+                final matchesQuery =
+                    q.isEmpty ||
                     name.contains(q) ||
                     email.contains(q) ||
                     dept.toLowerCase().contains(q);
-                final matchesDept = _selectedDeptFilter == 'ALL' || dept == _selectedDeptFilter;
+                final matchesDept =
+                    _selectedDeptFilter == 'ALL' || dept == _selectedDeptFilter;
                 return matchesQuery && matchesDept;
               }).toList();
 
@@ -949,7 +1237,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final Map<String, List<QueryDocumentSnapshot>> grouped = {};
               for (final doc in filteredDocs) {
                 final data = doc.data() as Map<String, dynamic>? ?? {};
-                final dept = (data['department']?.toString().trim().isNotEmpty ?? false)
+                final dept =
+                    (data['department']?.toString().trim().isNotEmpty ?? false)
                     ? data['department'].toString().trim()
                     : 'General Administration';
                 grouped.putIfAbsent(dept, () => []).add(doc);
@@ -970,12 +1259,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Center(
                         child: Text(
                           'No users match your query or filter.',
-                          style: AppTypography.bodySm(color: AppColors.outline).copyWith(fontSize: 11),
+                          style: AppTypography.bodySm(
+                            color: AppColors.outline,
+                          ).copyWith(fontSize: 11),
                         ),
                       ),
                     )
                   else
-                    ...grouped.entries.map((entry) => _buildDepartmentAccountGroup(entry.key, entry.value)),
+                    ...grouped.entries.map(
+                      (entry) =>
+                          _buildDepartmentAccountGroup(entry.key, entry.value),
+                    ),
                 ],
               );
             },
@@ -985,7 +1279,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildDeptFilterChip(String deptKey, int count, {String? customLabel}) {
+  Widget _buildDeptFilterChip(
+    String deptKey,
+    int count, {
+    String? customLabel,
+  }) {
     final isSelected = _selectedDeptFilter == deptKey;
     return Padding(
       padding: const EdgeInsets.only(right: 6),
@@ -998,7 +1296,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            color: isSelected ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surfaceContainerLowest,
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.2)
+                : AppColors.surfaceContainerLowest,
             border: Border.all(
               color: isSelected ? AppColors.primary : AppColors.overlay(0.08),
             ),
@@ -1008,16 +1308,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 customLabel ?? deptKey,
-                style: AppTypography.labelSm(
-                  color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
-                ).copyWith(fontSize: 10, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+                style:
+                    AppTypography.labelSm(
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.onSurfaceVariant,
+                    ).copyWith(
+                      fontSize: 10,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
               ),
               const SizedBox(width: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.3) : AppColors.overlay(0.08),
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.3)
+                      : AppColors.overlay(0.08),
                 ),
                 child: Text(
                   '$count',
@@ -1035,7 +1345,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildDepartmentAccountGroup(String deptName, List<QueryDocumentSnapshot> userDocs) {
+  Widget _buildDepartmentAccountGroup(
+    String deptName,
+    List<QueryDocumentSnapshot> userDocs,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -1051,31 +1364,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: AppColors.surfaceContainerHigh.withValues(alpha: 0.4),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(9),
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.domain_rounded, size: 14, color: AppColors.secondaryLight),
+                Icon(
+                  Icons.domain_rounded,
+                  size: 14,
+                  color: AppColors.secondaryLight,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     deptName,
-                    style: AppTypography.labelSm(color: AppColors.onSurface).copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
+                    style: AppTypography.labelSm(
+                      color: AppColors.onSurface,
+                    ).copyWith(fontWeight: FontWeight.bold, fontSize: 11),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
                     color: AppColors.secondaryContainer.withValues(alpha: 0.3),
                   ),
                   child: Text(
                     '${userDocs.length} ${userDocs.length == 1 ? 'user' : 'users'}',
-                    style: AppTypography.labelSm(color: AppColors.secondaryLight).copyWith(fontSize: 9.5),
+                    style: AppTypography.labelSm(
+                      color: AppColors.secondaryLight,
+                    ).copyWith(fontSize: 9.5),
                   ),
                 ),
               ],
@@ -1100,7 +1423,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.overlay(0.10), width: 0.5)),
+        border: Border(
+          bottom: BorderSide(color: AppColors.overlay(0.10), width: 0.5),
+        ),
       ),
       child: Row(
         children: [
@@ -1114,7 +1439,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: userRole == UserRole.admin ? AppColors.primary : AppColors.onlineMint,
+                color: userRole == UserRole.admin
+                    ? AppColors.primary
+                    : AppColors.onlineMint,
               ),
             ),
           ),
@@ -1128,29 +1455,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Flexible(
                       child: Text(
                         name,
-                        style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
+                        style: AppTypography.bodySm(
+                          color: AppColors.onSurface,
+                        ).copyWith(fontWeight: FontWeight.w600, fontSize: 12),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (isCurrent) ...[
                       const SizedBox(width: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(3),
                           color: AppColors.primary.withValues(alpha: 0.2),
                         ),
-                        child: Text('YOU', style: TextStyle(fontSize: 7.5, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          'YOU',
+                          style: TextStyle(
+                            fontSize: 7.5,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ],
                 ),
                 Text(
                   email,
-                  style: AppTypography.labelSm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 10),
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ).copyWith(fontSize: 10),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -1182,9 +1520,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    userRole == UserRole.admin ? Icons.admin_panel_settings_rounded : Icons.school_rounded,
+                    userRole == UserRole.admin
+                        ? Icons.admin_panel_settings_rounded
+                        : Icons.school_rounded,
                     size: 12,
-                    color: userRole == UserRole.admin ? AppColors.primary : AppColors.onlineMint,
+                    color: userRole == UserRole.admin
+                        ? AppColors.primary
+                        : AppColors.onlineMint,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -1192,14 +1534,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: userRole == UserRole.admin ? AppColors.primary : AppColors.onlineMint,
+                      color: userRole == UserRole.admin
+                          ? AppColors.primary
+                          : AppColors.onlineMint,
                     ),
                   ),
                   const SizedBox(width: 2),
                   Icon(
                     Icons.arrow_drop_down,
                     size: 14,
-                    color: userRole == UserRole.admin ? AppColors.primary : AppColors.onlineMint,
+                    color: userRole == UserRole.admin
+                        ? AppColors.primary
+                        : AppColors.onlineMint,
                   ),
                 ],
               ),
@@ -1209,14 +1555,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: 'admin',
                 child: Row(
                   children: [
-                    Icon(Icons.admin_panel_settings_rounded, size: 16, color: userRole == UserRole.admin ? AppColors.primary : AppColors.outline),
+                    Icon(
+                      Icons.admin_panel_settings_rounded,
+                      size: 16,
+                      color: userRole == UserRole.admin
+                          ? AppColors.primary
+                          : AppColors.outline,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Assign Administrator',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: userRole == UserRole.admin ? FontWeight.bold : FontWeight.normal,
-                        color: userRole == UserRole.admin ? AppColors.primary : AppColors.onSurface,
+                        fontWeight: userRole == UserRole.admin
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: userRole == UserRole.admin
+                            ? AppColors.primary
+                            : AppColors.onSurface,
                       ),
                     ),
                   ],
@@ -1226,14 +1582,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: 'teacher',
                 child: Row(
                   children: [
-                    Icon(Icons.school_rounded, size: 16, color: userRole == UserRole.teacher ? AppColors.onlineMint : AppColors.outline),
+                    Icon(
+                      Icons.school_rounded,
+                      size: 16,
+                      color: userRole == UserRole.teacher
+                          ? AppColors.onlineMint
+                          : AppColors.outline,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Assign Teacher',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: userRole == UserRole.teacher ? FontWeight.bold : FontWeight.normal,
-                        color: userRole == UserRole.teacher ? AppColors.onlineMint : AppColors.onSurface,
+                        fontWeight: userRole == UserRole.teacher
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: userRole == UserRole.teacher
+                            ? AppColors.onlineMint
+                            : AppColors.onSurface,
                       ),
                     ),
                   ],
@@ -1244,9 +1610,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: 'reassign_dept',
                 child: Row(
                   children: [
-                    Icon(Icons.domain_rounded, size: 16, color: AppColors.secondaryLight),
+                    Icon(
+                      Icons.domain_rounded,
+                      size: 16,
+                      color: AppColors.secondaryLight,
+                    ),
                     SizedBox(width: 8),
-                    Text('Reassign Department', style: TextStyle(fontSize: 12, color: AppColors.onSurface)),
+                    Text(
+                      'Reassign Department',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.onSurface,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1266,7 +1642,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               } else if (action == 'teacher') {
                 HapticFeedback.selectionClick();
-                await AuthState().updateUserRoleByAdmin(doc.id, UserRole.teacher);
+                await AuthState().updateUserRoleByAdmin(
+                  doc.id,
+                  UserRole.teacher,
+                );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -1277,7 +1656,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
                 }
               } else if (action == 'reassign_dept') {
-                _showReassignDepartmentDialog(doc.id, name, data['department']?.toString() ?? 'General Administration');
+                _showReassignDepartmentDialog(
+                  doc.id,
+                  name,
+                  data['department']?.toString() ?? 'General Administration',
+                );
               }
             },
           ),
@@ -1286,7 +1669,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showReassignDepartmentDialog(String uid, String userName, String currentDept) {
+  void _showReassignDepartmentDialog(
+    String uid,
+    String userName,
+    String currentDept,
+  ) {
     String pickedDept = currentDept;
     showDialog(
       context: context,
@@ -1297,7 +1684,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: AppColors.sheet,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                side: BorderSide(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
               title: Row(
                 children: [
@@ -1319,7 +1708,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       'Assign department for $userName:',
-                      style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 12),
+                      style: AppTypography.bodySm(
+                        color: AppColors.onSurfaceVariant,
+                      ).copyWith(fontSize: 12),
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -1332,21 +1723,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           final isSelected = dept == pickedDept;
                           return ListTile(
                             dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                            ),
                             title: Text(
                               dept,
                               style: TextStyle(
                                 fontSize: 11.5,
-                                color: isSelected ? AppColors.primary : AppColors.onSurface,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.onSurface,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                             leading: Icon(
-                              isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                              isSelected
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
                               size: 16,
-                              color: isSelected ? AppColors.primary : AppColors.outline,
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : AppColors.outline,
                             ),
-                            onTap: () => setDialogState(() => pickedDept = dept),
+                            onTap: () =>
+                                setDialogState(() => pickedDept = dept),
                           );
                         },
                       ),
@@ -1366,7 +1768,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   onPressed: () async {
                     Navigator.pop(dialogCtx);
-                    await AuthState().updateUserDepartmentByAdmin(uid, pickedDept);
+                    await AuthState().updateUserDepartmentByAdmin(
+                      uid,
+                      pickedDept,
+                    );
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -1400,7 +1805,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: AppColors.surfaceContainerHigh,
               border: Border.all(color: AppColors.overlay(0.08)),
             ),
-            child: Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.primary),
+            child: Icon(
+              Icons.arrow_back_ios_new,
+              size: 16,
+              color: AppColors.primary,
+            ),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -1409,9 +1818,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Row(
               children: [
-                Text('Root', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
+                Text(
+                  'Root',
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
                 Icon(Icons.chevron_right, size: 12, color: AppColors.outline),
-                Text('System', style: AppTypography.labelSm(color: AppColors.primary)),
+                Text(
+                  'System',
+                  style: AppTypography.labelSm(color: AppColors.primary),
+                ),
               ],
             ),
             Text(
@@ -1435,7 +1852,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(width: 6),
                 Text(
                   'SYS:OK',
-                  style: AppTypography.labelSm(color: AppColors.onSurfaceVariant),
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -1454,7 +1873,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 color: AppColors.surfaceContainer,
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withValues(alpha: 0.08),
@@ -1476,16 +1897,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               shape: BoxShape.circle,
                               color: AppColors.surfaceContainerHigh,
                               border: Border.all(
-                                color: (AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint).withValues(alpha: 0.4),
+                                color:
+                                    (AuthState().isAdmin
+                                            ? AppColors.primary
+                                            : AppColors.onlineMint)
+                                        .withValues(alpha: 0.4),
                               ),
                             ),
                             child: Center(
                               child: Text(
                                 AuthState().userName.isNotEmpty
-                                    ? AuthState().userName.substring(0, 1).toUpperCase()
+                                    ? AuthState().userName
+                                          .substring(0, 1)
+                                          .toUpperCase()
                                     : 'A',
                                 style: AppTypography.headlineSm(
-                                  color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
+                                  color: AuthState().isAdmin
+                                      ? AppColors.primary
+                                      : AppColors.onlineMint,
                                 ),
                               ),
                             ),
@@ -1495,7 +1924,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             bottom: 0,
                             child: PulsingBeacon(
                               size: 8,
-                              color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
+                              color: AuthState().isAdmin
+                                  ? AppColors.primary
+                                  : AppColors.onlineMint,
                             ),
                           ),
                         ],
@@ -1510,12 +1941,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 Expanded(
                                   child: Text(
                                     AuthState().userName,
-                                    style: AppTypography.headlineSm(fontSize: 15),
+                                    style: AppTypography.headlineSm(
+                                      fontSize: 15,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 IconButton(
-                                  icon: Icon(Icons.edit, size: 16, color: AppColors.primary),
+                                  icon: Icon(
+                                    Icons.edit,
+                                    size: 16,
+                                    color: AppColors.primary,
+                                  ),
                                   tooltip: 'Modify Name',
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
@@ -1526,7 +1963,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             const SizedBox(height: 2),
                             Text(
                               AuthState().userEmail,
-                              style: AppTypography.bodySm(color: AppColors.onSurfaceVariant),
+                              style: AppTypography.bodySm(
+                                color: AppColors.onSurfaceVariant,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -1544,7 +1983,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // Department Badge
                       Flexible(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: AppColors.surfaceContainerLowest,
@@ -1553,15 +1995,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.domain_rounded, size: 12, color: AppColors.secondaryLight),
+                              Icon(
+                                Icons.domain_rounded,
+                                size: 12,
+                                color: AppColors.secondaryLight,
+                              ),
                               const SizedBox(width: 5),
                               Flexible(
                                 child: Text(
                                   AuthState().userDepartmentShort,
-                                  style: AppTypography.labelSm(color: AppColors.secondaryLight).copyWith(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style:
+                                      AppTypography.labelSm(
+                                        color: AppColors.secondaryLight,
+                                      ).copyWith(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1577,7 +2026,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _showRoleSwitchBottomSheet();
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: AuthState().isAdmin
@@ -1593,22 +2045,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                AuthState().isAdmin ? Icons.admin_panel_settings_rounded : Icons.school_rounded,
+                                AuthState().isAdmin
+                                    ? Icons.admin_panel_settings_rounded
+                                    : Icons.school_rounded,
                                 size: 13,
-                                color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
+                                color: AuthState().isAdmin
+                                    ? AppColors.primary
+                                    : AppColors.onlineMint,
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                AuthState().isAdmin ? 'ADMINISTRATOR' : 'TEACHER',
-                                style: AppTypography.labelSm(
-                                  color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
-                                ).copyWith(fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                AuthState().isAdmin
+                                    ? 'ADMINISTRATOR'
+                                    : 'TEACHER',
+                                style:
+                                    AppTypography.labelSm(
+                                      color: AuthState().isAdmin
+                                          ? AppColors.primary
+                                          : AppColors.onlineMint,
+                                    ).copyWith(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
                               ),
                               const SizedBox(width: 4),
                               Icon(
                                 Icons.swap_horiz_rounded,
                                 size: 12,
-                                color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
+                                color: AuthState().isAdmin
+                                    ? AppColors.primary
+                                    : AppColors.onlineMint,
                               ),
                             ],
                           ),
@@ -1630,17 +2097,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   setState(() {});
                   messenger.showSnackBar(
                     SnackBar(
-                      content: Text('Switched to Administrator Mode. Full console and role management unlocked.'),
+                      content: Text(
+                        'Switched to Administrator Mode. Full console and role management unlocked.',
+                      ),
                       backgroundColor: AppColors.primary,
                     ),
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 11,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     color: AppColors.surfaceContainerLow,
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -1650,7 +2124,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           borderRadius: BorderRadius.circular(8),
                           color: AppColors.primary.withValues(alpha: 0.15),
                         ),
-                        child: Icon(Icons.admin_panel_settings_rounded, size: 16, color: AppColors.primary),
+                        child: Icon(
+                          Icons.admin_panel_settings_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1659,16 +2137,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             Text(
                               'Switch to Administrator Console',
-                              style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold),
+                              style: AppTypography.labelSm(
+                                color: AppColors.primary,
+                              ).copyWith(fontWeight: FontWeight.bold),
                             ),
                             Text(
                               'Tap to regain full administrative privileges and cloud directory access',
-                              style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 10),
+                              style: AppTypography.bodySm(
+                                color: AppColors.onSurfaceVariant,
+                              ).copyWith(fontSize: 10),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 12,
+                        color: AppColors.primary,
+                      ),
                     ],
                   ),
                 ),
@@ -1692,23 +2178,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(child: Row(
-                          children: [
-                            Icon(
-                              AuthState().isAdmin ? Icons.admin_panel_settings_rounded : Icons.school_rounded,
-                              size: 16,
-                              color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(child: Text(
-                              'Active Console Role',
-                              style: AppTypography.bodySm(color: AppColors.onSurface)
-                                  .copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis,
-                            )),
-                          ],
-                        )),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(
+                                AuthState().isAdmin
+                                    ? Icons.admin_panel_settings_rounded
+                                    : Icons.school_rounded,
+                                size: 16,
+                                color: AuthState().isAdmin
+                                    ? AppColors.primary
+                                    : AppColors.onlineMint,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Active Console Role',
+                                  style: AppTypography.bodySm(
+                                    color: AppColors.onSurface,
+                                  ).copyWith(fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4),
                             color: AuthState().isAdmin
@@ -1717,9 +2216,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           child: Text(
                             AuthState().userRole.displayName,
-                            style: AppTypography.labelSm(
-                              color: AuthState().isAdmin ? AppColors.primary : AppColors.onlineMint,
-                            ).copyWith(fontSize: 10, fontWeight: FontWeight.bold),
+                            style:
+                                AppTypography.labelSm(
+                                  color: AuthState().isAdmin
+                                      ? AppColors.primary
+                                      : AppColors.onlineMint,
+                                ).copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                         ),
                       ],
@@ -1729,7 +2234,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       AuthState().isAdmin
                           ? 'Administrator: Full layout enabled. You can add classrooms, provision switchboards, remap pins, and delete hardware.'
                           : 'Teacher: Operational control only. You can view all classrooms, zones, and control appliances. Setup & destructive actions are locked.',
-                      style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 11),
+                      style: AppTypography.bodySm(
+                        color: AppColors.onSurfaceVariant,
+                      ).copyWith(fontSize: 11),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -1744,15 +2251,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ? AppColors.surfaceContainerLowest
                                   : AppColors.onSurface,
                               padding: const EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                             onPressed: () {
                               HapticFeedback.selectionClick();
                               AuthState().setUserRole(UserRole.admin);
                               setState(() {});
                             },
-                            icon: const Icon(Icons.admin_panel_settings_rounded, size: 14),
-                            label: const Text('Admin Mode', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            icon: const Icon(
+                              Icons.admin_panel_settings_rounded,
+                              size: 14,
+                            ),
+                            label: const Text(
+                              'Admin Mode',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -1766,7 +2284,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ? AppColors.surfaceContainerLowest
                                   : AppColors.onSurface,
                               padding: const EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                             onPressed: () {
                               HapticFeedback.selectionClick();
@@ -1774,7 +2294,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               setState(() {});
                             },
                             icon: const Icon(Icons.school_rounded, size: 14),
-                            label: const Text('Teacher Mode', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            label: const Text(
+                              'Teacher Mode',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -1795,17 +2321,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Row(
-                  children: [
-                    Icon(Icons.hub, size: 16, color: AppColors.primary),
-                    const SizedBox(width: 6),
-                    Flexible(child: Text(
-                      'NETWORK & MQTT GATEWAY',
-                      style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis,
-                    )),
-                  ],
-                )),
-                Text('CONTROLLER #01', style: AppTypography.labelSm(color: AppColors.outline)),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.hub, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'NETWORK & MQTT GATEWAY',
+                          style: AppTypography.labelSm(
+                            color: AppColors.primary,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  'CONTROLLER #01',
+                  style: AppTypography.labelSm(color: AppColors.outline),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -1828,13 +2364,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('ESP32 Gateway', style: AppTypography.bodyMd().copyWith(fontWeight: FontWeight.w500)),
-                            Text('ESP32 Switchboard Controller', style: AppTypography.bodySm(color: AppColors.onSurfaceVariant)),
+                            Text(
+                              'ESP32 Gateway',
+                              style: AppTypography.bodyMd().copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              'ESP32 Switchboard Controller',
+                              style: AppTypography.bodySm(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
                           color: AppColors.surfaceContainerHigh,
@@ -1844,13 +2393,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             PulsingBeacon(
                               size: 5,
-                              color: MqttService().isConnected ? AppColors.onlineMint : AppColors.telemetryAmber,
+                              color: MqttService().isConnected
+                                  ? AppColors.onlineMint
+                                  : AppColors.telemetryAmber,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               MqttService().isConnected ? 'ONLINE' : 'STANDBY',
                               style: AppTypography.labelSm(
-                                color: MqttService().isConnected ? AppColors.onlineMint : AppColors.telemetryAmber,
+                                color: MqttService().isConnected
+                                    ? AppColors.onlineMint
+                                    : AppColors.telemetryAmber,
                               ),
                             ),
                           ],
@@ -1871,16 +2424,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Expanded(
                           child: Row(
                             children: [
-                              Icon(Icons.wifi, size: 18, color: AppColors.primary),
+                              Icon(
+                                Icons.wifi,
+                                size: 18,
+                                color: AppColors.primary,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Wi-Fi Mesh Link', style: AppTypography.bodyMd(fontSize: 13)),
                                     Text(
-                                      _connState.isWifiEnabled ? _connState.connectedSsid : 'Disabled',
-                                      style: AppTypography.bodySm(color: AppColors.primary).copyWith(fontSize: 11),
+                                      'Wi-Fi Mesh Link',
+                                      style: AppTypography.bodyMd(fontSize: 13),
+                                    ),
+                                    Text(
+                                      _connState.isWifiEnabled
+                                          ? _connState.connectedSsid
+                                          : 'Disabled',
+                                      style: AppTypography.bodySm(
+                                        color: AppColors.primary,
+                                      ).copyWith(fontSize: 11),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
@@ -1893,8 +2457,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('CONFIGURE', style: AppTypography.labelSm(color: AppColors.primary)),
-                            Icon(Icons.chevron_right, size: 14, color: AppColors.primary),
+                            Text(
+                              'CONFIGURE',
+                              style: AppTypography.labelSm(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
                           ],
                         ),
                       ],
@@ -1914,7 +2487,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Expanded(
                           child: Row(
                             children: [
-                              Icon(Icons.cloud_sync, size: 18, color: AppColors.secondary),
+                              Icon(
+                                Icons.cloud_sync,
+                                size: 18,
+                                color: AppColors.secondary,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -1927,7 +2504,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             'MQTT Hardware Mesh',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: AppTypography.bodyMd(fontSize: 13),
+                                            style: AppTypography.bodyMd(
+                                              fontSize: 13,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
@@ -1935,9 +2514,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           size: 5,
                                           color: MqttService().isConnected
                                               ? AppColors.onlineMint
-                                              : (MqttService().status == MqttConnectionStatus.connecting
-                                                  ? AppColors.telemetryAmber
-                                                  : AppColors.error),
+                                              : (MqttService().status ==
+                                                        MqttConnectionStatus
+                                                            .connecting
+                                                    ? AppColors.telemetryAmber
+                                                    : AppColors.error),
                                         ),
                                       ],
                                     ),
@@ -1961,12 +2542,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              MqttService().isConnected ? 'CONFIGURE' : 'CONNECT',
+                              MqttService().isConnected
+                                  ? 'CONFIGURE'
+                                  : 'CONNECT',
                               style: AppTypography.labelSm(
-                                color: MqttService().isConnected ? AppColors.primary : AppColors.secondary,
+                                color: MqttService().isConnected
+                                    ? AppColors.primary
+                                    : AppColors.secondary,
                               ),
                             ),
-                            Icon(Icons.chevron_right, size: 14, color: AppColors.primary),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
                           ],
                         ),
                       ],
@@ -1984,7 +2573,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Expanded(
                         child: Row(
                           children: [
-                            Icon(Icons.sync_rounded, size: 18, color: AppColors.onlineMint),
+                            Icon(
+                              Icons.sync_rounded,
+                              size: 18,
+                              color: AppColors.onlineMint,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -1997,10 +2590,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    ClassroomState().lastClassIntervalSyncTime != null
+                                    ClassroomState()
+                                                .lastClassIntervalSyncTime !=
+                                            null
                                         ? 'Interval ${ClassroomState().currentClassInterval} of 3 · Synced ${_formatSyncTime(ClassroomState().lastClassIntervalSyncTime!)}'
                                         : 'Interval ${ClassroomState().currentClassInterval} of 3 · Auto (3x / 50m)',
-                                    style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 11),
+                                    style: AppTypography.bodySm(
+                                      color: AppColors.onSurfaceVariant,
+                                    ).copyWith(fontSize: 11),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
@@ -2011,11 +2608,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(width: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
                           color: AppColors.onlineMint.withValues(alpha: 0.12),
-                          border: Border.all(color: AppColors.onlineMint.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: AppColors.onlineMint.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -2024,11 +2626,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             const SizedBox(width: 5),
                             Text(
                               'AUTO',
-                              style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
+                              style:
+                                  AppTypography.labelSm(
+                                    color: AppColors.onlineMint,
+                                  ).copyWith(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
                             ),
                           ],
                         ),
@@ -2044,11 +2649,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Software & OTA Updates
             Row(
               children: [
-                Icon(Icons.system_update_rounded, size: 16, color: AppColors.primary),
+                Icon(
+                  Icons.system_update_rounded,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'SOFTWARE & OTA UPDATES',
-                  style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontWeight: FontWeight.bold),
+                  style: AppTypography.labelSm(
+                    color: AppColors.primary,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -2068,7 +2679,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: _showAppDetailsDialog,
                     borderRadius: BorderRadius.circular(10),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 6,
+                      ),
                       child: Row(
                         children: [
                           Container(
@@ -2078,7 +2692,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               borderRadius: BorderRadius.circular(10),
                               color: AppColors.primary.withValues(alpha: 0.12),
                             ),
-                            child: Icon(Icons.verified_rounded, size: 18, color: AppColors.primary),
+                            child: Icon(
+                              Icons.verified_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -2087,31 +2705,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               children: [
                                 Text(
                                   'Installed Version',
-                                  style: AppTypography.bodyMd(color: AppColors.onSurface).copyWith(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style:
+                                      AppTypography.bodyMd(
+                                        color: AppColors.onSurface,
+                                      ).copyWith(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                                 Text(
                                   'Tap for developer & release details',
-                                  style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 11.5),
+                                  style: AppTypography.bodySm(
+                                    color: AppColors.onSurfaceVariant,
+                                  ).copyWith(fontSize: 11.5),
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               color: AppColors.surfaceContainerHigh,
                             ),
                             child: Text(
                               _appVersion,
-                              style: AppTypography.labelSm(color: AppColors.primary).copyWith(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style:
+                                  AppTypography.labelSm(
+                                    color: AppColors.primary,
+                                  ).copyWith(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ),
                         ],
@@ -2128,7 +2757,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Ink(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(14),
-                        color: AppColors.primary.withValues(alpha: AppColors.isDark ? 0.12 : 0.08),
+                        color: AppColors.primary.withValues(
+                          alpha: AppColors.isDark ? 0.12 : 0.08,
+                        ),
                         border: Border.all(
                           color: AppColors.primary.withValues(alpha: 0.35),
                           width: 1.2,
@@ -2138,7 +2769,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => CyberUpdateDialog.show(context),
                         borderRadius: BorderRadius.circular(14),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           child: Row(
                             children: [
                               Container(
@@ -2163,37 +2797,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       'Check for Updates',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: AppTypography.bodyMd(color: AppColors.onSurface).copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
+                                      style:
+                                          AppTypography.bodyMd(
+                                            color: AppColors.onSurface,
+                                          ).copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       'Install latest GitHub OTA APK release',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(
-                                        fontSize: 11.5,
-                                      ),
+                                      style: AppTypography.bodySm(
+                                        color: AppColors.onSurfaceVariant,
+                                      ).copyWith(fontSize: 11.5),
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
                                   color: AppColors.primary,
                                 ),
                                 child: Text(
                                   'UPDATE',
-                                  style: AppTypography.labelSm(color: AppColors.onPrimary).copyWith(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.6,
-                                  ),
+                                  style:
+                                      AppTypography.labelSm(
+                                        color: AppColors.onPrimary,
+                                      ).copyWith(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.6,
+                                      ),
                                 ),
                               ),
                             ],
@@ -2217,8 +2860,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: OutlinedButton.styleFrom(
                   backgroundColor: AppColors.surfaceContainerLow,
                   foregroundColor: AppColors.secondary,
-                  side: BorderSide(color: AppColors.secondary.withValues(alpha: 0.3)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(
+                    color: AppColors.secondary.withValues(alpha: 0.3),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: _showSwitchAccountDialog,
                 child: Row(
@@ -2226,7 +2873,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     const Icon(Icons.switch_account, size: 18),
                     const SizedBox(width: 8),
-                    Text('Switch Accounts', style: AppTypography.bodyMd().copyWith(fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Switch Accounts',
+                      style: AppTypography.bodyMd().copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2243,16 +2896,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: OutlinedButton.styleFrom(
                     backgroundColor: AppColors.surfaceContainerLow,
                     foregroundColor: AppColors.error,
-                    side: BorderSide(color: AppColors.error.withValues(alpha: 0.25)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    side: BorderSide(
+                      color: AppColors.error.withValues(alpha: 0.25),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: _showWipeConfirmationDialog,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.delete_sweep, size: 16, color: AppColors.error),
+                      Icon(
+                        Icons.delete_sweep,
+                        size: 16,
+                        color: AppColors.error,
+                      ),
                       const SizedBox(width: 8),
-                      Text('Wipe All Classroom Records', style: AppTypography.bodySm(color: AppColors.error).copyWith(fontWeight: FontWeight.w500)),
+                      Text(
+                        'Wipe All Classroom Records',
+                        style: AppTypography.bodySm(
+                          color: AppColors.error,
+                        ).copyWith(fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 ),
@@ -2265,10 +2931,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.errorContainer.withValues(alpha: 0.25),
+                  backgroundColor: AppColors.errorContainer.withValues(
+                    alpha: 0.25,
+                  ),
                   foregroundColor: AppColors.error,
-                  side: BorderSide(color: AppColors.error.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(
+                    color: AppColors.error.withValues(alpha: 0.5),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
                 onPressed: _signOut,
@@ -2279,7 +2951,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'Sign Out of ClassPulse Session',
-                      style: AppTypography.headlineSm(color: AppColors.error).copyWith(fontSize: 13, fontWeight: FontWeight.bold),
+                      style: AppTypography.headlineSm(
+                        color: AppColors.error,
+                      ).copyWith(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -2296,18 +2970,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: OutlinedButton.styleFrom(
                   backgroundColor: AppColors.surfaceContainerLow,
                   foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.35)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: _showAppDetailsDialog,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primary),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'App Details & Information',
-                      style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.w600),
+                      style: AppTypography.bodySm(
+                        color: AppColors.onSurface,
+                      ).copyWith(fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),

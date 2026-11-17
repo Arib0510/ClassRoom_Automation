@@ -2,6 +2,11 @@
 
 Complete hardware, firmware, and MQTT configuration guide for the 3 multi-switch zone boards (`zone_1`, `zone_2`, `zone_3`) and the independent Standalone AC controller (`zone_ac`).
 
+Before compiling, copy each sketch's `secrets.example.h` to `secrets.h` and enter
+the private Wi-Fi and role-specific broker credentials. See the [laptop broker
+migration guide](../docs/mqtt_laptop_broker_migration.md). `secrets.h` is ignored
+by Git.
+
 ---
 
 ## 1. Hardware & GPIO Mapping

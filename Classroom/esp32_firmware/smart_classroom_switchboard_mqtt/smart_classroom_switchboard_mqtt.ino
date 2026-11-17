@@ -44,6 +44,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include "secrets.h"  // Copy secrets.example.h to secrets.h and fill locally; never commit it.
 
 #if ARDUINOJSON_VERSION_MAJOR >= 7
   #define JSON_DOC(name, size) JsonDocument name
@@ -87,13 +88,12 @@ uint32_t phase5AckSeq    = 1;
 // =============================================================================
 // 2. WI-FI & MQTT BROKER CONFIGURATION
 // =============================================================================
-#define WIFI_SSID         "S 23"
-#define WIFI_PASSWORD     "asdf1234"
-
-const char* MQTT_BROKER   = "broker.emqx.io";
-const int   MQTT_PORT     = 1883;
-const char* MQTT_USER     = "";
-const char* MQTT_PASSWORD = "";
+const char* MQTT_BROKER   = CLASSROOM_MQTT_HOST;
+const int   MQTT_PORT     = CLASSROOM_MQTT_PORT;
+#define WIFI_SSID         CLASSROOM_WIFI_SSID
+#define WIFI_PASSWORD     CLASSROOM_WIFI_PASSWORD
+const char* MQTT_USER     = CLASSROOM_MQTT_USERNAME;
+const char* MQTT_PASSWORD = CLASSROOM_MQTT_PASSWORD;
 
 // =============================================================================
 // 3. 8-PAIR RELAY & MANUAL SWITCH GPIO MAPPING
@@ -629,7 +629,7 @@ void connectWifi() {
   if (WiFi.status() == WL_CONNECTED) return;
   Serial.printf("\n📶 [WiFi] Connecting to '%s' ", WIFI_SSID);
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(CLASSROOM_WIFI_SSID, CLASSROOM_WIFI_PASSWORD);
   int retry = 0;
   while (WiFi.status() != WL_CONNECTED && retry < 20) {
     // Keep polling physical manual switches even while Wi-Fi connects!

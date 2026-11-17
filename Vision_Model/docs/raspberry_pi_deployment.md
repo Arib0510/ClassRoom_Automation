@@ -46,26 +46,29 @@ userland may need a reviewed wheel-tag solution or a standard target image.
 
 ## Configure network and secrets
 
-Set the existing broker's reachable LAN address in `config/config.yaml`, replacing
-the example `192.168.1.10`. The Pi and ESP32s all connect to that broker. A DHCP
-reservation or LAN DNS name avoids changing addresses. No broker is installed on
-the 512 MB Pi by default; an existing router/server is preferable.
+The Windows laptop hosts Mosquitto on the trusted private hotspot at
+`10.247.68.155:1883`. The broker binds only that Wi-Fi address. Its Windows
+firewall rule permits TCP 1883 only from `10.247.68.0/24` on the Private Wi-Fi
+interface. If the hotspot assigns a different address later, update
+`CLASSROOM_MQTT_HOST`, the Flutter broker setting, and both ESP32 `secrets.h`
+files, then rerun the Windows provisioning script with the new address/subnet.
 
-For authenticated MQTT, set these environment variables before running manually:
+Copy `config/mqtt.env.example` to `config/mqtt.env`, replace its password from
+the secured Windows provisioning file, and restrict it to the Pi service user
+with `chmod 600 config/mqtt.env`. The active Pi username is `pi-vision`.
+For a one-session manual run, load the private environment file before starting:
 
 ```bash
-export CLASSROOM_MQTT_USERNAME='vision-publisher'
-read -rsp 'MQTT password: ' CLASSROOM_MQTT_PASSWORD; echo
-export CLASSROOM_MQTT_PASSWORD
+set -a
+. config/mqtt.env
+set +a
+.venv/bin/python scripts/run_classroom_vision.py --broker "$CLASSROOM_MQTT_HOST" --mode DRY_RUN
 ```
 
-For systemd, place the two `NAME=value` entries in `config/mqtt.env` and
-`chmod 600 config/mqtt.env`. That filename is gitignored. Do not commit passwords.
-Set `mqtt.tls: true` and optionally `ca_path` for a broker using TLS; select its
-actual port (commonly 8883). Certificate verification remains enabled. The
-plain MQTT default assumes a controlled classroom LAN. Use broker authentication
-and ACLs: Pi can publish its two topics, ESP32s can subscribe, and each connection
-has a unique client ID. No public broker or internet exposure is configured.
+Use `EnvironmentFile=/home/classroom/Classroom_Automation/Vision_Model/config/mqtt.env`
+for systemd. The Pi credential may publish/subscribe only within the room's
+existing `ruet/classroom/reb_room_301/` and `classpulse/reb_room_301/` topic
+trees. Keep passwords out of shell history, logs, and Git.
 
 Synchronize UTC on the Pi and ESP32s (NTP/SNTP) before applying occupancy. Confirm
 clock agreement and receiver expiry behavior; availability alone is insufficient.
@@ -114,9 +117,9 @@ vacancy requires at least three empty observations spanning 10 seconds. Stop wit
 Ctrl+C. Faults exit nonzero and send unknown/offline when networking permits.
 Receiver expiry covers cases where shutdown messages cannot be sent.
 
-From a separate broker administration machine, observe the two topics with your
+From a separate broker administration machine, observe the room topics with your
 broker's normal MQTT tools. Do not pass secrets in recorded command lines. Verify
-the full controller contract in [ESP32 integration](esp32_integration.md).
+the existing controller contract in [ESP32 integration](esp32_integration.md).
 
 ## Install the service after successful commissioning
 

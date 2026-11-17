@@ -5,12 +5,7 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import '../models/device.dart';
 
-enum MqttConnectionStatus {
-  disconnected,
-  connecting,
-  connected,
-  error,
-}
+enum MqttConnectionStatus { disconnected, connecting, connected, error }
 
 class MqttService {
   static final MqttService _instance = MqttService._internal();
@@ -18,10 +13,39 @@ class MqttService {
 
   MqttService._internal();
 
+  @visibleForTesting
+  static bool isFreshVisionState(
+    Map<String, dynamic> data, {
+    required int nowMs,
+  }) {
+    final occupancy = data['occupancy'];
+    if (data['status'] == 'OFFLINE' ||
+        data['online'] == false ||
+        occupancy is Map &&
+            (occupancy['status'] == 'OFFLINE' ||
+                occupancy['online'] == false)) {
+      return true;
+    }
+    final sentAt = data['sent_at_unix_ms'];
+    if (sentAt is! num || sentAt > nowMs + 3000) return false;
+    final expiresAt = data['expires_at_unix_ms'];
+    final freshness = data['freshness_seconds'];
+    if (expiresAt is num) {
+      return nowMs <= expiresAt &&
+          (freshness is! num || nowMs - sentAt <= freshness * 1000);
+    }
+    return freshness is num &&
+        freshness > 0 &&
+        nowMs - sentAt <= freshness * 1000;
+  }
+
   MqttServerClient? _client;
 
-  // Broker Configuration (Defaults to free, public, high-availability EMQX broker)
-  String _broker = 'broker.emqx.io';
+  // Deployment-specific host is supplied at build time; credentials are entered locally.
+  String _broker = const String.fromEnvironment(
+    'MQTT_BROKER_HOST',
+    defaultValue: '10.247.68.155',
+  );
   int _port = 1883;
   String _baseTopic = 'ruet/classroom';
   String _username = '';
@@ -50,16 +74,12 @@ class MqttService {
     int? speed,
     double? brightness,
     int? gpio,
-  )? onDeviceStatusReceived;
+  )?
+  onDeviceStatusReceived;
 
   // Board telemetry callback: (roomId, boardId, isOnline, ip, rssi)
-  void Function(
-    String roomId,
-    int boardId,
-    bool isOnline,
-    String ip,
-    int rssi,
-  )? onBoardTelemetryReceived;
+  void Function(String roomId, int boardId, bool isOnline, String ip, int rssi)?
+  onBoardTelemetryReceived;
 
   // Unified MQTT Discovery callback (`home/discovery`): (zoneId, deviceType, ip, roomId, rssi, isOnline)
   void Function(
@@ -69,7 +89,8 @@ class MqttService {
     String roomId,
     int rssi,
     bool isOnline,
-  )? onDiscoveryReceived;
+  )?
+  onDiscoveryReceived;
 
   // Switchboard-isolated relay status callback: (roomId, boardId, relayNumber, isOn, speed, brightness, gpio)
   void Function(
@@ -80,7 +101,8 @@ class MqttService {
     int? speed,
     double? brightness,
     int? gpio,
-  )? onRelayStatusReceived;
+  )?
+  onRelayStatusReceived;
 
   // Optical AC status callback: (roomId, boardId, isOn, temp, mode, fan, swing)
   void Function(
@@ -91,23 +113,21 @@ class MqttService {
     String mode,
     int fan,
     bool swing,
-  )? onAcStatusReceived;
+  )?
+  onAcStatusReceived;
 
   // Phase 5 AppBridge Callbacks:
   // App result callback: (roomId, requestId, result, reason)
-  void Function(
-    String roomId,
-    String requestId,
-    String result,
-    String reason,
-  )? onAppResultReceived;
+  void Function(String roomId, String requestId, String result, String reason)?
+  onAppResultReceived;
 
   // Unified App State snapshot callback: (roomId, occupancyMap, appliancesMap)
   void Function(
     String roomId,
     Map<String, dynamic> occupancy,
     Map<String, dynamic> appliances,
-  )? onAppStateReceived;
+  )?
+  onAppStateReceived;
 
   void configure({
     String? broker,
@@ -145,9 +165,11 @@ class MqttService {
         .withClientIdentifier(clientId)
         .startClean();
 
-    if (_username.isNotEmpty) {
-      connMess.authenticateAs(_username, _password);
+    if (_username.isEmpty || _password.isEmpty) {
+      _setStatus(MqttConnectionStatus.error);
+      return false;
     }
+    connMess.authenticateAs(_username, _password);
     _client!.connectionMessage = connMess;
 
     try {
@@ -167,7 +189,8 @@ class MqttService {
       return true;
     } else {
       debugPrint(
-          '[MQTT] Connection failed with state: ${_client!.connectionStatus!.state}');
+        '[MQTT] Connection failed with state: ${_client!.connectionStatus!.state}',
+      );
       _disconnectInternal();
       _setStatus(MqttConnectionStatus.error);
       return false;
@@ -182,7 +205,9 @@ class MqttService {
   void _onConnected() {
     debugPrint('[MQTT] Connected successfully to $_broker:$_port');
     _setStatus(MqttConnectionStatus.connected);
-    // Query live hardware states from all active ESP32 switchboards & Dual-AC
+    // 1. Clear legacy retained status records in this app's configured room.
+    clearLegacyRetainedStatus();
+    // 2. Query actual live hardware states from all active ESP32 switchboards
     Timer(const Duration(milliseconds: 350), () {
       requestHardwareSync();
     });
@@ -193,24 +218,40 @@ class MqttService {
     _publish('$_baseTopic/all/command/query', 'QUERY', retain: false);
     _publish('$_baseTopic/$roomId/command/query', 'QUERY', retain: false);
     if (roomId.contains('_')) {
-      _publish('$_baseTopic/${roomId.replaceAll('_', '-')}/command/query', 'QUERY', retain: false);
+      _publish(
+        '$_baseTopic/${roomId.replaceAll('_', '-')}/command/query',
+        'QUERY',
+        retain: false,
+      );
     } else if (roomId.contains('-')) {
-      _publish('$_baseTopic/${roomId.replaceAll('-', '_')}/command/query', 'QUERY', retain: false);
+      _publish(
+        '$_baseTopic/${roomId.replaceAll('-', '_')}/command/query',
+        'QUERY',
+        retain: false,
+      );
     }
     debugPrint('[MQTT] Hardware sync & discovery queried for room: $roomId');
   }
 
-  // Deletes any old stale retained messages on the public EMQX broker
-  void clearLegacyRetainedStatus([String roomId = 'room_304']) {
+  // Deletes old retained status records in the migrated room only.
+  void clearLegacyRetainedStatus([String roomId = 'reb_room_301']) {
     try {
-      final rooms = [roomId, 'room_304', 'room-304', 'room-402', 'room_402', 'room-3152', 'room-6191', 'room-6445', 'room-9853', 'all'];
+      final rooms = [roomId];
       for (final r in rooms) {
         for (int b = 1; b <= 4; b++) {
           _publish('$_baseTopic/$r/status/board/$b', '', retain: true);
           _publish('$_baseTopic/$r/zone/$b/status', '', retain: true);
           for (int rel = 1; rel <= 4; rel++) {
-            _publish('$_baseTopic/$r/status/board/$b/relay/$rel', '', retain: true);
-            _publish('$_baseTopic/$r/zone/$b/relay/$rel/status', '', retain: true);
+            _publish(
+              '$_baseTopic/$r/status/board/$b/relay/$rel',
+              '',
+              retain: true,
+            );
+            _publish(
+              '$_baseTopic/$r/zone/$b/relay/$rel/status',
+              '',
+              retain: true,
+            );
             _publish('$_baseTopic/$r/zone/$b/relay/$rel', '', retain: true);
           }
         }
@@ -268,12 +309,24 @@ class MqttService {
     // 2. Listen strictly to physical switchboard telemetry & relay status channels (Relays 1-8)
     _client!.subscribe('$_baseTopic/+/zone/+/status', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/zone/+/status', MqttQos.atLeastOnce);
-    _client!.subscribe('$_baseTopic/+/zone/+/relay/+/status', MqttQos.atLeastOnce);
-    _client!.subscribe('$_baseTopic/+/+/zone/+/relay/+/status', MqttQos.atLeastOnce);
+    _client!.subscribe(
+      '$_baseTopic/+/zone/+/relay/+/status',
+      MqttQos.atLeastOnce,
+    );
+    _client!.subscribe(
+      '$_baseTopic/+/+/zone/+/relay/+/status',
+      MqttQos.atLeastOnce,
+    );
     _client!.subscribe('$_baseTopic/+/status/board/+', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/status/board/+', MqttQos.atLeastOnce);
-    _client!.subscribe('$_baseTopic/+/status/board/+/relay/+', MqttQos.atLeastOnce);
-    _client!.subscribe('$_baseTopic/+/+/status/board/+/relay/+', MqttQos.atLeastOnce);
+    _client!.subscribe(
+      '$_baseTopic/+/status/board/+/relay/+',
+      MqttQos.atLeastOnce,
+    );
+    _client!.subscribe(
+      '$_baseTopic/+/+/status/board/+/relay/+',
+      MqttQos.atLeastOnce,
+    );
 
     // 3. Standalone AC status telemetry
     _client!.subscribe('$_baseTopic/+/zone/+/ac/status', MqttQos.atLeastOnce);
@@ -281,7 +334,10 @@ class MqttService {
     _client!.subscribe('$_baseTopic/+/status/ac', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/+/status/ac', MqttQos.atLeastOnce);
     _client!.subscribe('$_baseTopic/+/status/board/+/ac', MqttQos.atLeastOnce);
-    _client!.subscribe('$_baseTopic/+/+/status/board/+/ac', MqttQos.atLeastOnce);
+    _client!.subscribe(
+      '$_baseTopic/+/+/status/board/+/ac',
+      MqttQos.atLeastOnce,
+    );
 
     // 4. Listen to configuration acknowledgements
     _client!.subscribe('$_baseTopic/+/config/ack', MqttQos.atLeastOnce);
@@ -302,15 +358,22 @@ class MqttService {
         final recMess = msg.payload as MqttPublishMessage;
         final isRetained = recMess.header?.retain ?? false;
         final topic = msg.topic;
-        final payload =
-            MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+        final payload = MqttPublishPayload.bytesToStringAsString(
+          recMess.payload.message,
+        );
 
         // STALE RETAINED MESSAGE INTERCEPTOR:
-        // Stale messages lingering on the public EMQX broker must NEVER overwrite
+        // Retained messages must NEVER overwrite
         // active user states or mimic phantom hardware toggles.
         if (isRetained) {
+          if (topic.endsWith('/app/state') && _isOfflineState(payload)) {
+            _handleMessage(topic, payload);
+            continue;
+          }
           if (payload.isNotEmpty) {
-            debugPrint('[MQTT] Discarding stale retained broker message on $topic - purging from broker');
+            debugPrint(
+              '[MQTT] Discarding stale retained broker message on $topic - purging from broker',
+            );
             _publish(topic, '', retain: true);
           }
           continue;
@@ -319,6 +382,20 @@ class MqttService {
         _handleMessage(topic, payload);
       }
     });
+  }
+
+  bool _isOfflineState(String payload) {
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final occupancy = data['occupancy'];
+      return data['status'] == 'OFFLINE' ||
+          data['online'] == false ||
+          occupancy is Map &&
+              (occupancy['status'] == 'OFFLINE' ||
+                  occupancy['online'] == false);
+    } catch (_) {
+      return false;
+    }
   }
 
   void _handleMessage(String topic, String payload) {
@@ -344,9 +421,20 @@ class MqttService {
         final data = jsonDecode(payload) as Map<String, dynamic>;
         final occ = (data['occupancy'] as Map<String, dynamic>?) ?? {};
         final apps = (data['appliances'] as Map<String, dynamic>?) ?? {};
+        if (!isFreshVisionState(
+          data,
+          nowMs: DateTime.now().millisecondsSinceEpoch,
+        )) {
+          debugPrint(
+            '[MQTT] Ignoring stale or un-timestamped vision state on $topic',
+          );
+          return;
+        }
         final parts = topic.split('/');
         final rId = parts.length >= 3 ? parts[parts.length - 3] : 'room';
-        debugPrint('[MQTT APP STATE] $rId state snapshot received with ${occ.length} zones, ${apps.length} appliances');
+        debugPrint(
+          '[MQTT APP STATE] $rId state snapshot received with ${occ.length} zones, ${apps.length} appliances',
+        );
         onAppStateReceived?.call(rId, occ, apps);
       } catch (e) {
         debugPrint('[MQTT] Error parsing app state: $e');
@@ -359,21 +447,37 @@ class MqttService {
       try {
         if (payload.trim().startsWith('{')) {
           final data = jsonDecode(payload) as Map<String, dynamic>;
-          final zoneId = data['zone_id']?.toString() ??
+          final zoneId =
+              data['zone_id']?.toString() ??
               (data['zone'] != null ? 'zone_${data['zone']}' : 'zone_1');
-          final deviceType = data['device_type']?.toString() ??
+          final deviceType =
+              data['device_type']?.toString() ??
               (zoneId == 'zone_ac' ? 'ac_unit' : 'switchboard');
           final ip = data['ip']?.toString() ?? '192.168.1.x';
           final roomId = data['room']?.toString() ?? 'reb_room_301';
           final rssi = (data['rssi'] as num?)?.toInt() ?? -55;
-          final isOnline = (data['status']?.toString() ?? 'ONLINE').toUpperCase() != 'OFFLINE';
+          final isOnline =
+              (data['status']?.toString() ?? 'ONLINE').toUpperCase() !=
+              'OFFLINE';
 
-          debugPrint('[MQTT DISCOVERY] zone_id=$zoneId, device_type=$deviceType, ip=$ip, room=$roomId');
-          onDiscoveryReceived?.call(zoneId, deviceType, ip, roomId, rssi, isOnline);
+          debugPrint(
+            '[MQTT DISCOVERY] zone_id=$zoneId, device_type=$deviceType, ip=$ip, room=$roomId',
+          );
+          onDiscoveryReceived?.call(
+            zoneId,
+            deviceType,
+            ip,
+            roomId,
+            rssi,
+            isOnline,
+          );
 
           if (deviceType == 'ac_unit' || zoneId == 'zone_ac') {
             if (data.containsKey('state')) {
-              final isOn = data['state'] == 'ON' || data['state'] == true || data['state'] == '1';
+              final isOn =
+                  data['state'] == 'ON' ||
+                  data['state'] == true ||
+                  data['state'] == '1';
               final temp = (data['temp'] as num?)?.toInt() ?? 24;
               final mode = data['mode']?.toString() ?? 'COOL';
               onAcStatusReceived?.call(roomId, 4, isOn, temp, mode, 0, false);
@@ -392,15 +496,27 @@ class MqttService {
         if (payload.trim().startsWith('{')) {
           final data = jsonDecode(payload) as Map<String, dynamic>;
           final roomId = data['room']?.toString() ?? 'reb_room_301';
-          final isOn = data['state'] == 'ON' || data['state'] == true || data['state'] == '1';
+          final isOn =
+              data['state'] == 'ON' ||
+              data['state'] == true ||
+              data['state'] == '1';
           final temp = (data['temp'] as num?)?.toInt() ?? 24;
           final mode = data['mode']?.toString() ?? 'COOL';
           final fan = (data['fan'] as num?)?.toInt() ?? 0;
           final swing = data['swing'] == true;
           final gpio = (data['gpio'] as num?)?.toInt();
-          final acUnit = (data['ac_unit'] as num?)?.toInt() ??
+          final acUnit =
+              (data['ac_unit'] as num?)?.toInt() ??
               (gpio == 12 ? 2 : ((data['zone'] as num?)?.toInt() ?? 1));
-          onAcStatusReceived?.call(roomId, acUnit, isOn, temp, mode, fan, swing);
+          onAcStatusReceived?.call(
+            roomId,
+            acUnit,
+            isOn,
+            temp,
+            mode,
+            fan,
+            swing,
+          );
         }
       } catch (e) {
         debugPrint('[MQTT] Error parsing home/zone_ac/status: $e');
@@ -409,22 +525,36 @@ class MqttService {
     }
 
     // Home Switchboard Relay Status (`home/zone_<id>/relay/<num>/status`)
-    if (topic.startsWith('home/zone_') && topic.endsWith('/status') && topic.contains('/relay/')) {
+    if (topic.startsWith('home/zone_') &&
+        topic.endsWith('/status') &&
+        topic.contains('/relay/')) {
       try {
         final parts = topic.split('/');
         // home / zone_1 / relay / 1 / status
         if (parts.length >= 5) {
           final zoneStr = parts[1];
-          final bId = int.tryParse(zoneStr.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
+          final bId =
+              int.tryParse(zoneStr.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
           final relayNum = int.tryParse(parts[3]) ?? 1;
           if (payload.trim().startsWith('{')) {
             final data = jsonDecode(payload) as Map<String, dynamic>;
             final roomId = data['room']?.toString() ?? 'reb_room_301';
-            final isOn = data['state'] == 'ON' || data['state'] == true || data['state'] == '1';
+            final isOn =
+                data['state'] == 'ON' ||
+                data['state'] == true ||
+                data['state'] == '1';
             final speed = (data['speed'] as num?)?.toInt();
             final brightness = (data['brightness'] as num?)?.toDouble();
             final gpio = (data['gpio'] as num?)?.toInt();
-            onRelayStatusReceived?.call(roomId, bId, relayNum, isOn, speed, brightness, gpio);
+            onRelayStatusReceived?.call(
+              roomId,
+              bId,
+              relayNum,
+              isOn,
+              speed,
+              brightness,
+              gpio,
+            );
           }
         }
       } catch (e) {
@@ -464,7 +594,8 @@ class MqttService {
       // Format: ruet/classroom/<roomId>/zone/<zoneId>/...
       if (section == 'zone' && parts.length >= (5 + offset)) {
         final rawZonePart = parts[4 + offset];
-        final isAcZone = rawZonePart.toLowerCase() == 'ac' || rawZonePart == '4';
+        final isAcZone =
+            rawZonePart.toLowerCase() == 'ac' || rawZonePart == '4';
         final zoneId = isAcZone ? 4 : (int.tryParse(rawZonePart) ?? 1);
 
         // Relay status: ruet/classroom/<roomId>/zone/<zoneId>/relay/<relayNum>/status
@@ -478,14 +609,30 @@ class MqttService {
           try {
             if (payload.startsWith('{')) {
               final data = jsonDecode(payload) as Map<String, dynamic>;
-              isOn = (data['state'] == 'ON' || data['state'] == true || data['state'] == '1');
-              if (data.containsKey('speed')) speed = (data['speed'] as num?)?.toInt();
-              if (data.containsKey('brightness')) brightness = (data['brightness'] as num?)?.toDouble();
-              if (data.containsKey('gpio')) gpio = (data['gpio'] as num?)?.toInt();
+              isOn =
+                  (data['state'] == 'ON' ||
+                  data['state'] == true ||
+                  data['state'] == '1');
+              if (data.containsKey('speed'))
+                speed = (data['speed'] as num?)?.toInt();
+              if (data.containsKey('brightness'))
+                brightness = (data['brightness'] as num?)?.toDouble();
+              if (data.containsKey('gpio'))
+                gpio = (data['gpio'] as num?)?.toInt();
             } else {
-              isOn = (payload.trim().toUpperCase() == 'ON' || payload.trim() == '1');
+              isOn =
+                  (payload.trim().toUpperCase() == 'ON' ||
+                  payload.trim() == '1');
             }
-            onRelayStatusReceived?.call(roomId, zoneId, relayNum, isOn, speed, brightness, gpio);
+            onRelayStatusReceived?.call(
+              roomId,
+              zoneId,
+              relayNum,
+              isOn,
+              speed,
+              brightness,
+              gpio,
+            );
           } catch (e) {
             debugPrint('[MQTT] Error parsing zone relay status payload: $e');
           }
@@ -494,16 +641,29 @@ class MqttService {
 
         // Zone AC Status: ruet/classroom/<roomId>/zone/<zoneId>/ac/status or .../zone/ac/status
         if ((parts.length >= (6 + offset) && parts[5 + offset] == 'ac') ||
-            (isAcZone && parts.length >= (6 + offset) && parts[5 + offset] == 'status')) {
+            (isAcZone &&
+                parts.length >= (6 + offset) &&
+                parts[5 + offset] == 'status')) {
           try {
             if (payload.startsWith('{')) {
               final data = jsonDecode(payload) as Map<String, dynamic>;
-              final isOn = (data['state'] == 'ON' || data['state'] == true || data['state'] == '1');
+              final isOn =
+                  (data['state'] == 'ON' ||
+                  data['state'] == true ||
+                  data['state'] == '1');
               final temp = (data['temp'] as num?)?.toInt() ?? 24;
               final mode = data['mode']?.toString() ?? 'COOL';
               final fan = (data['fan'] as num?)?.toInt() ?? 0;
               final swing = data['swing'] == true;
-              onAcStatusReceived?.call(roomId, zoneId, isOn, temp, mode, fan, swing);
+              onAcStatusReceived?.call(
+                roomId,
+                zoneId,
+                isOn,
+                temp,
+                mode,
+                fan,
+                swing,
+              );
             }
           } catch (e) {
             debugPrint('[MQTT] Error parsing zone AC status payload: $e');
@@ -522,8 +682,12 @@ class MqttService {
             final isOnline = data['status'] == 'ONLINE';
             final ip = data['ip']?.toString() ?? '192.168.0.x';
             final rssi = (data['rssi'] as num?)?.toInt() ?? -60;
-            final zStr = data['zone_id']?.toString() ?? (zoneId == 4 ? 'zone_ac' : 'zone_$zoneId');
-            final dType = data['device_type']?.toString() ?? (zoneId == 4 ? 'ac_unit' : 'switchboard');
+            final zStr =
+                data['zone_id']?.toString() ??
+                (zoneId == 4 ? 'zone_ac' : 'zone_$zoneId');
+            final dType =
+                data['device_type']?.toString() ??
+                (zoneId == 4 ? 'ac_unit' : 'switchboard');
             onDiscoveryReceived?.call(zStr, dType, ip, roomId, rssi, isOnline);
             onBoardTelemetryReceived?.call(roomId, zoneId, isOnline, ip, rssi);
           } catch (_) {
@@ -552,14 +716,30 @@ class MqttService {
             try {
               if (payload.startsWith('{')) {
                 final data = jsonDecode(payload) as Map<String, dynamic>;
-                isOn = (data['state'] == 'ON' || data['state'] == true || data['state'] == '1');
-                if (data.containsKey('speed')) speed = (data['speed'] as num?)?.toInt();
-                if (data.containsKey('brightness')) brightness = (data['brightness'] as num?)?.toDouble();
-                if (data.containsKey('gpio')) gpio = (data['gpio'] as num?)?.toInt();
+                isOn =
+                    (data['state'] == 'ON' ||
+                    data['state'] == true ||
+                    data['state'] == '1');
+                if (data.containsKey('speed'))
+                  speed = (data['speed'] as num?)?.toInt();
+                if (data.containsKey('brightness'))
+                  brightness = (data['brightness'] as num?)?.toDouble();
+                if (data.containsKey('gpio'))
+                  gpio = (data['gpio'] as num?)?.toInt();
               } else {
-                isOn = (payload.trim().toUpperCase() == 'ON' || payload.trim() == '1');
+                isOn =
+                    (payload.trim().toUpperCase() == 'ON' ||
+                    payload.trim() == '1');
               }
-              onRelayStatusReceived?.call(roomId, boardId, relayNum, isOn, speed, brightness, gpio);
+              onRelayStatusReceived?.call(
+                roomId,
+                boardId,
+                relayNum,
+                isOn,
+                speed,
+                brightness,
+                gpio,
+              );
             } catch (e) {
               debugPrint('[MQTT] Error parsing board relay status payload: $e');
             }
@@ -576,8 +756,12 @@ class MqttService {
             final isOnline = data['status'] == 'ONLINE';
             final ip = data['ip']?.toString() ?? '192.168.0.x';
             final rssi = (data['rssi'] as num?)?.toInt() ?? -60;
-            final zStr = data['zone_id']?.toString() ?? (boardId == 4 ? 'zone_ac' : 'zone_$boardId');
-            final dType = data['device_type']?.toString() ?? (boardId == 4 ? 'ac_unit' : 'switchboard');
+            final zStr =
+                data['zone_id']?.toString() ??
+                (boardId == 4 ? 'zone_ac' : 'zone_$boardId');
+            final dType =
+                data['device_type']?.toString() ??
+                (boardId == 4 ? 'ac_unit' : 'switchboard');
             onDiscoveryReceived?.call(zStr, dType, ip, roomId, rssi, isOnline);
             onBoardTelemetryReceived?.call(roomId, boardId, isOnline, ip, rssi);
           } catch (_) {
@@ -590,13 +774,27 @@ class MqttService {
           try {
             if (payload.startsWith('{')) {
               final data = jsonDecode(payload) as Map<String, dynamic>;
-              final isOn = (data['state'] == 'ON' || data['state'] == true || data['state'] == '1');
+              final isOn =
+                  (data['state'] == 'ON' ||
+                  data['state'] == true ||
+                  data['state'] == '1');
               final temp = (data['temp'] as num?)?.toInt() ?? 24;
               final mode = data['mode']?.toString() ?? 'COOL';
               final fan = (data['fan'] as num?)?.toInt() ?? 0;
               final swing = data['swing'] == true;
-              final bId = (data['board'] as num?)?.toInt() ?? (data['zone'] as num?)?.toInt() ?? 1;
-              onAcStatusReceived?.call(roomId, bId, isOn, temp, mode, fan, swing);
+              final bId =
+                  (data['board'] as num?)?.toInt() ??
+                  (data['zone'] as num?)?.toInt() ??
+                  1;
+              onAcStatusReceived?.call(
+                roomId,
+                bId,
+                isOn,
+                temp,
+                mode,
+                fan,
+                swing,
+              );
             }
           } catch (e) {
             debugPrint('[MQTT] Error parsing AC status payload: $e');
@@ -614,12 +812,19 @@ class MqttService {
         try {
           if (payload.startsWith('{')) {
             final data = jsonDecode(payload) as Map<String, dynamic>;
-            isOn = (data['state'] == 'ON' || data['state'] == true || data['state'] == '1');
-            if (data.containsKey('speed')) speed = (data['speed'] as num?)?.toInt();
-            if (data.containsKey('brightness')) brightness = (data['brightness'] as num?)?.toDouble();
-            if (data.containsKey('gpio')) gpio = (data['gpio'] as num?)?.toInt();
+            isOn =
+                (data['state'] == 'ON' ||
+                data['state'] == true ||
+                data['state'] == '1');
+            if (data.containsKey('speed'))
+              speed = (data['speed'] as num?)?.toInt();
+            if (data.containsKey('brightness'))
+              brightness = (data['brightness'] as num?)?.toDouble();
+            if (data.containsKey('gpio'))
+              gpio = (data['gpio'] as num?)?.toInt();
           } else {
-            isOn = (payload.trim().toUpperCase() == 'ON' || payload.trim() == '1');
+            isOn =
+                (payload.trim().toUpperCase() == 'ON' || payload.trim() == '1');
           }
 
           onDeviceStatusReceived?.call(
@@ -658,26 +863,39 @@ class MqttService {
     });
   }
 
-  void _publish(String topic, String payload, {bool retain = false, MqttQos qos = MqttQos.atMostOnce}) {
+  void _publish(
+    String topic,
+    String payload, {
+    bool retain = false,
+    MqttQos qos = MqttQos.atMostOnce,
+  }) {
     if (!isConnected || _client == null) {
-      debugPrint('[MQTT] Cannot publish (not connected): $topic. Initiating connect...');
+      debugPrint(
+        '[MQTT] Cannot publish (not connected): $topic. Initiating connect...',
+      );
       connect();
       return;
     }
     final builder = MqttClientPayloadBuilder();
     builder.addString(payload);
-    _client!.publishMessage(
-      topic,
-      qos,
-      builder.payload!,
-      retain: retain,
-    );
+    _client!.publishMessage(topic, qos, builder.payload!, retain: retain);
     debugPrint('[MQTT PUB] $topic => $payload');
   }
 
   // Fast single-packet publication to room (Zero duplicate storm, no dropped commands)
-  void _publishToRoom(String roomId, String subTopic, String payload, {bool retain = false, MqttQos qos = MqttQos.atMostOnce}) {
-    _publish('$_baseTopic/$roomId/$subTopic', payload, retain: retain, qos: qos);
+  void _publishToRoom(
+    String roomId,
+    String subTopic,
+    String payload, {
+    bool retain = false,
+    MqttQos qos = MqttQos.atMostOnce,
+  }) {
+    _publish(
+      '$_baseTopic/$roomId/$subTopic',
+      payload,
+      retain: retain,
+      qos: qos,
+    );
     if (roomId.contains('-')) {
       final alt = roomId.replaceAll('-', '_');
       _publish('$_baseTopic/$alt/$subTopic', payload, retain: retain, qos: qos);
@@ -691,10 +909,20 @@ class MqttService {
     Duration duration = const Duration(milliseconds: 75),
     bool retain = false,
   }) {
-    _publishThrottled('$_baseTopic/$roomId/$subTopic', payload, duration: duration, retain: retain);
+    _publishThrottled(
+      '$_baseTopic/$roomId/$subTopic',
+      payload,
+      duration: duration,
+      retain: retain,
+    );
     if (roomId.contains('-')) {
       final alt = roomId.replaceAll('-', '_');
-      _publishThrottled('$_baseTopic/$alt/$subTopic', payload, duration: duration, retain: retain);
+      _publishThrottled(
+        '$_baseTopic/$alt/$subTopic',
+        payload,
+        duration: duration,
+        retain: retain,
+      );
     }
   }
 
@@ -718,9 +946,22 @@ class MqttService {
       'sent_at_unix_ms': DateTime.now().millisecondsSinceEpoch,
     });
 
-    _publishToRoom(roomId, 'app/requests', payload, retain: false, qos: MqttQos.atLeastOnce);
-    _publish('classpulse/$roomId/app/requests', payload, retain: false, qos: MqttQos.atLeastOnce);
-    debugPrint('[MQTT APP REQ] $roomId -> $applianceId desired: $desiredState (reqId: $reqId)');
+    _publishToRoom(
+      roomId,
+      'app/requests',
+      payload,
+      retain: false,
+      qos: MqttQos.atLeastOnce,
+    );
+    _publish(
+      'classpulse/$roomId/app/requests',
+      payload,
+      retain: false,
+      qos: MqttQos.atLeastOnce,
+    );
+    debugPrint(
+      '[MQTT APP REQ] $roomId -> $applianceId desired: $desiredState (reqId: $reqId)',
+    );
   }
 
   // 1. Toggle Single Device with Ultra-Fast, Zero-Collision Direct Targeting
@@ -754,11 +995,14 @@ class MqttService {
     };
 
     if (device.type == DeviceType.fan) {
-      payloadMap['speed'] = turnOn ? (device.fanSpeed > 0 ? device.fanSpeed : 3) : 0;
+      payloadMap['speed'] = turnOn
+          ? (device.fanSpeed > 0 ? device.fanSpeed : 3)
+          : 0;
     } else if (device.type == DeviceType.lighting) {
       payloadMap['brightness'] = turnOn ? device.brightness : 0;
     } else if (device.type == DeviceType.hvac) {
-      final acGpio = device.gpioPinNumber; // GPIO 33 (Gree AC #1) or GPIO 12 (Gree AC #2)
+      final acGpio =
+          device.gpioPinNumber; // GPIO 33 (Gree AC #1) or GPIO 12 (Gree AC #2)
       final acUnit = acGpio == 12 ? 2 : 1;
       payloadMap['ac_unit'] = acUnit;
       payloadMap['zone'] = acUnit;
@@ -776,14 +1020,48 @@ class MqttService {
     if (device.type == DeviceType.hvac) {
       final acUnit = device.gpioPinNumber == 12 ? 2 : 1;
       // Standalone Dual-AC IR Controller (`zone_ac`: AC #1 on GPIO 33, AC #2 on GPIO 12)
-      _publishToRoom(roomId, 'ac/$acUnit/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
-      _publishToRoom(roomId, 'zone/$acUnit/ac/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
-      _publishToRoom(roomId, 'ac/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
-      _publish('home/zone_ac/command', payloadStr, retain: false, qos: MqttQos.atMostOnce);
+      _publishToRoom(
+        roomId,
+        'ac/$acUnit/command',
+        payloadStr,
+        retain: false,
+        qos: MqttQos.atMostOnce,
+      );
+      _publishToRoom(
+        roomId,
+        'zone/$acUnit/ac/command',
+        payloadStr,
+        retain: false,
+        qos: MqttQos.atMostOnce,
+      );
+      _publishToRoom(
+        roomId,
+        'ac/command',
+        payloadStr,
+        retain: false,
+        qos: MqttQos.atMostOnce,
+      );
+      _publish(
+        'home/zone_ac/command',
+        payloadStr,
+        retain: false,
+        qos: MqttQos.atMostOnce,
+      );
     } else {
       // 8-Switch Zone Switchboard (Zones 1, 2, 3, Relays 1..8)
-      _publishToRoom(roomId, 'zone/$boardId/relay/$relayNum', payloadStr, retain: false, qos: MqttQos.atMostOnce);
-      _publish('home/zone_$boardId/relay/$relayNum', payloadStr, retain: false, qos: MqttQos.atMostOnce);
+      _publishToRoom(
+        roomId,
+        'zone/$boardId/relay/$relayNum',
+        payloadStr,
+        retain: false,
+        qos: MqttQos.atMostOnce,
+      );
+      _publish(
+        'home/zone_$boardId/relay/$relayNum',
+        payloadStr,
+        retain: false,
+        qos: MqttQos.atMostOnce,
+      );
     }
   }
 
@@ -816,17 +1094,45 @@ class MqttService {
       'gpio': resolvedGpio,
       'protocol': 'GREE',
     });
-    _publishToRoom(roomId, 'ac/$unitNum/command', payload, retain: false, qos: MqttQos.atMostOnce);
-    _publishToRoom(roomId, 'zone/$unitNum/ac/command', payload, retain: false, qos: MqttQos.atMostOnce);
-    _publishToRoom(roomId, 'ac/command', payload, retain: false, qos: MqttQos.atMostOnce);
-    _publish('home/zone_ac/command', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publishToRoom(
+      roomId,
+      'ac/$unitNum/command',
+      payload,
+      retain: false,
+      qos: MqttQos.atMostOnce,
+    );
+    _publishToRoom(
+      roomId,
+      'zone/$unitNum/ac/command',
+      payload,
+      retain: false,
+      qos: MqttQos.atMostOnce,
+    );
+    _publishToRoom(
+      roomId,
+      'ac/command',
+      payload,
+      retain: false,
+      qos: MqttQos.atMostOnce,
+    );
+    _publish(
+      'home/zone_ac/command',
+      payload,
+      retain: false,
+      qos: MqttQos.atMostOnce,
+    );
   }
 
   // 2. Zone All On / All Off (Targets ONLY this switchboard / zone!)
   void publishZoneAll(String roomId, int boardId, bool turnOn) {
     final payload = turnOn ? 'ALL_ON' : 'ALL_OFF';
-    _publishToRoom(roomId, 'zone/$boardId/command/all', payload, retain: false, qos: MqttQos.atMostOnce);
-    _publish('home/zone_$boardId/command/all', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publishToRoom(
+      roomId,
+      'zone/$boardId/command/all',
+      payload,
+      retain: false,
+      qos: MqttQos.atMostOnce,
+    );
   }
 
   // 3. Adjust Fan Speed with Board Isolation
@@ -839,12 +1145,22 @@ class MqttService {
       'state': speed > 0 ? 'ON' : 'OFF',
       'speed': speed,
     });
-    _publishToRoom(roomId, 'zone/$boardId/relay/$relayNumber', payload, retain: false, qos: MqttQos.atMostOnce);
-    _publish('home/zone_$boardId/relay/$relayNumber', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publishToRoom(
+      roomId,
+      'zone/$boardId/relay/$relayNumber',
+      payload,
+      retain: false,
+      qos: MqttQos.atMostOnce,
+    );
   }
 
   // 4. Adjust Light Brightness with Board Isolation
-  void publishLightBrightness(String roomId, int boardId, int relayNumber, double brightness) {
+  void publishLightBrightness(
+    String roomId,
+    int boardId,
+    int relayNumber,
+    double brightness,
+  ) {
     final payload = jsonEncode({
       'room': roomId,
       'zone': boardId,
@@ -854,16 +1170,25 @@ class MqttService {
       'brightness': brightness.round(),
     });
     // Throttled to prevent flooding ESP32 PWM during continuous touch drag
-    _publishThrottledToRoom(roomId, 'zone/$boardId/relay/$relayNumber', payload, duration: const Duration(milliseconds: 75), retain: false);
-    _publishThrottled('home/zone_$boardId/relay/$relayNumber', payload, duration: const Duration(milliseconds: 75), retain: false);
+    _publishThrottledToRoom(
+      roomId,
+      'zone/$boardId/relay/$relayNumber',
+      payload,
+      duration: const Duration(milliseconds: 75),
+      retain: false,
+    );
   }
 
   // 5. Global All On / All Off for Entire Room
   void publishAllDevices(String roomId, bool allOn) {
     final payload = allOn ? 'ALL_ON' : 'ALL_OFF';
-    _publishToRoom(roomId, 'command/all', payload, retain: false, qos: MqttQos.atMostOnce);
-    _publish('home/command/all', payload, retain: false, qos: MqttQos.atMostOnce);
-    _publish('home/zone_ac/command/all', payload, retain: false, qos: MqttQos.atMostOnce);
+    _publishToRoom(
+      roomId,
+      'command/all',
+      payload,
+      retain: false,
+      qos: MqttQos.atMostOnce,
+    );
   }
 
   // 6. Emergency Cutoff / Trip All Relays
@@ -881,9 +1206,25 @@ class MqttService {
       'mode': enabled ? 'VISION' : 'MANUAL',
       'sent_at_unix_ms': DateTime.now().millisecondsSinceEpoch,
     });
-    _publishToRoom(roomId, 'vision/control', payload, retain: false, qos: MqttQos.atLeastOnce);
-    _publish('classpulse/$roomId/vision/control', payload, retain: false, qos: MqttQos.atLeastOnce);
-    _publish('home/vision/control', payload, retain: false, qos: MqttQos.atLeastOnce);
+    _publishToRoom(
+      roomId,
+      'vision/control',
+      payload,
+      retain: false,
+      qos: MqttQos.atLeastOnce,
+    );
+    _publish(
+      'classpulse/$roomId/vision/control',
+      payload,
+      retain: false,
+      qos: MqttQos.atLeastOnce,
+    );
+    _publish(
+      'home/vision/control',
+      payload,
+      retain: false,
+      qos: MqttQos.atLeastOnce,
+    );
   }
 
   // 7. Remote Customizable GPIO Configuration (OTA Pin Remapping)
@@ -918,4 +1259,3 @@ class MqttService {
     _publish(topic, '', retain: true);
   }
 }
-

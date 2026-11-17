@@ -438,7 +438,7 @@ PREVIEW_HTML = """<!DOCTYPE html>
           elSubBack.style.color = r2 ? '#4ade80' : '#94a3b8';
 
           document.getElementById('val_fps').textContent = (d.stream_fps ? d.stream_fps.toFixed(1) : (d.fps ? d.fps.toFixed(1) : '--')) + ' FPS';
-          document.getElementById('sub_status').textContent = 'AI: ' + (d.ai_fps ? d.ai_fps.toFixed(1) : '--') + ' Hz · ' + (d.model_name || 'YOLOv8n');
+          document.getElementById('sub_status').textContent = 'AI: ' + (d.ai_fps ? d.ai_fps.toFixed(1) : '--') + ' Hz · MQTT: ' + (d.mqtt_connected ? 'CONNECTED' : 'DISCONNECTED') + ' · ' + (d.model_name || 'YOLOv8n');
 
           if (d.zones6) {
             const z = d.zones6;
@@ -516,6 +516,12 @@ class PreviewHTTPHandler(BaseHTTPRequestHandler):
                         pass
                 if "mode" in qs:
                     new_mode = qs["mode"][0].upper()
+                    if new_mode == "LIVE" and getattr(controller, "dry_run_only", False):
+                        self.send_response(403)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(b'{"status":"rejected","reason":"DRY_RUN lock"}')
+                        return
                     if new_mode in ("LIVE", "DRY_RUN"):
                         controller.mode = new_mode
                         LOG.info(f"⚡ [MODE CHANGED] Switched operation mode to: {controller.mode}")
@@ -613,6 +619,7 @@ class PreviewHTTPHandler(BaseHTTPRequestHandler):
             if controller is not None:
                 status_doc["current_conf"] = controller.conf_thresh
                 status_doc["vision_control_enabled"] = controller.vision_control_enabled
+                status_doc["dry_run_locked"] = bool(getattr(controller, "dry_run_only", False))
                 status_doc["front_board_id"] = controller.front_board_id
                 status_doc["back_board_id"] = controller.back_board_id
                 status_doc["board1_relays"] = controller.board_relays.get(controller.front_board_id, {})
@@ -653,7 +660,7 @@ class ClassroomVisionController:
     def __init__(
         self,
         model_path: str = "auto",
-        broker: str = "broker.emqx.io",
+        broker: str | None = None,
         port: int = 1883,
         room_id: str = "reb_room_301",
         front_board: str = "board01",
@@ -679,14 +686,18 @@ class ClassroomVisionController:
         invert_zones: bool = True,
         flip_180: bool = True,
         channels: str = "1,2",
+        dry_run_only: bool = False,
     ):
-        self.broker = broker
+        self.broker = broker or os.environ.get("CLASSROOM_MQTT_HOST", "127.0.0.1")
         self.port = port
         self.room_id = room_id
         self.front_board_id = front_board
         self.back_board_id = back_board
         self.third_board_id = third_board
         self.mode = mode.upper()
+        self.dry_run_only = bool(dry_run_only)
+        if self.dry_run_only and self.mode != "DRY_RUN":
+            raise ValueError("DRY_RUN-only deployment cannot start in LIVE mode")
         self.channels_str = channels
         self.active_channels = [int(x.strip()) for x in channels.split(",") if x.strip().isdigit()] or [1, 2]
         self.camera_source = camera_source
@@ -882,6 +893,12 @@ class ClassroomVisionController:
             self.mqtt_client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
         self.mqtt_client.on_connect = self._on_connect
         self.mqtt_client.on_message = self._on_message
+        self.mqtt_client.reconnect_delay_set(min_delay=1, max_delay=10)
+        mqtt_username = os.environ.get("CLASSROOM_MQTT_USERNAME")
+        mqtt_password = os.environ.get("CLASSROOM_MQTT_PASSWORD")
+        if not mqtt_username or not mqtt_password:
+            raise ValueError("Set CLASSROOM_MQTT_USERNAME and CLASSROOM_MQTT_PASSWORD before connecting")
+        self.mqtt_client.username_pw_set(mqtt_username, mqtt_password)
 
         self.app_req_topic = f"classpulse/{self.room_id}/app/requests"
         self.app_res_topic = f"classpulse/{self.room_id}/app/results"
@@ -889,12 +906,10 @@ class ClassroomVisionController:
 
         lwt_doc = {
             "occupancy": {
-                "count": 0,
-                "front_count": 0,
-                "back_count": 0,
-                "moving_count": 0,
-                "stationary_count": 0,
-                "zones": {"Zone 1": 0, "Zone 2": 0, "Zone 3": 0},
+                "status": "OFFLINE",
+                "online": False,
+                "count": None,
+                "zones": None,
             },
             "status": "OFFLINE",
             "online": False,
@@ -902,11 +917,47 @@ class ClassroomVisionController:
         self.mqtt_client.will_set(self.app_state_topic, json.dumps(lwt_doc), qos=1, retain=True)
 
         try:
-            LOG.info(f"Connecting to MQTT Broker: {self.broker}:{self.port}...")
-            self.mqtt_client.connect(self.broker, self.port, keepalive=30)
+            LOG.info(
+                "Connecting to MQTT Broker: %s:%s (retry backoff 1..10 seconds)...",
+                self.broker,
+                self.port,
+            )
+            self.mqtt_client.connect_async(self.broker, self.port, keepalive=30)
             self.mqtt_client.loop_start()
         except Exception as e:
             LOG.error(f"Failed to connect to MQTT broker: {e}")
+
+    def _cleanup_startup_failure(self):
+        """Release background resources when camera setup fails before the run loop."""
+        if self.preview_server is not None:
+            try:
+                self.preview_server.shutdown()
+                self.preview_server.server_close()
+            except Exception:
+                pass
+            self.preview_server = None
+        client = getattr(self, "mqtt_client", None)
+        if client is not None:
+            try:
+                if client.is_connected():
+                    client.publish(
+                        self.app_state_topic,
+                        json.dumps({
+                            "occupancy": {"status": "OFFLINE", "online": False, "count": None},
+                            "status": "OFFLINE",
+                            "online": False,
+                        }),
+                        qos=1,
+                        retain=True,
+                    )
+                client.disconnect()
+            except Exception as exc:
+                LOG.warning("Could not publish startup-failure offline state: %s", exc)
+            finally:
+                try:
+                    client.loop_stop()
+                except Exception:
+                    pass
 
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
@@ -914,10 +965,17 @@ class ClassroomVisionController:
             client.subscribe(f"classpulse/{self.room_id}/controllers/+/status", qos=0)
             client.subscribe(f"classpulse/{self.room_id}/controllers/+/ack", qos=0)
             client.subscribe(self.app_req_topic, qos=1)
-            client.subscribe(f"ruet/classroom/{self.room_id}/#", qos=0)
             client.subscribe(f"classpulse/{self.room_id}/vision/control", qos=1)
             client.subscribe(f"ruet/classroom/{self.room_id}/vision/control", qos=1)
-            client.subscribe("home/vision/control", qos=1)
+            if self.dry_run_only:
+                # A DRY_RUN-only process does not receive legacy physical command routes.
+                client.subscribe(f"ruet/classroom/{self.room_id}/status/#", qos=0)
+                client.subscribe(f"ruet/classroom/{self.room_id}/zone/+/status", qos=0)
+                client.subscribe(f"ruet/classroom/{self.room_id}/zone/+/ac/status", qos=0)
+                client.subscribe(f"ruet/classroom/{self.room_id}/board/+/status", qos=0)
+            else:
+                client.subscribe(f"ruet/classroom/{self.room_id}/#", qos=0)
+                client.subscribe("home/vision/control", qos=1)
 
             for bid in [self.front_board_id, self.back_board_id, self.third_board_id]:
                 hello_pkt = {
@@ -1138,6 +1196,9 @@ class ClassroomVisionController:
 
     def _send_esp32_command(self, board_id: str, channel: int, desired_state: str, lease_sec: int = 60):
         if mqtt is None or not hasattr(self, "mqtt_client"):
+            return
+        if getattr(self, "dry_run_only", False) and self.mode != "DRY_RUN":
+            LOG.error("DRY_RUN lock rejected appliance command while mode was not DRY_RUN")
             return
         target_topic = (
             f"classpulse/{self.room_id}/controllers/{board_id}/dry_run/command"
@@ -1415,6 +1476,7 @@ class ClassroomVisionController:
                     "vision_control": self.vision_control_enabled,
                     "sent_at_unix_ms": int(now_wall * 1000),
                     "freshness_seconds": 4.0,
+                    "expires_at_unix_ms": int((now_wall + 4.0) * 1000),
                     "occupancy": {
                         "vision_control": self.vision_control_enabled,
                         "present": total_count > 0,
@@ -1560,6 +1622,24 @@ class ClassroomVisionController:
             f"Total:{total_count} | {self.mode}"
         )
         cv2.putText(annotated, hud_str, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (240, 240, 240), 1)
+        mqtt_connected = bool(
+            hasattr(self, "mqtt_client") and self.mqtt_client.is_connected()
+        )
+        occupied_zones = [name for name, count in zone6_counts.items() if count > 0]
+        zone_text = ",".join(occupied_zones) if occupied_zones else "none"
+        connectivity_text = (
+            f"MQTT:{'CONNECTED' if mqtt_connected else 'DISCONNECTED'} | "
+            f"OCCUPIED:{zone_text} | {self.mode}"
+        )
+        cv2.putText(
+            annotated,
+            connectivity_text,
+            (10, h - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.42,
+            (80, 220, 100) if mqtt_connected else (40, 190, 255),
+            1,
+        )
         if self.diagnostic_overlay:
             diag_str = (
                 f"RAW {len(raw_detections)} (model NMS) | MERGED {merged_detection_count} | "
@@ -1592,6 +1672,7 @@ class ClassroomVisionController:
                 static_frame = cv2.imread(self.camera_source)
                 if static_frame is None:
                     LOG.error(f"Cannot read image: {self.camera_source}. Exiting.")
+                    self._cleanup_startup_failure()
                     return
 
         if not is_image:
@@ -1607,6 +1688,7 @@ class ClassroomVisionController:
                     cap = cv2.VideoCapture(self.camera_source)
                     if not cap.isOpened():
                         LOG.error(f"Cannot open camera: {self.camera_source}. Exiting.")
+                        self._cleanup_startup_failure()
                         return
 
             if use_picam2:
@@ -1633,6 +1715,17 @@ class ClassroomVisionController:
                     )
                 except Exception as e:
                     LOG.error(f"Picamera2 initialization failed: {e}")
+                    if self.picam2 is not None:
+                        try:
+                            self.picam2.stop()
+                        except Exception:
+                            pass
+                        try:
+                            self.picam2.close()
+                        except Exception:
+                            pass
+                        self.picam2 = None
+                    self._cleanup_startup_failure()
                     return
             elif cap is not None:
                 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -1670,7 +1763,7 @@ class ClassroomVisionController:
                     time.sleep(0.04)
                 elif use_picam2 and self.picam2 is not None:
                     frame = self.picam2.capture_array()
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                    # Picamera2 RGB888 bytes are BGR-ordered for OpenCV; do not swap channels.
                     if self.flip_180:
                         frame = cv2.flip(frame, -1)
                 elif cap is not None:
@@ -1713,6 +1806,9 @@ class ClassroomVisionController:
                                 "fps": round(self.stream_fps, 1),
                                 "stream_fps": round(self.stream_fps, 1),
                                 "ai_fps": round(self.ai_fps, 1),
+                                "mqtt_connected": bool(
+                                    hasattr(self, "mqtt_client") and self.mqtt_client.is_connected()
+                                ),
                                 "model_name": self.model_path.name,
                                 "total_count": self.latest_total_count,
                                 "moving_count": self.moving_count_snapshot,
@@ -1806,12 +1902,10 @@ class ClassroomVisionController:
                     LOG.info("[SHUTDOWN] Broadcasting OFFLINE state...")
                     offline_pkt = {
                         "occupancy": {
-                            "count": 0,
-                            "front_count": 0,
-                            "back_count": 0,
-                            "moving_count": 0,
-                            "stationary_count": 0,
-                            "zones": {"Zone 1": 0, "Zone 2": 0, "Zone 3": 0},
+                            "status": "OFFLINE",
+                            "online": False,
+                            "count": None,
+                            "zones": None,
                         },
                         "status": "OFFLINE",
                         "online": False,
@@ -1835,13 +1929,14 @@ if __name__ == "__main__":
         default="auto",
         help="Path to YOLOv8 model (.pt or .onnx). Defaults to 'auto' (loads trained classroom_yolo_best.pt)",
     )
-    parser.add_argument("--broker", default="broker.emqx.io", help="MQTT broker hostname")
+    parser.add_argument("--broker", default=os.environ.get("CLASSROOM_MQTT_HOST", "127.0.0.1"), help="MQTT broker hostname (or CLASSROOM_MQTT_HOST)")
     parser.add_argument("--port", type=int, default=1883, help="MQTT broker port")
     parser.add_argument("--room", default="reb_room_301", help="Classroom identifier")
     parser.add_argument("--front-board", default="board01", help="Front/Near Zone Controller board ID (Zone 1)")
     parser.add_argument("--back-board", default="board02", help="Back/Far Zone Controller board ID (Zone 2)")
     parser.add_argument("--third-board", default="board03", help="Third Zone Controller board ID (Zone 3)")
-    parser.add_argument("--mode", default="LIVE", choices=["DRY_RUN", "LIVE"], help="Operational mode (default: LIVE)")
+    parser.add_argument("--mode", default="DRY_RUN", choices=["DRY_RUN", "LIVE"], help="Operational mode (default: DRY_RUN)")
+    parser.add_argument("--dry-run-only", action="store_true", help="Lock this process to DRY_RUN; reject runtime LIVE changes")
     parser.add_argument("--channels", default="1,2", help="Comma-separated relay channels to actuate (default: 1,2)")
     parser.add_argument("--source", default=0, help="Camera index, 'picam', image, or video file")
     parser.add_argument("--no-gui", action="store_true", help="Run headless without display window (recommended for Pi)")
@@ -1927,5 +2022,6 @@ if __name__ == "__main__":
         invert_zones=not args.no_invert_zones,
         flip_180=not args.no_flip,
         channels=args.channels,
+        dry_run_only=args.dry_run_only,
     )
     controller.run()

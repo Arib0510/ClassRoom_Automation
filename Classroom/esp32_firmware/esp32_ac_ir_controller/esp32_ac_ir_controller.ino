@@ -18,17 +18,17 @@
 
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include "secrets.h"  // Copy secrets.example.h to secrets.h and fill locally; never commit it.
 #include <ArduinoJson.h>
 #include "../smart_classroom_switchboard_mqtt/ac_control.h"
 
 #define CLASSROOM_ID      "reb_room_301"
 #define AC_BOARD_ID       4                // Board 4 = Standalone Dual-AC Controller (zone_ac)
 
-#define WIFI_SSID         "S 23"
-#define WIFI_PASSWORD     "asdf1234"
-
-const char* MQTT_BROKER   = "broker.emqx.io";
-const int   MQTT_PORT     = 1883;
+#define WIFI_SSID         CLASSROOM_WIFI_SSID
+#define WIFI_PASSWORD     CLASSROOM_WIFI_PASSWORD
+const char* MQTT_BROKER   = CLASSROOM_MQTT_HOST;
+const int   MQTT_PORT     = CLASSROOM_MQTT_PORT;
 
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
@@ -121,7 +121,8 @@ void connectMqtt() {
   String lwtTopic = getBaseTopic() + "/status/board/" + String(AC_BOARD_ID);
   String lwtMsg   = "{\"status\":\"OFFLINE\",\"zone_id\":\"zone_ac\",\"device_type\":\"ac_unit\",\"board\":4}";
 
-  if (mqtt.connect(clientId.c_str(), lwtTopic.c_str(), 1, true, lwtMsg.c_str())) {
+  if (mqtt.connect(clientId.c_str(), CLASSROOM_MQTT_USER_AC, CLASSROOM_MQTT_PASSWORD_AC,
+                   lwtTopic.c_str(), 1, true, lwtMsg.c_str())) {
     mqtt.subscribe("home/discovery/query", 1);
     mqtt.subscribe("home/zone_ac/#", 1);
     mqtt.subscribe("home/command/#", 1);

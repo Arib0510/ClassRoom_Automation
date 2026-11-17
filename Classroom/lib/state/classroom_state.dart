@@ -14,8 +14,10 @@ class ClassroomState extends ChangeNotifier {
   factory ClassroomState() => _instance;
 
   static const String _storageKeyClassrooms = 'classpulse_saved_classrooms_v2';
-  static const String _storageKeySelectedRoom = 'classpulse_selected_room_id_v2';
-  static const String _storageKeyVisionControl = 'classpulse_vision_control_enabled';
+  static const String _storageKeySelectedRoom =
+      'classpulse_selected_room_id_v2';
+  static const String _storageKeyVisionControl =
+      'classpulse_vision_control_enabled';
 
   bool _visionControlEnabled = true;
   bool get visionControlEnabled => _visionControlEnabled;
@@ -42,7 +44,10 @@ class ClassroomState extends ChangeNotifier {
     // 1. Direct match on room ID (e.g. "ete_room_304", "eee_room_304")
     for (var i = 0; i < _classrooms.length; i++) {
       if (_classrooms[i].id == roomId) {
-        if (building == null || _classrooms[i].building.toLowerCase().contains(building.toLowerCase())) {
+        if (building == null ||
+            _classrooms[i].building.toLowerCase().contains(
+              building.toLowerCase(),
+            )) {
           return _classrooms[i];
         }
       }
@@ -56,10 +61,19 @@ class ClassroomState extends ChangeNotifier {
     }
 
     // 3. Match normalized ID or scoped ID
-    final normSearch = roomId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final normSearch = roomId.toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9]'),
+      '',
+    );
     for (var i = 0; i < _classrooms.length; i++) {
-      final normId = _classrooms[i].id.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      final normScoped = _classrooms[i].scopedRoomId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final normId = _classrooms[i].id.toLowerCase().replaceAll(
+        RegExp(r'[^a-z0-9]'),
+        '',
+      );
+      final normScoped = _classrooms[i].scopedRoomId.toLowerCase().replaceAll(
+        RegExp(r'[^a-z0-9]'),
+        '',
+      );
       if (normId == normSearch || normScoped == normSearch) {
         return _classrooms[i];
       }
@@ -67,8 +81,14 @@ class ClassroomState extends ChangeNotifier {
 
     // 4. If search contains building prefix (e.g. "ete_304" or "eee_304")
     for (var i = 0; i < _classrooms.length; i++) {
-      final bTag = _classrooms[i].buildingShort.replaceAll(RegExp(r'[^a-z0-9]'), '');
-      final rNum = _classrooms[i].roomNumber.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final bTag = _classrooms[i].buildingShort.replaceAll(
+        RegExp(r'[^a-z0-9]'),
+        '',
+      );
+      final rNum = _classrooms[i].roomNumber.toLowerCase().replaceAll(
+        RegExp(r'[^a-z0-9]'),
+        '',
+      );
       if (normSearch == '$bTag$rNum' || normSearch == '${bTag}room$rNum') {
         return _classrooms[i];
       }
@@ -76,10 +96,14 @@ class ClassroomState extends ChangeNotifier {
 
     // 5. Fallback: match roomNumber ONLY if uniquely one room matches (or if building matches)
     final matches = _classrooms.where((c) {
-      final normNum = c.roomNumber.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final normNum = c.roomNumber.toLowerCase().replaceAll(
+        RegExp(r'[^a-z0-9]'),
+        '',
+      );
       final matchesNum = normNum == normSearch || normSearch == 'room$normNum';
       if (building != null) {
-        return matchesNum && c.building.toLowerCase().contains(building.toLowerCase());
+        return matchesNum &&
+            c.building.toLowerCase().contains(building.toLowerCase());
       }
       return matchesNum;
     }).toList();
@@ -89,7 +113,9 @@ class ClassroomState extends ChangeNotifier {
     // 6. Match 'reb_room_301' or '301' to any classroom matching 301
     if (normSearch.contains('301')) {
       for (var c in _classrooms) {
-        if (c.id.contains('301') || c.roomNumber.contains('301') || c.name.contains('301')) {
+        if (c.id.contains('301') ||
+            c.roomNumber.contains('301') ||
+            c.name.contains('301')) {
           return c;
         }
       }
@@ -116,17 +142,29 @@ class ClassroomState extends ChangeNotifier {
   }
 
   // --- Local SharedPreferences Persistence (Cache-First) ---
-  Future<void> _persistDevicePower(ClassroomDevice device, {String? roomId}) async {
+  Future<void> _persistDevicePower(
+    ClassroomDevice device, {
+    String? roomId,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('pwr_${device.id}', device.isOn);
       final rId = roomId ?? selectedRoomId;
       if (rId.isNotEmpty) {
-        await prefs.setBool('pwr_${rId}_b${device.boardId}_r${device.relayNumber}', device.isOn);
+        await prefs.setBool(
+          'pwr_${rId}_b${device.boardId}_r${device.relayNumber}',
+          device.isOn,
+        );
         if (rId.contains('-')) {
-          await prefs.setBool('pwr_${rId.replaceAll('-', '_')}_b${device.boardId}_r${device.relayNumber}', device.isOn);
+          await prefs.setBool(
+            'pwr_${rId.replaceAll('-', '_')}_b${device.boardId}_r${device.relayNumber}',
+            device.isOn,
+          );
         } else if (rId.contains('_')) {
-          await prefs.setBool('pwr_${rId.replaceAll('_', '-')}_b${device.boardId}_r${device.relayNumber}', device.isOn);
+          await prefs.setBool(
+            'pwr_${rId.replaceAll('_', '-')}_b${device.boardId}_r${device.relayNumber}',
+            device.isOn,
+          );
         }
       }
       if (device.type == DeviceType.fan) {
@@ -137,18 +175,30 @@ class ClassroomState extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> _persistMultipleDevicesPower(Iterable<ClassroomDevice> devices, {String? roomId}) async {
+  Future<void> _persistMultipleDevicesPower(
+    Iterable<ClassroomDevice> devices, {
+    String? roomId,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final rId = roomId ?? selectedRoomId;
       for (final device in devices) {
         await prefs.setBool('pwr_${device.id}', device.isOn);
         if (rId.isNotEmpty) {
-          await prefs.setBool('pwr_${rId}_b${device.boardId}_r${device.relayNumber}', device.isOn);
+          await prefs.setBool(
+            'pwr_${rId}_b${device.boardId}_r${device.relayNumber}',
+            device.isOn,
+          );
           if (rId.contains('-')) {
-            await prefs.setBool('pwr_${rId.replaceAll('-', '_')}_b${device.boardId}_r${device.relayNumber}', device.isOn);
+            await prefs.setBool(
+              'pwr_${rId.replaceAll('-', '_')}_b${device.boardId}_r${device.relayNumber}',
+              device.isOn,
+            );
           } else if (rId.contains('_')) {
-            await prefs.setBool('pwr_${rId.replaceAll('_', '-')}_b${device.boardId}_r${device.relayNumber}', device.isOn);
+            await prefs.setBool(
+              'pwr_${rId.replaceAll('_', '-')}_b${device.boardId}_r${device.relayNumber}',
+              device.isOn,
+            );
           }
         }
         if (device.type == DeviceType.fan) {
@@ -168,7 +218,9 @@ class ClassroomState extends ChangeNotifier {
       if (isWiped) {
         _classrooms = [];
         _selectedRoomId = '';
-        debugPrint('[ClassroomState] System is in wiped state; keeping classrooms clean & empty.');
+        debugPrint(
+          '[ClassroomState] System is in wiped state; keeping classrooms clean & empty.',
+        );
         notifyListeners();
         return;
       }
@@ -176,7 +228,8 @@ class ClassroomState extends ChangeNotifier {
       // Purge legacy user-partitioned keys to eliminate zombie rooms across logins
       final allKeys = prefs.getKeys();
       for (final k in allKeys) {
-        if (k.startsWith('${_storageKeyClassrooms}_') || k.startsWith('${_storageKeySelectedRoom}_')) {
+        if (k.startsWith('${_storageKeyClassrooms}_') ||
+            k.startsWith('${_storageKeySelectedRoom}_')) {
           await prefs.remove(k);
         }
       }
@@ -185,7 +238,10 @@ class ClassroomState extends ChangeNotifier {
       if (rawJson != null && rawJson.isNotEmpty && rawJson != '[]') {
         final decoded = jsonDecode(rawJson) as List<dynamic>;
         final loadedRooms = decoded
-            .map((item) => Classroom.fromMap(Map<String, dynamic>.from(item as Map)))
+            .map(
+              (item) =>
+                  Classroom.fromMap(Map<String, dynamic>.from(item as Map)),
+            )
             .toList();
         if (loadedRooms.isNotEmpty) {
           // Normalize room IDs to match building-scoped convention (e.g., ete_room_304)
@@ -201,31 +257,38 @@ class ClassroomState extends ChangeNotifier {
             r.lastVisionTelemetry = null;
             _lastKnownFrontOcc[r.id] = 0;
             _lastKnownBackOcc[r.id] = 0;
-            final roomDigits = RegExp(r'\d+').firstMatch(r.roomNumber)?.group(0) ?? '304';
+            final roomDigits =
+                RegExp(r'\d+').firstMatch(r.roomNumber)?.group(0) ?? '304';
             final b = r.buildingShort.replaceAll(RegExp(r'[^a-z0-9]'), '');
             final cleanId = r.id.startsWith('${b}_')
                 ? r.id
                 : (b.isNotEmpty ? '${b}_room_$roomDigits' : 'room_$roomDigits');
             if (r.id != cleanId) {
-              loadedRooms[i] = r.copyWith(
-                id: cleanId,
-              );
+              loadedRooms[i] = r.copyWith(id: cleanId);
             }
 
             // Restore device power state from local SharedPreferences disk cache
             for (final d in loadedRooms[i].devices) {
               final rId = loadedRooms[i].id;
-              final isZoneDev = d.boardId == 1 || d.boardId == 2 ||
-                  d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') ||
-                  d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back');
+              final isZoneDev =
+                  d.boardId == 1 ||
+                  d.boardId == 2 ||
+                  d.zone.toLowerCase().contains('zone 1') ||
+                  d.zone.toLowerCase().contains('zone 2') ||
+                  d.zone.toLowerCase().contains('front') ||
+                  d.zone.toLowerCase().contains('back');
               if (_visionControlEnabled && isZoneDev) {
                 // Autonomous zone devices boot in standby OFF when cold-starting without active camera
                 d.isOn = false;
                 d.statusDescription = 'Standby · Vacant Zone';
                 prefs.setBool('pwr_${d.id}', false);
-                prefs.setBool('pwr_${rId}_b${d.boardId}_r${d.relayNumber}', false);
+                prefs.setBool(
+                  'pwr_${rId}_b${d.boardId}_r${d.relayNumber}',
+                  false,
+                );
               } else {
-                final savedPwr = prefs.getBool('pwr_${d.id}') ??
+                final savedPwr =
+                    prefs.getBool('pwr_${d.id}') ??
                     prefs.getBool('pwr_${rId}_b${d.boardId}_r${d.relayNumber}');
                 if (savedPwr != null) {
                   d.isOn = savedPwr;
@@ -234,24 +297,33 @@ class ClassroomState extends ChangeNotifier {
               if (d.type == DeviceType.fan) {
                 final savedSpd = prefs.getInt('spd_${d.id}');
                 if (savedSpd != null) d.fanSpeed = savedSpd;
-                d.statusDescription = d.isOn ? 'Speed ${d.fanSpeed} · Active' : 'Standby · Array Off';
+                d.statusDescription = d.isOn
+                    ? 'Speed ${d.fanSpeed} · Active'
+                    : 'Standby · Array Off';
               } else if (d.type == DeviceType.lighting) {
                 final savedBri = prefs.getDouble('bri_${d.id}');
                 if (savedBri != null) d.brightness = savedBri;
-                d.statusDescription = d.isOn ? 'Active · Relay Closed' : 'Standby · Power Off';
+                d.statusDescription = d.isOn
+                    ? 'Active · Relay Closed'
+                    : 'Standby · Power Off';
               } else if (d.type == DeviceType.hvac) {
-                d.statusDescription = d.isOn ? 'Cooling 22°C · Active' : 'Standby · Off';
+                d.statusDescription = d.isOn
+                    ? 'Cooling 22°C · Active'
+                    : 'Standby · Off';
               }
             }
           }
           _classrooms = loadedRooms;
           final savedRoomId = prefs.getString(_storageKeySelectedRoom);
-          if (savedRoomId != null && _classrooms.any((r) => r.id == savedRoomId)) {
+          if (savedRoomId != null &&
+              _classrooms.any((r) => r.id == savedRoomId)) {
             _selectedRoomId = savedRoomId;
           } else {
             _selectedRoomId = _classrooms.first.id;
           }
-          debugPrint('[ClassroomState] Restored and normalized ${_classrooms.length} rooms from shared campus cache.');
+          debugPrint(
+            '[ClassroomState] Restored and normalized ${_classrooms.length} rooms from shared campus cache.',
+          );
           notifyListeners();
         }
       } else if (rawJson == '[]') {
@@ -288,7 +360,9 @@ class ClassroomState extends ChangeNotifier {
       } else {
         await prefs.remove(_storageKeySelectedRoom);
       }
-      debugPrint('[ClassroomState] Persisted state to shared local storage cache.');
+      debugPrint(
+        '[ClassroomState] Persisted state to shared local storage cache.',
+      );
     } catch (e) {
       debugPrint('[ClassroomState] Error writing to cached storage: $e');
     }
@@ -316,7 +390,9 @@ class ClassroomState extends ChangeNotifier {
 
     // Listen to unified MQTT discovery payloads (`home/discovery`) for Zones 1-3 & Standalone AC (`zone_ac`)
     mqtt.onDiscoveryReceived = (zoneId, deviceType, ip, roomId, rssi, isOnline) {
-      debugPrint('[MQTT ➡️ State] Discovery: zone_id=$zoneId, device_type=$deviceType, ip=$ip, room=$roomId');
+      debugPrint(
+        '[MQTT ➡️ State] Discovery: zone_id=$zoneId, device_type=$deviceType, ip=$ip, room=$roomId',
+      );
       ConnectivityState().updateDiscoveredDevice(
         zoneId: zoneId,
         deviceType: deviceType,
@@ -329,40 +405,53 @@ class ClassroomState extends ChangeNotifier {
 
     // Listen to real-time ESP32 microcontroller board health & diagnostics
     mqtt.onBoardTelemetryReceived = (roomId, boardId, isOnline, ip, rssi) {
-      debugPrint('[MQTT ➡️ State] Board #$boardId Telemetry: room=$roomId, online=$isOnline, ip=$ip, rssi=$rssi dBm');
-      ConnectivityState().updateBoardTelemetry(boardId, isOnline, ip, rssi, roomId);
+      debugPrint(
+        '[MQTT ➡️ State] Board #$boardId Telemetry: room=$roomId, online=$isOnline, ip=$ip, rssi=$rssi dBm',
+      );
+      ConnectivityState().updateBoardTelemetry(
+        boardId,
+        isOnline,
+        ip,
+        rssi,
+        roomId,
+      );
     };
 
     // Listen to switchboard-isolated relay status updates (strictly matches physical boardId and relayNumber)
-    mqtt.onRelayStatusReceived = (roomId, boardId, relayNumber, isOn, speed, brightness, gpio) {
-      final room = findRoom(roomId);
-      if (room == null) return;
-      ClassroomDevice? targetDevice;
-      for (var d in room.devices) {
-        if (d.boardId == boardId && d.relayNumber == relayNumber) {
-          targetDevice = d;
-          break;
-        }
-      }
-      if (targetDevice != null) {
-        // Drop outdated incoming status if user toggled this device recently and state disagrees
-        if (_isRecentlyToggled(roomId, targetDevice.id) && targetDevice.isOn != isOn) {
-          debugPrint('[MQTT ➡️ State] Suppressed stale incoming relay status for ${targetDevice.name}');
-          return;
-        }
+    mqtt.onRelayStatusReceived =
+        (roomId, boardId, relayNumber, isOn, speed, brightness, gpio) {
+          final room = findRoom(roomId);
+          if (room == null) return;
+          ClassroomDevice? targetDevice;
+          for (var d in room.devices) {
+            if (d.boardId == boardId && d.relayNumber == relayNumber) {
+              targetDevice = d;
+              break;
+            }
+          }
+          if (targetDevice != null) {
+            // Drop outdated incoming status if user toggled this device recently and state disagrees
+            if (_isRecentlyToggled(roomId, targetDevice.id) &&
+                targetDevice.isOn != isOn) {
+              debugPrint(
+                '[MQTT ➡️ State] Suppressed stale incoming relay status for ${targetDevice.name}',
+              );
+              return;
+            }
 
-        targetDevice.isOn = isOn;
-        if (speed != null && targetDevice.type == DeviceType.fan) {
-          targetDevice.fanSpeed = speed;
-        }
-        if (brightness != null && targetDevice.type == DeviceType.lighting) {
-          targetDevice.brightness = brightness;
-        }
-        _persistDevicePower(targetDevice, roomId: room.id);
-        notifyListeners();
-        _scheduleLocalStorageSave();
-      }
-    };
+            targetDevice.isOn = isOn;
+            if (speed != null && targetDevice.type == DeviceType.fan) {
+              targetDevice.fanSpeed = speed;
+            }
+            if (brightness != null &&
+                targetDevice.type == DeviceType.lighting) {
+              targetDevice.brightness = brightness;
+            }
+            _persistDevicePower(targetDevice, roomId: room.id);
+            notifyListeners();
+            _scheduleLocalStorageSave();
+          }
+        };
 
     // Listen to direct optical Dual-AC telemetry updates (AC #1 on GPIO 33, AC #2 on GPIO 12)
     mqtt.onAcStatusReceived = (roomId, acUnitId, isOn, temp, mode, fan, swing) {
@@ -406,28 +495,11 @@ class ClassroomState extends ChangeNotifier {
       room.lastVisionTelemetry = DateTime.now();
       room.visionMode = _visionControlEnabled ? 'LIVE' : 'MANUAL';
 
-      final isOfflinePkt = occupancy['status'] == 'OFFLINE' || occupancy['online'] == false;
+      final isOfflinePkt =
+          occupancy['status'] == 'OFFLINE' || occupancy['online'] == false;
       if (isOfflinePkt) {
+        // Offline means occupancy and appliance outputs are unknown, not vacant/off.
         room.visionMode = _visionControlEnabled ? 'OFFLINE' : 'MANUAL';
-        room.currentOccupancy = 0;
-        room.frontOccupancy = 0;
-        room.backOccupancy = 0;
-        room.movingOccupancy = 0;
-        room.stationaryOccupancy = 0;
-        room.isOccupied = false;
-        _lastKnownFrontOcc[room.id] = 0;
-        _lastKnownBackOcc[room.id] = 0;
-        if (_visionControlEnabled) {
-          for (var d in room.devices) {
-            if (d.boardId == 1 || d.boardId == 2 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back')) {
-              d.isOn = false;
-              d.manualOverrideOff = false;
-              d.statusDescription = 'Standby · Vacant Zone';
-              _persistDevicePower(d, roomId: room.id);
-              changed = true;
-            }
-          }
-        }
         notifyListeners();
         return;
       }
@@ -454,13 +526,21 @@ class ClassroomState extends ChangeNotifier {
           changed = true;
         }
 
-        final front = occupancy['front_count'] ?? (occupancy['zones'] is Map ? (occupancy['zones']['front'] ?? occupancy['zones']['Zone 1']) : null);
+        final front =
+            occupancy['front_count'] ??
+            (occupancy['zones'] is Map
+                ? (occupancy['zones']['front'] ?? occupancy['zones']['Zone 1'])
+                : null);
         if (front is num) {
           room.frontOccupancy = front.toInt();
           changed = true;
         }
 
-        final back = occupancy['back_count'] ?? (occupancy['zones'] is Map ? (occupancy['zones']['back'] ?? occupancy['zones']['Zone 2']) : null);
+        final back =
+            occupancy['back_count'] ??
+            (occupancy['zones'] is Map
+                ? (occupancy['zones']['back'] ?? occupancy['zones']['Zone 2'])
+                : null);
         if (back is num) {
           room.backOccupancy = back.toInt();
           changed = true;
@@ -473,29 +553,40 @@ class ClassroomState extends ChangeNotifier {
         final newBack = room.backOccupancy;
 
         if (_visionControlEnabled) {
-          // --- ZONE 1 (Front Zone) ---
-          // A. Initial detection or transition from Vacant (0) to Occupied (> 0):
-          if ((prevFront <= 0 && newFront > 0) || (prevFront == -1 && newFront > 0)) {
-            debugPrint('[ClassroomState] Front Zone OCCUPIED ($newFront students). Turning ON Zone 1 devices.');
+          if ((prevFront <= 0 && newFront > 0) ||
+              (prevFront == -1 && newFront > 0)) {
+            debugPrint(
+              '[ClassroomState] Front Zone OCCUPIED ($newFront students). Turning ON Zone 1 devices.',
+            );
             for (var d in room.devices) {
-              if (d.boardId == 1 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('front')) {
-                d.manualOverrideOff = false; // Reset any previous manual override
+              if (d.boardId == 1 ||
+                  d.zone.toLowerCase().contains('zone 1') ||
+                  d.zone.toLowerCase().contains('front')) {
+                d.manualOverrideOff = false;
                 d.isOn = true;
-                if (d.type == DeviceType.fan && d.fanSpeed == 0) d.fanSpeed = 3;
-                if (d.type == DeviceType.lighting && d.brightness == 0) d.brightness = 85;
+                if (d.type == DeviceType.fan && d.fanSpeed == 0) {
+                  d.fanSpeed = 3;
+                }
+                if (d.type == DeviceType.lighting && d.brightness == 0) {
+                  d.brightness = 85;
+                }
                 d.statusDescription = d.type == DeviceType.fan
                     ? 'Speed ${d.fanSpeed} · Active (Zone 1 Occupied)'
-                    : (d.type == DeviceType.lighting ? 'Active · Relay Closed' : 'Active');
+                    : (d.type == DeviceType.lighting
+                          ? 'Active · Relay Closed'
+                          : 'Active');
                 _persistDevicePower(d, roomId: room.id);
                 changed = true;
               }
             }
-          }
-          // B. Transition from Occupied (> 0) to Vacant (0):
-          else if (prevFront > 0 && newFront == 0) {
-            debugPrint('[ClassroomState] Front Zone VACANT. Turning OFF Zone 1 devices.');
+          } else if (prevFront > 0 && newFront == 0) {
+            debugPrint(
+              '[ClassroomState] Front Zone VACANT. Turning OFF Zone 1 devices.',
+            );
             for (var d in room.devices) {
-              if (d.boardId == 1 || d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('front')) {
+              if (d.boardId == 1 ||
+                  d.zone.toLowerCase().contains('zone 1') ||
+                  d.zone.toLowerCase().contains('front')) {
                 d.manualOverrideOff = false;
                 d.isOn = false;
                 d.statusDescription = 'Standby · Vacant Zone';
@@ -505,29 +596,40 @@ class ClassroomState extends ChangeNotifier {
             }
           }
 
-          // --- ZONE 2 (Back Zone) ---
-          // A. Initial detection or transition from Vacant (0) to Occupied (> 0):
-          if ((prevBack <= 0 && newBack > 0) || (prevBack == -1 && newBack > 0)) {
-            debugPrint('[ClassroomState] Back Zone OCCUPIED ($newBack students). Turning ON Zone 2 devices.');
+          if ((prevBack <= 0 && newBack > 0) ||
+              (prevBack == -1 && newBack > 0)) {
+            debugPrint(
+              '[ClassroomState] Back Zone OCCUPIED ($newBack students). Turning ON Zone 2 devices.',
+            );
             for (var d in room.devices) {
-              if (d.boardId == 2 || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('back')) {
+              if (d.boardId == 2 ||
+                  d.zone.toLowerCase().contains('zone 2') ||
+                  d.zone.toLowerCase().contains('back')) {
                 d.manualOverrideOff = false;
                 d.isOn = true;
-                if (d.type == DeviceType.fan && d.fanSpeed == 0) d.fanSpeed = 3;
-                if (d.type == DeviceType.lighting && d.brightness == 0) d.brightness = 85;
+                if (d.type == DeviceType.fan && d.fanSpeed == 0) {
+                  d.fanSpeed = 3;
+                }
+                if (d.type == DeviceType.lighting && d.brightness == 0) {
+                  d.brightness = 85;
+                }
                 d.statusDescription = d.type == DeviceType.fan
                     ? 'Speed ${d.fanSpeed} · Active (Zone 2 Occupied)'
-                    : (d.type == DeviceType.lighting ? 'Active · Relay Closed' : 'Active');
+                    : (d.type == DeviceType.lighting
+                          ? 'Active · Relay Closed'
+                          : 'Active');
                 _persistDevicePower(d, roomId: room.id);
                 changed = true;
               }
             }
-          }
-          // B. Transition from Occupied (> 0) to Vacant (0):
-          else if (prevBack > 0 && newBack == 0) {
-            debugPrint('[ClassroomState] Back Zone VACANT. Turning OFF Zone 2 devices.');
+          } else if (prevBack > 0 && newBack == 0) {
+            debugPrint(
+              '[ClassroomState] Back Zone VACANT. Turning OFF Zone 2 devices.',
+            );
             for (var d in room.devices) {
-              if (d.boardId == 2 || d.zone.toLowerCase().contains('zone 2') || d.zone.toLowerCase().contains('back')) {
+              if (d.boardId == 2 ||
+                  d.zone.toLowerCase().contains('zone 2') ||
+                  d.zone.toLowerCase().contains('back')) {
                 d.manualOverrideOff = false;
                 d.isOn = false;
                 d.statusDescription = 'Standby · Vacant Zone';
@@ -611,7 +713,9 @@ class ClassroomState extends ChangeNotifier {
           await _applyIncomingCloudClassrooms(rooms);
         },
         onError: (err) {
-          debugPrint('[ClassroomState] Firestore classrooms stream error: $err');
+          debugPrint(
+            '[ClassroomState] Firestore classrooms stream error: $err',
+          );
           // Auto-reconnect after backoff delay if stream encounters error
           Timer(const Duration(seconds: 4), () {
             if (AuthState().isLoggedIn) {
@@ -636,34 +740,50 @@ class ClassroomState extends ChangeNotifier {
       _selectedRoomId = '';
       await prefs.setString(_storageKeyClassrooms, '[]');
       await prefs.remove(_storageKeySelectedRoom);
-      debugPrint('[ClassroomState] Cloud classrooms collection is EMPTY. Cleared local state & cache.');
+      debugPrint(
+        '[ClassroomState] Cloud classrooms collection is EMPTY. Cleared local state & cache.',
+      );
       notifyListeners();
       return;
     }
 
     // Automatic state sync on app open and when incoming cloud snapshots arrive
     for (final incomingRoom in rooms) {
-      final currentRoom = findRoom(incomingRoom.id, building: incomingRoom.building);
+      final currentRoom = findRoom(
+        incomingRoom.id,
+        building: incomingRoom.building,
+      );
       final rId = incomingRoom.id;
-      final userModifiedTime = _localRoomUserModified[rId] ?? _localRoomUserModified[incomingRoom.scopedRoomId];
+      final userModifiedTime =
+          _localRoomUserModified[rId] ??
+          _localRoomUserModified[incomingRoom.scopedRoomId];
       final cloudSyncTime = incomingRoom.lastIntervalSync;
 
       // Automatically adopt the cloud state snapshot when:
       // 1. Teacher just opened the app (userModifiedTime == null)
       // 2. Or the cloud snapshot from a class interval is newer than any local interaction
-      final shouldAdoptCloudState = userModifiedTime == null ||
+      final shouldAdoptCloudState =
+          userModifiedTime == null ||
           (cloudSyncTime != null && cloudSyncTime.isAfter(userModifiedTime));
 
       for (final incomingDev in incomingRoom.devices) {
-        final curDev = currentRoom != null ? findDevice(currentRoom, incomingDev.id) : null;
-        final savedPwr = prefs.getBool('pwr_${incomingDev.id}') ??
-            prefs.getBool('pwr_${rId}_b${incomingDev.boardId}_r${incomingDev.relayNumber}');
+        final curDev = currentRoom != null
+            ? findDevice(currentRoom, incomingDev.id)
+            : null;
+        final savedPwr =
+            prefs.getBool('pwr_${incomingDev.id}') ??
+            prefs.getBool(
+              'pwr_${rId}_b${incomingDev.boardId}_r${incomingDev.relayNumber}',
+            );
 
         if (shouldAdoptCloudState) {
           if (cloudSyncTime != null) {
             // Cloud has fresh class interval state snapshot: adopt cloud state
             prefs.setBool('pwr_${incomingDev.id}', incomingDev.isOn);
-            prefs.setBool('pwr_${rId}_b${incomingDev.boardId}_r${incomingDev.relayNumber}', incomingDev.isOn);
+            prefs.setBool(
+              'pwr_${rId}_b${incomingDev.boardId}_r${incomingDev.relayNumber}',
+              incomingDev.isOn,
+            );
             if (incomingDev.type == DeviceType.fan) {
               prefs.setInt('spd_${incomingDev.id}', incomingDev.fanSpeed);
             } else if (incomingDev.type == DeviceType.lighting) {
@@ -683,8 +803,10 @@ class ClassroomState extends ChangeNotifier {
         } else if (curDev != null) {
           // Active teacher tapping on this device right now: keep local UI state
           incomingDev.isOn = curDev.isOn;
-          if (incomingDev.type == DeviceType.fan) incomingDev.fanSpeed = curDev.fanSpeed;
-          if (incomingDev.type == DeviceType.lighting) incomingDev.brightness = curDev.brightness;
+          if (incomingDev.type == DeviceType.fan)
+            incomingDev.fanSpeed = curDev.fanSpeed;
+          if (incomingDev.type == DeviceType.lighting)
+            incomingDev.brightness = curDev.brightness;
         }
 
         // Update status description
@@ -704,7 +826,8 @@ class ClassroomState extends ChangeNotifier {
       }
     }
     _classrooms = rooms;
-    if (_selectedRoomId.isEmpty || !_classrooms.any((r) => r.id == _selectedRoomId)) {
+    if (_selectedRoomId.isEmpty ||
+        !_classrooms.any((r) => r.id == _selectedRoomId)) {
       _selectedRoomId = _classrooms.first.id;
     }
     await _saveToLocalStorage();
@@ -716,7 +839,10 @@ class ClassroomState extends ChangeNotifier {
   // (every 16 min 40 sec) so that when another teacher comes, their phone syncs live device states.
   static const int kClassDurationMinutes = 50;
   static const int kClassSyncIntervals = 3;
-  static const Duration kIntervalSyncDuration = Duration(minutes: 16, seconds: 40);
+  static const Duration kIntervalSyncDuration = Duration(
+    minutes: 16,
+    seconds: 40,
+  );
 
   Timer? _classIntervalSyncTimer;
   int _currentClassInterval = 1;
@@ -738,37 +864,16 @@ class ClassroomState extends ChangeNotifier {
           }
           continue;
         }
-        final isTimedOut = room.lastVisionTelemetry == null ||
-            now.difference(room.lastVisionTelemetry!) > const Duration(seconds: 6);
+        final isTimedOut =
+            room.lastVisionTelemetry == null ||
+            now.difference(room.lastVisionTelemetry!) >
+                const Duration(seconds: 6);
         if (isTimedOut) {
-          if (room.visionMode != 'OFFLINE' ||
-              room.currentOccupancy > 0 ||
-              room.frontOccupancy > 0 ||
-              room.backOccupancy > 0 ||
-              room.isOccupied) {
-            debugPrint('[ClassroomState] Watchdog: Vision model offline for ${room.id}. Marking OFFLINE & Vacant.');
+          if (room.visionMode != 'OFFLINE') {
+            debugPrint(
+              '[ClassroomState] Watchdog: Vision model offline for ${room.id}. Occupancy is unknown.',
+            );
             room.visionMode = 'OFFLINE';
-            room.currentOccupancy = 0;
-            room.frontOccupancy = 0;
-            room.backOccupancy = 0;
-            room.movingOccupancy = 0;
-            room.stationaryOccupancy = 0;
-            room.isOccupied = false;
-            _lastKnownFrontOcc[room.id] = 0;
-            _lastKnownBackOcc[room.id] = 0;
-
-            for (var d in room.devices) {
-              if (d.boardId == 1 || d.boardId == 2 ||
-                  d.zone.toLowerCase().contains('zone 1') || d.zone.toLowerCase().contains('zone 2') ||
-                  d.zone.toLowerCase().contains('front') || d.zone.toLowerCase().contains('back')) {
-                if (d.isOn && !d.manualOverrideOff) {
-                  d.isOn = false;
-                  d.statusDescription = 'Standby · Vacant Zone';
-                  _persistDevicePower(d, roomId: room.id);
-                  changed = true;
-                }
-              }
-            }
             changed = true;
           }
         }
@@ -786,8 +891,10 @@ class ClassroomState extends ChangeNotifier {
       if (!enabled) {
         room.visionMode = 'MANUAL';
       } else {
-        final hasRecentTelemetry = room.lastVisionTelemetry != null &&
-            DateTime.now().difference(room.lastVisionTelemetry!) <= const Duration(seconds: 6);
+        final hasRecentTelemetry =
+            room.lastVisionTelemetry != null &&
+            DateTime.now().difference(room.lastVisionTelemetry!) <=
+                const Duration(seconds: 6);
         room.visionMode = hasRecentTelemetry ? 'LIVE' : 'OFFLINE';
       }
     }
@@ -819,7 +926,9 @@ class ClassroomState extends ChangeNotifier {
 
   void _triggerClassIntervalSync() {
     _lastClassIntervalSyncTime = DateTime.now();
-    debugPrint('[ClassroomState] Class 50-min session: Interval $_currentClassInterval/$kClassSyncIntervals triggered. Syncing device state & config to Firebase for next teacher...');
+    debugPrint(
+      '[ClassroomState] Class 50-min session: Interval $_currentClassInterval/$kClassSyncIntervals triggered. Syncing device state & config to Firebase for next teacher...',
+    );
     syncAllClassroomsStateAndConfig(interval: _currentClassInterval);
     _currentClassInterval = (_currentClassInterval % kClassSyncIntervals) + 1;
     notifyListeners();
@@ -830,7 +939,10 @@ class ClassroomState extends ChangeNotifier {
     final targetInterval = interval ?? _currentClassInterval;
     _lastClassIntervalSyncTime = DateTime.now();
     for (final room in _classrooms) {
-      await FirestoreService().syncClassroomStateAndConfig(room, interval: targetInterval);
+      await FirestoreService().syncClassroomStateAndConfig(
+        room,
+        interval: targetInterval,
+      );
     }
     notifyListeners();
   }
@@ -840,7 +952,10 @@ class ClassroomState extends ChangeNotifier {
     final room = findRoom(roomId);
     if (room == null) return;
     _lastClassIntervalSyncTime = DateTime.now();
-    await FirestoreService().syncClassroomStateAndConfig(room, interval: _currentClassInterval);
+    await FirestoreService().syncClassroomStateAndConfig(
+      room,
+      interval: _currentClassInterval,
+    );
     notifyListeners();
   }
 
@@ -950,7 +1065,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 1',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(1, boardId: 1),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              1,
+              boardId: 1,
+            ),
             zigbeeOrBleNode: 'Switchboard #1',
             brightness: 100,
           ),
@@ -961,7 +1079,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 1',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(2, boardId: 1),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              2,
+              boardId: 1,
+            ),
             zigbeeOrBleNode: 'Switchboard #1',
             brightness: 100,
           ),
@@ -972,7 +1093,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 1',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(3, boardId: 1),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              3,
+              boardId: 1,
+            ),
             zigbeeOrBleNode: 'Switchboard #1',
             fanSpeed: 0,
           ),
@@ -983,7 +1107,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 1',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(4, boardId: 1),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              4,
+              boardId: 1,
+            ),
             zigbeeOrBleNode: 'Switchboard #1',
             fanSpeed: 0,
           ),
@@ -996,7 +1123,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 2',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(1, boardId: 2),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              1,
+              boardId: 2,
+            ),
             zigbeeOrBleNode: 'Switchboard #2',
             brightness: 100,
           ),
@@ -1007,7 +1137,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 2',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(2, boardId: 2),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              2,
+              boardId: 2,
+            ),
             zigbeeOrBleNode: 'Switchboard #2',
             brightness: 100,
           ),
@@ -1018,7 +1151,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 2',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(3, boardId: 2),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              3,
+              boardId: 2,
+            ),
             zigbeeOrBleNode: 'Switchboard #2',
             fanSpeed: 0,
           ),
@@ -1029,7 +1165,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 2',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(4, boardId: 2),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              4,
+              boardId: 2,
+            ),
             zigbeeOrBleNode: 'Switchboard #2',
             fanSpeed: 0,
           ),
@@ -1042,7 +1181,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 3',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(1, boardId: 3),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              1,
+              boardId: 3,
+            ),
             zigbeeOrBleNode: 'Switchboard #3',
             brightness: 100,
           ),
@@ -1053,7 +1195,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Standby · Power Off',
             isOn: false,
             zone: 'Zone 3',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(2, boardId: 3),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              2,
+              boardId: 3,
+            ),
             zigbeeOrBleNode: 'Switchboard #3',
             brightness: 100,
           ),
@@ -1064,7 +1209,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 3',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(3, boardId: 3),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              3,
+              boardId: 3,
+            ),
             zigbeeOrBleNode: 'Switchboard #3',
             fanSpeed: 0,
           ),
@@ -1075,7 +1223,10 @@ class ClassroomState extends ChangeNotifier {
             statusDescription: 'Speed 0 (Idle)',
             isOn: false,
             zone: 'Zone 3',
-            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(4, boardId: 3),
+            relayChannel: ClassroomDevice.defaultRelayChannelForRelay(
+              4,
+              boardId: 3,
+            ),
             zigbeeOrBleNode: 'Switchboard #3',
             fanSpeed: 0,
           ),
@@ -1089,7 +1240,8 @@ class ClassroomState extends ChangeNotifier {
             isOn: false,
             zone: 'Standalone AC',
             relayChannel: 'GREE AC #1 IR (GPIO 33)',
-            hardwareModel: 'Standalone Dual-Gree AC IR Controller (GPIO 33 / GPIO 12)',
+            hardwareModel:
+                'Standalone Dual-Gree AC IR Controller (GPIO 33 / GPIO 12)',
             zigbeeOrBleNode: 'Standalone AC',
             temperature: 24,
             hvacMode: 'COOL',
@@ -1102,7 +1254,8 @@ class ClassroomState extends ChangeNotifier {
             isOn: false,
             zone: 'Standalone AC',
             relayChannel: 'GREE AC #2 IR (GPIO 12)',
-            hardwareModel: 'Standalone Dual-Gree AC IR Controller (GPIO 33 / GPIO 12)',
+            hardwareModel:
+                'Standalone Dual-Gree AC IR Controller (GPIO 33 / GPIO 12)',
             zigbeeOrBleNode: 'Standalone AC',
             temperature: 24,
             hvacMode: 'COOL',
@@ -1334,10 +1487,14 @@ class ClassroomState extends ChangeNotifier {
     if (boardId == 1) return room.frontOccupancy;
 
     final lower = zoneName.toLowerCase();
-    if (lower.contains('zone 2') || lower.contains('zone_2') || lower.contains('back')) {
+    if (lower.contains('zone 2') ||
+        lower.contains('zone_2') ||
+        lower.contains('back')) {
       return room.backOccupancy;
     }
-    if (lower.contains('zone 1') || lower.contains('zone_1') || lower.contains('front')) {
+    if (lower.contains('zone 1') ||
+        lower.contains('zone_1') ||
+        lower.contains('front')) {
       return room.frontOccupancy;
     }
 
@@ -1358,9 +1515,15 @@ class ClassroomState extends ChangeNotifier {
     // If turning ON, ensure someone is actually sitting or moving in this zone!
     if (willTurnOn) {
       if (_visionControlEnabled) {
-        final occ = getZoneOccupancy(room, device.zone, boardId: device.boardId);
+        final occ = getZoneOccupancy(
+          room,
+          device.zone,
+          boardId: device.boardId,
+        );
         if (occ <= 0) {
-          debugPrint('[Vision Gate] BLOCKED toggle ON for ${device.name} in ${device.zone}: 0 occupants.');
+          debugPrint(
+            '[Vision Gate] BLOCKED toggle ON for ${device.name} in ${device.zone}: 0 occupants.',
+          );
           device.isOn = false;
           notifyListeners();
           return 'Vision Gate: ${device.zone} is empty (0 occupants). Turn off Vision Control for direct control.';
@@ -1372,7 +1535,9 @@ class ClassroomState extends ChangeNotifier {
       // User is manually turning device OFF while zone might be occupied:
       // Mark manualOverrideOff = true so automation does NOT immediately turn it back ON!
       device.manualOverrideOff = true;
-      debugPrint('[Manual Override] User turned OFF ${device.name}. Manual override active.');
+      debugPrint(
+        '[Manual Override] User turned OFF ${device.name}. Manual override active.',
+      );
     }
 
     device.isOn = willTurnOn;
@@ -1385,15 +1550,21 @@ class ClassroomState extends ChangeNotifier {
           ? 'Speed ${device.fanSpeed} · Active'
           : 'Standby · Array Off';
     } else if (device.type == DeviceType.lighting) {
-      device.statusDescription = device.isOn ? 'Active · Relay Closed' : 'Standby · Power Off';
+      device.statusDescription = device.isOn
+          ? 'Active · Relay Closed'
+          : 'Standby · Power Off';
     } else if (device.type == DeviceType.hvac) {
       device.statusDescription = device.isOn
           ? '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}'
           : 'Standby · IR GPIO ${device.gpioPinNumber}';
     } else if (device.type == DeviceType.projector) {
-      device.statusDescription = device.isOn ? 'Laser Projector · Active' : 'Standby · Lamp Off';
+      device.statusDescription = device.isOn
+          ? 'Laser Projector · Active'
+          : 'Standby · Lamp Off';
     } else if (device.type == DeviceType.powerStrip) {
-      device.statusDescription = device.isOn ? 'Sockets Active' : 'Relays Disengaged';
+      device.statusDescription = device.isOn
+          ? 'Sockets Active'
+          : 'Relays Disengaged';
     }
 
     _recordUserToggle(roomId, deviceId);
@@ -1419,7 +1590,9 @@ class ClassroomState extends ChangeNotifier {
     if (speed > 0 && _visionControlEnabled) {
       final occ = getZoneOccupancy(room, device.zone, boardId: device.boardId);
       if (occ <= 0) {
-        debugPrint('[Vision Gate] BLOCKED fan speed on empty zone: ${device.zone}');
+        debugPrint(
+          '[Vision Gate] BLOCKED fan speed on empty zone: ${device.zone}',
+        );
         device.fanSpeed = 0;
         device.isOn = false;
         notifyListeners();
@@ -1438,7 +1611,12 @@ class ClassroomState extends ChangeNotifier {
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
     _scheduleLocalStorageSave(immediate: true);
-    MqttService().publishFanSpeed(room.scopedRoomId, device.boardId, device.relayNumber, speed);
+    MqttService().publishFanSpeed(
+      room.scopedRoomId,
+      device.boardId,
+      device.relayNumber,
+      speed,
+    );
   }
 
   void toggleFanReverse(String roomId, String deviceId) {
@@ -1462,7 +1640,8 @@ class ClassroomState extends ChangeNotifier {
     final newTemp = (device.temperature + delta).clamp(16, 30);
     device.temperature = newTemp;
     if (!device.isOn) device.isOn = true;
-    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
+    device.statusDescription =
+        '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
     _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
@@ -1477,7 +1656,8 @@ class ClassroomState extends ChangeNotifier {
     if (device == null) return;
     device.hvacMode = mode;
     if (!device.isOn) device.isOn = true;
-    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
+    device.statusDescription =
+        '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
     _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
@@ -1492,7 +1672,8 @@ class ClassroomState extends ChangeNotifier {
     if (device == null) return;
     device.fanSpeed = fanSpeed.clamp(0, 3);
     if (!device.isOn) device.isOn = true;
-    device.statusDescription = '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
+    device.statusDescription =
+        '${device.hvacMode} ${device.temperature}°C · IR GPIO ${device.gpioPinNumber}';
     _recordUserToggle(roomId, deviceId);
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
@@ -1530,7 +1711,12 @@ class ClassroomState extends ChangeNotifier {
     _persistDevicePower(device, roomId: room.id);
     notifyListeners();
     _scheduleLocalStorageSave(immediate: true);
-    MqttService().publishLightBrightness(room.scopedRoomId, device.boardId, device.relayNumber, brightness);
+    MqttService().publishLightBrightness(
+      room.scopedRoomId,
+      device.boardId,
+      device.relayNumber,
+      brightness,
+    );
   }
 
   void setProjectorSource(String roomId, String deviceId, String source) {
@@ -1559,8 +1745,10 @@ class ClassroomState extends ChangeNotifier {
     for (var device in room.devices) {
       device.isOn = powerOn;
       if (powerOn) {
-        if (device.type == DeviceType.fan && device.fanSpeed == 0) device.fanSpeed = 3;
-        if (device.type == DeviceType.lighting && device.brightness == 0) device.brightness = 85;
+        if (device.type == DeviceType.fan && device.fanSpeed == 0)
+          device.fanSpeed = 3;
+        if (device.type == DeviceType.lighting && device.brightness == 0)
+          device.brightness = 85;
       }
     }
     room.isOccupied = powerOn;
@@ -1581,8 +1769,10 @@ class ClassroomState extends ChangeNotifier {
       for (var device in room.devices) {
         device.isOn = allOn;
         if (allOn) {
-          if (device.type == DeviceType.fan && device.fanSpeed == 0) device.fanSpeed = 3;
-          if (device.type == DeviceType.lighting && device.brightness == 0) device.brightness = 85;
+          if (device.type == DeviceType.fan && device.fanSpeed == 0)
+            device.fanSpeed = 3;
+          if (device.type == DeviceType.lighting && device.brightness == 0)
+            device.brightness = 85;
         }
       }
       room.isOccupied = allOn;
@@ -1938,7 +2128,9 @@ class ClassroomState extends ChangeNotifier {
       if (_visionControlEnabled) {
         final occ = getZoneOccupancy(room, zoneName);
         if (occ <= 0) {
-          debugPrint('[Vision Gate] BLOCKED toggleZone ON for $zoneName: 0 occupants.');
+          debugPrint(
+            '[Vision Gate] BLOCKED toggleZone ON for $zoneName: 0 occupants.',
+          );
           return 'Vision Gate: $zoneName is empty (0 occupants). Turn off Vision Control for direct control.';
         }
       }
@@ -1954,12 +2146,16 @@ class ClassroomState extends ChangeNotifier {
       d.isOn = willTurnOn;
       if (willTurnOn) {
         if (d.type == DeviceType.fan && d.fanSpeed == 0) d.fanSpeed = 3;
-        if (d.type == DeviceType.lighting && d.brightness == 0) d.brightness = 85;
+        if (d.type == DeviceType.lighting && d.brightness == 0)
+          d.brightness = 85;
       }
     }
 
     // Determine target switchboard / boardId for this zone (e.g. Zone 1 -> 1, Zone 2 -> 2)
-    final zoneMatch = RegExp(r'Zone\s*(\d+)', caseSensitive: false).firstMatch(zoneName);
+    final zoneMatch = RegExp(
+      r'Zone\s*(\d+)',
+      caseSensitive: false,
+    ).firstMatch(zoneName);
     final boardId = zoneMatch != null
         ? (int.tryParse(zoneMatch.group(1) ?? '') ?? 1)
         : (zoneDevs.isNotEmpty ? zoneDevs.first.boardId : 1);
@@ -2065,4 +2261,3 @@ class ClassroomState extends ChangeNotifier {
     }
   }
 }
-

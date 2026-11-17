@@ -42,6 +42,13 @@ def test_paths_resolve_against_config_directory(monkeypatch, tmp_path):
     assert config.detector.model_path == REPO_ROOT / "models/ssd_mobilenet_v2_coco_quant.tflite"
 
 
+def test_mqtt_host_comes_from_deployment_environment(monkeypatch):
+    monkeypatch.setenv("CLASSROOM_MQTT_HOST", "10.247.68.155")
+    config = load_config()
+    assert config.mqtt.host == "10.247.68.155"
+    assert config.mqtt.topic_prefix == "ruet/classroom/reb_room_301/vision"
+
+
 def test_check_and_simulation_never_import_hardware_or_interpreter(capsys):
     assert main(["check-config"]) == 0
     assert "PENDING" in capsys.readouterr().out

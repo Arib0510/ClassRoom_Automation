@@ -96,16 +96,23 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Row(
-                children: [
-                  Icon(Icons.hub, size: 20, color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Flexible(child: Text(
-                    'Hardware Connectivity',
-                    style: AppTypography.headlineSm(color: AppColors.onSurface), overflow: TextOverflow.ellipsis,
-                  )),
-                ],
-              )),
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.hub, size: 20, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Hardware Connectivity',
+                        style: AppTypography.headlineSm(
+                          color: AppColors.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               IconButton(
                 icon: Icon(Icons.close, size: 20, color: AppColors.outline),
                 onPressed: () => Navigator.pop(context),
@@ -147,7 +154,8 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                             : Colors.transparent,
                         border: _activeTab == 0
                             ? Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3))
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                              )
                             : null,
                       ),
                       child: Row(
@@ -163,11 +171,16 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                           const SizedBox(width: 5),
                           Text(
                             'Wi-Fi',
-                            style: AppTypography.labelSm(
-                              color: _activeTab == 0
-                                  ? AppColors.primary
-                                  : AppColors.onSurfaceVariant,
-                            ).copyWith(fontWeight: _activeTab == 0 ? FontWeight.bold : FontWeight.normal),
+                            style:
+                                AppTypography.labelSm(
+                                  color: _activeTab == 0
+                                      ? AppColors.primary
+                                      : AppColors.onSurfaceVariant,
+                                ).copyWith(
+                                  fontWeight: _activeTab == 0
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
                           ),
                         ],
                       ),
@@ -192,7 +205,8 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                             : Colors.transparent,
                         border: _activeTab == 1
                             ? Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3))
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                              )
                             : null,
                       ),
                       child: Row(
@@ -208,11 +222,16 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                           const SizedBox(width: 5),
                           Text(
                             'MQTT',
-                            style: AppTypography.labelSm(
-                              color: _activeTab == 1
-                                  ? AppColors.primary
-                                  : AppColors.onSurfaceVariant,
-                            ).copyWith(fontWeight: _activeTab == 1 ? FontWeight.bold : FontWeight.normal),
+                            style:
+                                AppTypography.labelSm(
+                                  color: _activeTab == 1
+                                      ? AppColors.primary
+                                      : AppColors.onSurfaceVariant,
+                                ).copyWith(
+                                  fontWeight: _activeTab == 1
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
                           ),
                         ],
                       ),
@@ -237,7 +256,8 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                             : Colors.transparent,
                         border: _activeTab == 2
                             ? Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3))
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                              )
                             : null,
                       ),
                       child: Row(
@@ -253,11 +273,16 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                           const SizedBox(width: 5),
                           Text(
                             'ESP-NOW',
-                            style: AppTypography.labelSm(
-                              color: _activeTab == 2
-                                  ? AppColors.primary
-                                  : AppColors.onSurfaceVariant,
-                            ).copyWith(fontWeight: _activeTab == 2 ? FontWeight.bold : FontWeight.normal),
+                            style:
+                                AppTypography.labelSm(
+                                  color: _activeTab == 2
+                                      ? AppColors.primary
+                                      : AppColors.onSurfaceVariant,
+                                ).copyWith(
+                                  fontWeight: _activeTab == 2
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
                           ),
                         ],
                       ),
@@ -289,20 +314,27 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: AppColors.telemetryAmber.withValues(alpha: 0.12),
-          border: Border.all(color: AppColors.telemetryAmber.withValues(alpha: 0.4)),
+          border: Border.all(
+            color: AppColors.telemetryAmber.withValues(alpha: 0.4),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.location_on, size: 16, color: AppColors.telemetryAmber),
+                Icon(
+                  Icons.location_on,
+                  size: 16,
+                  color: AppColors.telemetryAmber,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'LOCATION PERMISSION REQUIRED',
-                    style: AppTypography.labelSm(color: AppColors.telemetryAmber)
-                        .copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.labelSm(
+                      color: AppColors.telemetryAmber,
+                    ).copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -310,8 +342,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             const SizedBox(height: 6),
             Text(
               'Android requires Location permission to read your connected Wi-Fi network SSID.',
-              style: AppTypography.bodySm(color: AppColors.onSurfaceVariant)
-                  .copyWith(fontSize: 12),
+              style: AppTypography.bodySm(
+                color: AppColors.onSurfaceVariant,
+              ).copyWith(fontSize: 12),
             ),
             const SizedBox(height: 10),
             SizedBox(
@@ -323,7 +356,8 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                   foregroundColor: AppColors.onAccent,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onPressed: () async {
                   HapticFeedback.mediumImpact();
@@ -361,28 +395,34 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                 children: [
                   Text(
                     'DEVICE GPS LOCATION IS OFF',
-                    style: AppTypography.labelSm(color: AppColors.primary)
-                        .copyWith(fontWeight: FontWeight.bold),
+                    style: AppTypography.labelSm(
+                      color: AppColors.primary,
+                    ).copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
                     'Turn on GPS in phone settings to see nearby Wi-Fi SSIDs & BLE beacons.',
-                    style: AppTypography.bodySm(color: AppColors.outline)
-                        .copyWith(fontSize: 11),
+                    style: AppTypography.bodySm(
+                      color: AppColors.outline,
+                    ).copyWith(fontSize: 11),
                   ),
                 ],
               ),
             ),
             TextButton(
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: () => _connState.openLocationSettings(),
               child: Text(
                 'ENABLE GPS',
-                style: AppTypography.labelSm(color: AppColors.primary)
-                    .copyWith(fontWeight: FontWeight.bold),
+                style: AppTypography.labelSm(
+                  color: AppColors.primary,
+                ).copyWith(fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -462,12 +502,18 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                            color: AppColors.primary.withValues(alpha: 0.4)),
+                          color: AppColors.primary.withValues(alpha: 0.4),
+                        ),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       onPressed: () => _connState.toggleWifi(true),
-                      icon: Icon(Icons.wifi, size: 16, color: AppColors.primary),
+                      icon: Icon(
+                        Icons.wifi,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
                       label: Text(
                         'TURN ON PHONE WI-FI',
                         style: AppTypography.labelSm(color: AppColors.primary),
@@ -488,8 +534,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 color: AppColors.surfaceContainer,
-                border:
-                    Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Column(
                 children: [
@@ -499,8 +546,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                       Expanded(
                         child: Row(
                           children: [
-                            PulsingBeacon(
-                                size: 6, color: AppColors.onlineMint),
+                            PulsingBeacon(size: 6, color: AppColors.onlineMint),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -514,7 +560,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
                           color: AppColors.primary.withValues(alpha: 0.15),
@@ -523,7 +571,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                           _connState.wifiSignalDbm != null
                               ? '${_connState.wifiSignalDbm} dBm'
                               : 'ONLINE',
-                          style: AppTypography.labelSm(color: AppColors.primary),
+                          style: AppTypography.labelSm(
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -537,14 +587,18 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                       Expanded(
                         child: Text(
                           'IP: ${_connState.ipAddress}',
-                          style: AppTypography.labelSm(color: AppColors.outline),
+                          style: AppTypography.labelSm(
+                            color: AppColors.outline,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Expanded(
                         child: Text(
                           'GATEWAY: ${_connState.gatewayAddress}',
-                          style: AppTypography.labelSm(color: AppColors.outline),
+                          style: AppTypography.labelSm(
+                            color: AppColors.outline,
+                          ),
                           textAlign: TextAlign.end,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -561,10 +615,15 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Text(
-                  'NEARBY WI-FI NETWORKS (${_connState.wifiNetworks.length})',
-                  style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,
-                )),
+                Expanded(
+                  child: Text(
+                    'NEARBY WI-FI NETWORKS (${_connState.wifiNetworks.length})',
+                    style: AppTypography.labelSm(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 GestureDetector(
                   onTap: _connState.isScanningWifi
                       ? null
@@ -583,7 +642,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                         const SizedBox(width: 6),
                       ],
                       Text(
-                        _connState.isScanningWifi ? 'SCANNING...' : 'REFRESH SCAN',
+                        _connState.isScanningWifi
+                            ? 'SCANNING...'
+                            : 'REFRESH SCAN',
                         style: AppTypography.labelSm(color: AppColors.primary),
                       ),
                     ],
@@ -613,11 +674,15 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: Text(
-                    'LOCAL NETWORK IOT NODES (${_connState.discoveredIpNodes.length})',
-                    style:
-                        AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,
-                  )),
+                  Expanded(
+                    child: Text(
+                      'LOCAL NETWORK IOT NODES (${_connState.discoveredIpNodes.length})',
+                      style: AppTypography.labelSm(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Text(
                     'PORT 80 / ESP32',
                     style: AppTypography.labelSm(color: AppColors.onlineMint),
@@ -625,7 +690,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                 ],
               ),
               const SizedBox(height: 10),
-              ..._connState.discoveredIpNodes.map((node) => _buildIpNodeTile(node)),
+              ..._connState.discoveredIpNodes.map(
+                (node) => _buildIpNodeTile(node),
+              ),
             ],
           ],
         ],
@@ -690,13 +757,17 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
           if (net.isConnected)
             Text(
               'CONNECTED',
-              style: AppTypography.labelSm(color: AppColors.primary)
-                  .copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.labelSm(
+                color: AppColors.primary,
+              ).copyWith(fontWeight: FontWeight.bold),
             )
           else
             TextButton(
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
@@ -721,9 +792,7 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         color: AppColors.surfaceContainerLowest,
-        border: Border.all(
-          color: AppColors.onlineMint.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: AppColors.onlineMint.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -743,8 +812,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                     children: [
                       Text(
                         node.name,
-                        style: AppTypography.bodySm(color: AppColors.onSurface)
-                            .copyWith(fontWeight: FontWeight.w500),
+                        style: AppTypography.bodySm(
+                          color: AppColors.onSurface,
+                        ).copyWith(fontWeight: FontWeight.w500),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
@@ -799,36 +869,47 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Row(
-                  children: [
-                    PulsingBeacon(
-                      size: 8,
-                      color: isConnected ? AppColors.onlineMint : AppColors.telemetryAmber,
-                      isPulsing: isConnected,
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'MQTT Broker Status',
-                          style: AppTypography.headlineSm(fontSize: 14),
-                        ),
-                        Text(
-                          isConnected ? 'Connected & Synchronized' : 'Connecting / Standby',
-                          style: AppTypography.bodySm(
-                            color: isConnected ? AppColors.onlineMint : AppColors.telemetryAmber,
+                Expanded(
+                  child: Row(
+                    children: [
+                      PulsingBeacon(
+                        size: 8,
+                        color: isConnected
+                            ? AppColors.onlineMint
+                            : AppColors.telemetryAmber,
+                        isPulsing: isConnected,
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'MQTT Broker Status',
+                            style: AppTypography.headlineSm(fontSize: 14),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )),
+                          Text(
+                            isConnected
+                                ? 'Connected & Synchronized'
+                                : 'Connecting / Standby',
+                            style: AppTypography.bodySm(
+                              color: isConnected
+                                  ? AppColors.onlineMint
+                                  : AppColors.telemetryAmber,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.surfaceContainerHigh,
                     foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -842,7 +923,10 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                       ),
                     );
                   },
-                  child: Text('RECONNECT', style: AppTypography.labelSm(color: AppColors.primary)),
+                  child: Text(
+                    'RECONNECT',
+                    style: AppTypography.labelSm(color: AppColors.primary),
+                  ),
                 ),
               ],
             ),
@@ -864,23 +948,49 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Row(
-                      children: [
-                        Icon(Icons.dns, size: 16, color: AppColors.primary),
-                        const SizedBox(width: 8),
-                        Flexible(child: Text('BROKER SERVER PARAMETERS', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,)),
-                      ],
-                    )),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(Icons.dns, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'BROKER SERVER PARAMETERS',
+                              style: AppTypography.labelSm(
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     InkWell(
                       onTap: _showConfigureBrokerDialog,
                       borderRadius: BorderRadius.circular(6),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         child: Row(
                           children: [
-                            Icon(Icons.edit, size: 12, color: AppColors.primary),
+                            Icon(
+                              Icons.edit,
+                              size: 12,
+                              color: AppColors.primary,
+                            ),
                             const SizedBox(width: 4),
-                            Text('EDIT', style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontSize: 10, fontWeight: FontWeight.bold)),
+                            Text(
+                              'EDIT',
+                              style:
+                                  AppTypography.labelSm(
+                                    color: AppColors.primary,
+                                  ).copyWith(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
                           ],
                         ),
                       ),
@@ -892,7 +1002,10 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                 _buildParamRow('Port', '${MqttService().port} (TCP)'),
                 _buildParamRow('Base Topic', MqttService().baseTopic),
                 _buildParamRow('Protocol', 'MQTT v3.1.1 Standard'),
-                _buildParamRow('Classrooms Linked', '${state.classrooms.length} Active Rooms'),
+                _buildParamRow(
+                  'Classrooms Linked',
+                  '${state.classrooms.length} Active Rooms',
+                ),
               ],
             ),
           ),
@@ -914,13 +1027,27 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                   children: [
                     Icon(Icons.alt_route, size: 16, color: AppColors.secondary),
                     const SizedBox(width: 8),
-                    Text('MQTT TOPIC PROTOCOL HIERARCHY', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
+                    Text(
+                      'MQTT TOPIC PROTOCOL HIERARCHY',
+                      style: AppTypography.labelSm(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                _buildTopicRow('Device Commands', 'ruet/classroom/<ROOM>/command/<DEVICE>/set'),
-                _buildTopicRow('ESP32 Telemetry', 'ruet/classroom/<ROOM>/status/board/<ID>'),
-                _buildTopicRow('GPIO Reconfig', 'ruet/classroom/<ROOM>/config/board/<ID>/gpio'),
+                _buildTopicRow(
+                  'Device Commands',
+                  'ruet/classroom/<ROOM>/command/<DEVICE>/set',
+                ),
+                _buildTopicRow(
+                  'ESP32 Telemetry',
+                  'ruet/classroom/<ROOM>/status/board/<ID>',
+                ),
+                _buildTopicRow(
+                  'GPIO Reconfig',
+                  'ruet/classroom/<ROOM>/config/board/<ID>/gpio',
+                ),
               ],
             ),
           ),
@@ -935,8 +1062,19 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(child: Text(label, style: AppTypography.bodySm(color: AppColors.outline), overflow: TextOverflow.ellipsis,)),
-          Text(value, style: AppTypography.bodySm(color: AppColors.onSurface).copyWith(fontWeight: FontWeight.w500)),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTypography.bodySm(color: AppColors.outline),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            value,
+            style: AppTypography.bodySm(
+              color: AppColors.onSurface,
+            ).copyWith(fontWeight: FontWeight.w500),
+          ),
         ],
       ),
     );
@@ -948,11 +1086,18 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppTypography.labelSm(color: AppColors.outline).copyWith(fontSize: 10)),
+          Text(
+            label,
+            style: AppTypography.labelSm(
+              color: AppColors.outline,
+            ).copyWith(fontSize: 10),
+          ),
           const SizedBox(height: 2),
           Text(
             topic,
-            style: AppTypography.labelSm(color: AppColors.primary).copyWith(fontFamily: 'monospace', fontSize: 11),
+            style: AppTypography.labelSm(
+              color: AppColors.primary,
+            ).copyWith(fontFamily: 'monospace', fontSize: 11),
           ),
         ],
       ),
@@ -961,8 +1106,14 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
 
   void _showConfigureBrokerDialog() {
     final hostController = TextEditingController(text: MqttService().broker);
-    final portController = TextEditingController(text: MqttService().port.toString());
-    final topicController = TextEditingController(text: MqttService().baseTopic);
+    final portController = TextEditingController(
+      text: MqttService().port.toString(),
+    );
+    final topicController = TextEditingController(
+      text: MqttService().baseTopic,
+    );
+    final usernameController = TextEditingController();
+    final passwordController = TextEditingController();
 
     showDialog(
       context: context,
@@ -977,7 +1128,10 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             children: [
               Icon(Icons.dns, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
-              Text('Configure MQTT Broker', style: AppTypography.headlineSm(fontSize: 16)),
+              Text(
+                'Configure MQTT Broker',
+                style: AppTypography.headlineSm(fontSize: 16),
+              ),
             ],
           ),
           content: SingleChildScrollView(
@@ -985,7 +1139,12 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('BROKER HOST (Domain or Local IP)', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
+                Text(
+                  'BROKER HOST (Domain or Local IP)',
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: hostController,
@@ -994,11 +1153,59 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                     filled: true,
                     fillColor: AppColors.surfaceContainerLowest,
                     hintText: 'e.g. broker.emqx.io or 192.168.1.100',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text('PORT', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
+                Text(
+                  'MQTT USERNAME',
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: usernameController,
+                  style: AppTypography.bodyMd(color: AppColors.onSurface),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.surfaceContainerLowest,
+                    hintText: 'Provisioned MQTT account',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'MQTT PASSWORD',
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  style: AppTypography.bodyMd(color: AppColors.onSurface),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.surfaceContainerLowest,
+                    hintText: 'MQTT password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'PORT',
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: portController,
@@ -1008,11 +1215,18 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                     filled: true,
                     fillColor: AppColors.surfaceContainerLowest,
                     hintText: '1883',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text('BASE TOPIC', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant)),
+                Text(
+                  'BASE TOPIC',
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: topicController,
@@ -1021,7 +1235,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                     filled: true,
                     fillColor: AppColors.surfaceContainerLowest,
                     hintText: 'ruet/classroom',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
@@ -1030,7 +1246,10 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('CANCEL', style: AppTypography.labelMd(color: AppColors.outline)),
+              child: Text(
+                'CANCEL',
+                style: AppTypography.labelMd(color: AppColors.outline),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -1042,7 +1261,13 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                 final p = int.tryParse(portController.text.trim()) ?? 1883;
                 final t = topicController.text.trim();
                 if (h.isNotEmpty) {
-                  MqttService().configure(broker: h, port: p, baseTopic: t.isNotEmpty ? t : null);
+                  MqttService().configure(
+                    broker: h,
+                    port: p,
+                    baseTopic: t.isNotEmpty ? t : null,
+                    username: usernameController.text,
+                    password: passwordController.text,
+                  );
                   MqttService().disconnect();
                   MqttService().connect();
                   setState(() {});
@@ -1054,7 +1279,12 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                   );
                 }
               },
-              child: Text('APPLY & CONNECT', style: AppTypography.labelMd().copyWith(fontWeight: FontWeight.bold)),
+              child: Text(
+                'APPLY & CONNECT',
+                style: AppTypography.labelMd().copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -1075,7 +1305,9 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               color: AppColors.surfaceContainerLowest,
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               children: [
@@ -1085,18 +1317,27 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                     borderRadius: BorderRadius.circular(8),
                     color: AppColors.primary.withValues(alpha: 0.15),
                   ),
-                  child: Icon(Icons.flash_on, color: AppColors.primary, size: 20),
+                  child: Icon(
+                    Icons.flash_on,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('ESP-NOW Hardware Bus', style: AppTypography.headlineSm(fontSize: 14)),
+                      Text(
+                        'ESP-NOW Hardware Bus',
+                        style: AppTypography.headlineSm(fontSize: 14),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         'Direct peer-to-peer 2.4GHz mesh for zero-latency relay triggers',
-                        style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 11),
+                        style: AppTypography.bodySm(
+                          color: AppColors.onSurfaceVariant,
+                        ).copyWith(fontSize: 11),
                       ),
                     ],
                   ),
@@ -1111,11 +1352,23 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text('ESP32 HARDWARE CONTROLLERS', style: AppTypography.labelSm(color: AppColors.onSurfaceVariant), overflow: TextOverflow.ellipsis,)),
+              Expanded(
+                child: Text(
+                  'ESP32 HARDWARE CONTROLLERS',
+                  style: AppTypography.labelSm(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               Text(
-                liveBoards.isNotEmpty ? '${liveBoards.length} BOARDS ACTIVE' : '0 BOARDS ACTIVE',
+                liveBoards.isNotEmpty
+                    ? '${liveBoards.length} BOARDS ACTIVE'
+                    : '0 BOARDS ACTIVE',
                 style: AppTypography.labelSm(
-                  color: liveBoards.isNotEmpty ? AppColors.onlineMint : AppColors.outline,
+                  color: liveBoards.isNotEmpty
+                      ? AppColors.onlineMint
+                      : AppColors.outline,
                 ),
               ),
             ],
@@ -1139,65 +1392,99 @@ class _ConnectivitySheetState extends State<ConnectivitySheet>
                       shape: BoxShape.circle,
                       color: AppColors.surfaceContainerHigh,
                     ),
-                    child: Icon(Icons.developer_board_off, size: 28, color: AppColors.outline),
+                    child: Icon(
+                      Icons.developer_board_off,
+                      size: 28,
+                      color: AppColors.outline,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'No Physical ESP32 Switchboards Online',
-                    style: AppTypography.headlineSm(color: AppColors.onSurface).copyWith(fontSize: 14),
+                    style: AppTypography.headlineSm(
+                      color: AppColors.onSurface,
+                    ).copyWith(fontSize: 14),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'No microcontrollers are currently transmitting telemetry on this mesh. When an ESP32 board is powered on with the test firmware, it will appear here automatically.',
-                    style: AppTypography.bodySm(color: AppColors.onSurfaceVariant),
+                    style: AppTypography.bodySm(
+                      color: AppColors.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
             )
           else
-            ...liveBoards.map((board) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: AppColors.surfaceContainerLowest,
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(child: Row(
-                        children: [
-                          Icon(Icons.memory, size: 16, color: AppColors.primary),
-                          const SizedBox(width: 8),
-                          Flexible(child: Text(
-                            board.name,
-                            style: AppTypography.bodyMd().copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis,
-                          )),
-                        ],
-                      )),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          color: AppColors.onlineMint.withValues(alpha: 0.15),
+            ...liveBoards.map(
+              (board) => Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.surfaceContainerLowest,
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.memory,
+                                size: 16,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  board.name,
+                                  style: AppTypography.bodyMd().copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Text(board.status, style: AppTypography.labelSm(color: AppColors.onlineMint).copyWith(fontSize: 10)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'IP Address: ${board.ip} · Signal: ${board.responseTimeMs} dBm · Port: ${board.port}',
-                    style: AppTypography.labelSm(color: AppColors.outline),
-                  ),
-                ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4),
+                            color: AppColors.onlineMint.withValues(alpha: 0.15),
+                          ),
+                          child: Text(
+                            board.status,
+                            style: AppTypography.labelSm(
+                              color: AppColors.onlineMint,
+                            ).copyWith(fontSize: 10),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'IP Address: ${board.ip} · Signal: ${board.responseTimeMs} dBm · Port: ${board.port}',
+                      style: AppTypography.labelSm(color: AppColors.outline),
+                    ),
+                  ],
+                ),
               ),
-            )),
+            ),
         ],
       ),
     );

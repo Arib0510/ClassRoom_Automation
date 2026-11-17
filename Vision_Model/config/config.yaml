@@ -37,10 +37,11 @@ occupancy:
   clear_misses: 3
   stale_seconds: 4.0
 mqtt:
-  host: broker.emqx.io  # High-availability public cloud MQTT broker
+  host: 127.0.0.1  # Local development fallback; deployment host comes from the environment.
+  host_env: CLASSROOM_MQTT_HOST
   port: 1883
-  client_id: classpulse-room-304-vision
-  topic_prefix: classpulse/room_304/vision
+  client_id: classpulse-reb_room_301-vision
+  topic_prefix: ruet/classroom/reb_room_301/vision
   keepalive: 20
   heartbeat_seconds: 2.0
   expiry_seconds: 8
