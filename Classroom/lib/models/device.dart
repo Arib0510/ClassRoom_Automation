@@ -121,7 +121,7 @@ class ClassroomDevice {
         eventLog = eventLog ?? _defaultEventLog(type);
 
   // ===========================================================================
-  // EXACT HARDWARE GPIO MAPPING (ZONE 1 [6], ZONE 2 [8], ZONE 3 [5])
+  // EXACT HARDWARE GPIO MAPPING (ZONE 1 [6], ZONE 2 [6], ZONE 3 [5])
   // ===========================================================================
   static List<Map<String, dynamic>> switchRelayPairsForZone(int boardId) {
     if (boardId == 1) {
@@ -135,16 +135,14 @@ class ClassroomDevice {
         {'relay': 6, 'relayLabel': 'In6 [R]', 'gpio': 19, 'switchName': 'S6', 'switchGpio': 34},
       ];
     } else if (boardId == 2) {
-      // Zone 2 (Unlabeled Board): 8 pairs
+      // Zone 2 (Unlabeled Board): 6 relays (App/MQTT only, no physical switches; in5 uses GPIO 17)
       return const [
-        {'relay': 1, 'relayLabel': 'In4 [R]', 'gpio': 15, 'switchName': 'SW1', 'switchGpio': 13},
-        {'relay': 2, 'relayLabel': 'In3 [R]', 'gpio': 2,  'switchName': 'SW2', 'switchGpio': 12},
-        {'relay': 3, 'relayLabel': 'In2 [R]', 'gpio': 4,  'switchName': 'SW3', 'switchGpio': 14},
-        {'relay': 4, 'relayLabel': 'In1 [R]', 'gpio': 16, 'switchName': 'SW4', 'switchGpio': 27},
-        {'relay': 5, 'relayLabel': 'In4 [L]', 'gpio': 5,  'switchName': 'SW5', 'switchGpio': 26},
-        {'relay': 6, 'relayLabel': 'In3 [L]', 'gpio': 18, 'switchName': 'SW6', 'switchGpio': 25},
-        {'relay': 7, 'relayLabel': 'In2 [L]', 'gpio': 19, 'switchName': 'SW7', 'switchGpio': 33},
-        {'relay': 8, 'relayLabel': 'In1 [L]', 'gpio': 21, 'switchName': 'SW8', 'switchGpio': 32},
+        {'relay': 1, 'relayLabel': 'In1', 'gpio': 4,  'switchName': 'NONE', 'switchGpio': -1},
+        {'relay': 2, 'relayLabel': 'In2', 'gpio': 0,  'switchName': 'NONE', 'switchGpio': -1},
+        {'relay': 3, 'relayLabel': 'In3', 'gpio': 2,  'switchName': 'NONE', 'switchGpio': -1},
+        {'relay': 4, 'relayLabel': 'In4', 'gpio': 15, 'switchName': 'NONE', 'switchGpio': -1},
+        {'relay': 5, 'relayLabel': 'In5', 'gpio': 17, 'switchName': 'NONE', 'switchGpio': -1},
+        {'relay': 6, 'relayLabel': 'In6', 'gpio': 5,  'switchName': 'NONE', 'switchGpio': -1},
       ];
     } else {
       // Zone 3 ("3rd One"): 5 pairs
@@ -182,7 +180,10 @@ class ClassroomDevice {
     final rLabel = info['relayLabel'];
     final gpio = info['gpio'];
     final swName = info['switchName'];
-    final swGpio = info['switchGpio'];
+    final swGpio = info['switchGpio'] as int;
+    if (swGpio < 0) {
+      return 'RELAY $validRelay [$rLabel] (GPIO $gpio) ↔ App/MQTT only';
+    }
     return 'RELAY $validRelay [$rLabel] (GPIO $gpio) ↔ $swName (D$swGpio)';
   }
 

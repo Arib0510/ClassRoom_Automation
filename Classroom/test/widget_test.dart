@@ -7,6 +7,7 @@ import 'package:smart_classroom_iot/screens/dashboard_screen.dart';
 import 'package:smart_classroom_iot/screens/device_detail_screen.dart';
 import 'package:smart_classroom_iot/services/mqtt_service.dart';
 import 'package:smart_classroom_iot/state/classroom_state.dart';
+import 'package:smart_classroom_iot/state/connectivity_state.dart';
 
 void main() {
   setUp(() {
@@ -93,7 +94,7 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
   });
 
-  test('Switchboard pin mappings match Board 1 (6 pairs), Board 2 (8 pairs), Board 3 (5 pairs)', () {
+  test('Switchboard pin mappings match Board 1 (6 pairs), Board 2 (6 relays), Board 3 (5 pairs)', () {
     final b1 = ClassroomDevice.switchRelayPairsForZone(1);
     expect(b1.length, 6);
     expect(b1.map((p) => [p['relayLabel'], p['gpio'], p['switchGpio']]).toList(), [
@@ -106,7 +107,19 @@ void main() {
     ]);
 
     final b2 = ClassroomDevice.switchRelayPairsForZone(2);
-    expect(b2.length, 8);
+    expect(b2.length, 6);
+    expect(b2.map((p) => [p['relayLabel'], p['gpio'], p['switchGpio']]).toList(), [
+      ['In1', 4, -1],
+      ['In2', 0, -1],
+      ['In3', 2, -1],
+      ['In4', 15, -1],
+      ['In5', 17, -1],
+      ['In6', 5, -1],
+    ]);
+    expect(
+      ClassroomDevice.defaultRelayChannelForRelay(1, boardId: 2),
+      'RELAY 1 [In1] (GPIO 4) ↔ App/MQTT only',
+    );
 
     final b3 = ClassroomDevice.switchRelayPairsForZone(3);
     expect(b3.length, 5);
@@ -119,6 +132,7 @@ void main() {
     ]);
 
     expect(() => ClassroomDevice.defaultRelayChannelForRelay(8, boardId: 1), returnsNormally);
+    expect(() => ClassroomDevice.defaultRelayChannelForRelay(8, boardId: 2), returnsNormally);
     expect(() => ClassroomDevice.defaultRelayChannelForRelay(8, boardId: 3), returnsNormally);
 
     final migrated = ClassroomDevice.fromMap({
@@ -136,6 +150,34 @@ void main() {
     expect(reb, isNotNull);
     expect(reb!.devices.any((d) => d.id == 'dev-301-z1-r5'), isTrue);
     expect(reb.devices.any((d) => d.id == 'dev-301-z1-r6'), isTrue);
+    expect(reb.devices.any((d) => d.id == 'dev-301-z2-r5'), isTrue);
+    expect(reb.devices.any((d) => d.id == 'dev-301-z2-r6'), isTrue);
     expect(reb.devices.any((d) => d.id == 'dev-301-z3-r5'), isTrue);
+  });
+
+  test('ConnectivityState isolates discovered boards by zone/room and suppresses identical heartbeat notifies', () {
+    final conn = ConnectivityState();
+    conn.purgeAllDiscoveredNodes(force: true);
+
+    conn.updateBoardTelemetry(1, true, '192.168.0.x', -55, 'reb_room_301', 'zone_1', 'switchboard');
+    conn.updateBoardTelemetry(2, true, '10.247.68.102', -58, 'reb_room_301', 'zone_2', 'switchboard');
+    conn.updateBoardTelemetry(4, true, '192.168.0.x', -60, 'reb_room_301', 'zone_ac', 'ac_unit');
+    expect(conn.discoveredIpNodes.length, 3);
+
+    // Offline LWT for zone_ac with fallback IP must not evict zone_1 even when IPs match.
+    conn.updateBoardTelemetry(4, false, '192.168.0.x', 0, 'reb_room_301', 'zone_ac', 'ac_unit');
+    expect(conn.discoveredIpNodes.map((n) => n.zoneId).toList(), ['zone_1', 'zone_2']);
+
+    int notifyCount = 0;
+    void listener() => notifyCount++;
+    conn.addListener(listener);
+    conn.updateBoardTelemetry(2, true, '10.247.68.102', -59, 'reb_room_301', 'zone_2', 'switchboard');
+    expect(notifyCount, 0);
+
+    // Substantial RSSI/IP change or new node does notify listeners.
+    conn.updateBoardTelemetry(3, true, '10.247.68.103', -52, 'reb_room_301', 'zone_3', 'switchboard');
+    expect(notifyCount, 1);
+    conn.removeListener(listener);
+    conn.purgeAllDiscoveredNodes(force: true);
   });
 }

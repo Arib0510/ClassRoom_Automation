@@ -77,9 +77,14 @@ class MqttService {
 
   MqttConnectionStatus _status = MqttConnectionStatus.disconnected;
   MqttConnectionStatus get status => _status;
-  bool get isConnected => _status == MqttConnectionStatus.connected;
+  bool get isConnected =>
+      _status == MqttConnectionStatus.connected &&
+      _client?.connectionStatus?.state == MqttConnectionState.connected;
   bool _explicitDisconnect = false;
   Timer? _reconnectTimer;
+  Completer<bool>? _connectCompleter;
+  StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? _updatesSub;
+  String? _pendingDiscoveryRoomId;
 
   // Stream controller for live status changes
   final _statusController = StreamController<MqttConnectionStatus>.broadcast();
@@ -211,22 +216,32 @@ class MqttService {
 
   Future<bool> connect() async {
     _explicitDisconnect = false;
-    if (_status == MqttConnectionStatus.connecting) return false;
+    if (isConnected) return true;
+    if (_connectCompleter != null && !_connectCompleter!.isCompleted) {
+      return _connectCompleter!.future;
+    }
+
+    final completer = Completer<bool>();
+    _connectCompleter = completer;
+    _reconnectTimer?.cancel();
+    _disconnectInternal();
     _setStatus(MqttConnectionStatus.connecting);
     await loadSavedConfig();
 
     final clientId =
         'ClassPulseApp_${DateTime.now().millisecondsSinceEpoch}_${(100 + (DateTime.now().microsecond % 900))}';
 
-    _client = MqttServerClient.withPort(_broker, clientId, _port);
-    _client!.logging(on: false);
-    _client!.keepAlivePeriod = 30;
-    _client!.connectTimeoutPeriod = 8000;
-    _client!.autoReconnect = true;
-    _client!.setProtocolV311();
-    _client!.onDisconnected = _onDisconnected;
-    _client!.onConnected = _onConnected;
-    _client!.onSubscribed = _onSubscribed;
+    final client = MqttServerClient.withPort(_broker, clientId, _port);
+    client.logging(on: false);
+    client.keepAlivePeriod = 20;
+    client.connectTimeoutPeriod = 6000;
+    // Manage reconnects deterministically so every reconnect re-subscribes & attaches updates cleanly.
+    client.autoReconnect = false;
+    client.setProtocolV311();
+    client.onDisconnected = _onDisconnected;
+    client.onConnected = _onConnected;
+    client.onSubscribed = _onSubscribed;
+    _client = client;
 
     final connMess = MqttConnectMessage()
         .withClientIdentifier(clientId)
@@ -234,34 +249,75 @@ class MqttService {
 
     if (_username.isEmpty || _password.isEmpty) {
       _setStatus(MqttConnectionStatus.error);
+      if (!completer.isCompleted) completer.complete(false);
       return false;
     }
     connMess.authenticateAs(_username, _password);
-    _client!.connectionMessage = connMess;
+    client.connectionMessage = connMess;
 
     try {
       debugPrint('[MQTT] Connecting to $_broker:$_port as $clientId...');
-      await _client!.connect();
+      await client.connect();
     } catch (e) {
       debugPrint('[MQTT] Exception during connect: $e');
       _disconnectInternal();
       _setStatus(MqttConnectionStatus.error);
+      _scheduleReconnect();
+      if (!completer.isCompleted) completer.complete(false);
       return false;
     }
 
-    if (_client!.connectionStatus!.state == MqttConnectionState.connected) {
+    if (client.connectionStatus?.state == MqttConnectionState.connected) {
       _setStatus(MqttConnectionStatus.connected);
       _subscribeTopics();
       _listenIncomingMessages();
+      _flushPendingDiscovery();
+      if (!completer.isCompleted) completer.complete(true);
       return true;
     } else {
       debugPrint(
-        '[MQTT] Connection failed with state: ${_client!.connectionStatus!.state}',
+        '[MQTT] Connection failed with state: ${client.connectionStatus?.state}',
       );
       _disconnectInternal();
       _setStatus(MqttConnectionStatus.error);
+      _scheduleReconnect();
+      if (!completer.isCompleted) completer.complete(false);
       return false;
     }
+  }
+
+  Future<void> ensureConnectedAndSync([String roomId = 'reb_room_301']) async {
+    _pendingDiscoveryRoomId = roomId;
+    if (isConnected) {
+      publishStatusQuery(roomId);
+      return;
+    }
+    final ok = await connect();
+    if (ok) {
+      publishStatusQuery(roomId);
+    }
+  }
+
+  void _flushPendingDiscovery() {
+    final pendingRoom = _pendingDiscoveryRoomId;
+    if (pendingRoom != null && pendingRoom.isNotEmpty) {
+      _pendingDiscoveryRoomId = null;
+      Timer(const Duration(milliseconds: 200), () {
+        if (isConnected) {
+          publishStatusQuery(pendingRoom);
+        }
+      });
+    }
+  }
+
+  void _scheduleReconnect() {
+    if (_explicitDisconnect) return;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(const Duration(seconds: 2), () {
+      if (!isConnected && _status != MqttConnectionStatus.connecting) {
+        connect();
+      }
+    });
   }
 
   void _setStatus(MqttConnectionStatus s) {
@@ -279,6 +335,11 @@ class MqttService {
   }
 
   void requestHardwareSync([String roomId = 'reb_room_301']) {
+    if (!isConnected) {
+      _pendingDiscoveryRoomId = roomId;
+      connect();
+      return;
+    }
     _publish('home/discovery/query', 'QUERY', retain: false);
     _publish('$_baseTopic/$roomId/command/query', 'QUERY', retain: false);
     debugPrint('[MQTT] Hardware sync & discovery queried for room: $roomId');
@@ -317,14 +378,10 @@ class MqttService {
 
   void _onDisconnected() {
     debugPrint('[MQTT] Disconnected from broker. Auto-reconnecting in 2s...');
+    _updatesSub?.cancel();
+    _updatesSub = null;
     _setStatus(MqttConnectionStatus.disconnected);
-    if (_explicitDisconnect) return;
-    _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 2), () {
-      if (!isConnected && _status != MqttConnectionStatus.connecting) {
-        connect();
-      }
-    });
+    _scheduleReconnect();
   }
 
   void _onSubscribed(String topic) {
@@ -332,6 +389,8 @@ class MqttService {
   }
 
   void _disconnectInternal() {
+    _updatesSub?.cancel();
+    _updatesSub = null;
     try {
       _client?.disconnect();
     } catch (_) {}
@@ -404,7 +463,8 @@ class MqttService {
   }
 
   void _listenIncomingMessages() {
-    _client!.updates?.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
+    _updatesSub?.cancel();
+    _updatesSub = _client?.updates?.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
       for (final msg in messages) {
         final recMess = msg.payload as MqttPublishMessage;
         final isRetained = recMess.header?.retain ?? false;
@@ -746,13 +806,6 @@ class MqttService {
                 data['status']?.toString().toUpperCase() == 'ONLINE';
             final ip = data['ip']?.toString() ?? '192.168.0.x';
             final rssi = (data['rssi'] as num?)?.toInt() ?? -60;
-            final zStr =
-                data['zone_id']?.toString() ??
-                (zoneId == 4 ? 'zone_ac' : 'zone_$zoneId');
-            final dType =
-                data['device_type']?.toString() ??
-                (zoneId == 4 ? 'ac_unit' : 'switchboard');
-            onDiscoveryReceived?.call(zStr, dType, ip, roomId, rssi, isOnline);
             onBoardTelemetryReceived?.call(roomId, zoneId, isOnline, ip, rssi);
           } catch (_) {
             onBoardTelemetryReceived?.call(roomId, zoneId, false, '', 0);
@@ -824,13 +877,6 @@ class MqttService {
                 data['status']?.toString().toUpperCase() == 'ONLINE';
             final ip = data['ip']?.toString() ?? '192.168.0.x';
             final rssi = (data['rssi'] as num?)?.toInt() ?? -60;
-            final zStr =
-                data['zone_id']?.toString() ??
-                (boardId == 4 ? 'zone_ac' : 'zone_$boardId');
-            final dType =
-                data['device_type']?.toString() ??
-                (boardId == 4 ? 'ac_unit' : 'switchboard');
-            onDiscoveryReceived?.call(zStr, dType, ip, roomId, rssi, isOnline);
             onBoardTelemetryReceived?.call(roomId, boardId, isOnline, ip, rssi);
           } catch (_) {
             onBoardTelemetryReceived?.call(roomId, boardId, false, '', 0);
@@ -947,10 +993,17 @@ class MqttService {
       connect();
       return;
     }
-    final builder = MqttClientPayloadBuilder();
-    builder.addString(payload);
-    _client!.publishMessage(topic, qos, builder.payload!, retain: retain);
-    debugPrint('[MQTT PUB] $topic => $payload');
+    try {
+      final builder = MqttClientPayloadBuilder();
+      builder.addString(payload);
+      _client!.publishMessage(topic, qos, builder.payload!, retain: retain);
+      debugPrint('[MQTT PUB] $topic => $payload');
+    } catch (e) {
+      debugPrint('[MQTT] Publish failed ($topic): $e. Reconnecting...');
+      _disconnectInternal();
+      _setStatus(MqttConnectionStatus.disconnected);
+      connect();
+    }
   }
 
   // Fast single-packet publication to room (Zero duplicate storm, no dropped commands)
@@ -1345,6 +1398,14 @@ class MqttService {
 
   // 8. Active Telemetry Ping / Unified Hardware Discovery Scan Query
   void publishStatusQuery([String? roomId]) {
+    final targetRoom = (roomId != null && roomId.isNotEmpty)
+        ? roomId
+        : 'reb_room_301';
+    if (!isConnected) {
+      _pendingDiscoveryRoomId = targetRoom;
+      connect();
+      return;
+    }
     _publish('home/discovery/query', 'PING');
     if (roomId != null && roomId.isNotEmpty) {
       _publishToRoom(roomId, 'command/query', 'PING');

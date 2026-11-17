@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/splash_screen.dart';
+import 'services/mqtt_service.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
@@ -49,8 +50,33 @@ void main() async {
   runApp(const ClassPulseApp());
 }
 
-class ClassPulseApp extends StatelessWidget {
+class ClassPulseApp extends StatefulWidget {
   const ClassPulseApp({super.key});
+
+  @override
+  State<ClassPulseApp> createState() => _ClassPulseAppState();
+}
+
+class _ClassPulseAppState extends State<ClassPulseApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Re-verify MQTT socket & subscriptions when returning from background/Wi-Fi switch.
+      MqttService().ensureConnectedAndSync();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

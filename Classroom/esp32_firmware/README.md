@@ -24,18 +24,16 @@ by Git.
 | **Pair 6** | `In6 [R]` | **D19** (`GPIO 19`) | `S6` | **D34** (`GPIO 34`, `INPUT` only) |
 
 ### Zone 2 (`ZONE_ID = 2`, `zone_2` — Unlabeled Board)
-8 Relays (`OUTPUT`) and 8 Manual Switches (`INPUT_PULLUP`):
+6 active Relays (`OUTPUT`, App/MQTT only — no physical switches wired; `In5` uses `GPIO 17` instead of `GPIO 11` flash pin):
 
 | Pair | Relay Label | Relay GPIO | Switch Label | Switch GPIO |
 | :---: | :---: | :---: | :---: | :---: |
-| **Pair 1** | `In4 [R]` | **D15** (`GPIO 15`) | `SW1` | **D13** (`GPIO 13`) |
-| **Pair 2** | `In3 [R]` | **D2** (`GPIO 2`) | `SW2` | **D12** (`GPIO 12`) |
-| **Pair 3** | `In2 [R]` | **D4** (`GPIO 4`) | `SW3` | **D14** (`GPIO 14`) |
-| **Pair 4** | `In1 [R]` | **D16** (`GPIO 16`) | `SW4` | **D27** (`GPIO 27`) |
-| **Pair 5** | `In4 [L]` | **D5** (`GPIO 5`) | `SW5` | **D26** (`GPIO 26`) |
-| **Pair 6** | `In3 [L]` | **D18** (`GPIO 18`) | `SW6` | **D25** (`GPIO 25`) |
-| **Pair 7** | `In2 [L]` | **D19** (`GPIO 19`) | `SW7` | **D33** (`GPIO 33`) |
-| **Pair 8** | `In1 [L]` | **D21** (`GPIO 21`) | `SW8` | **D32** (`GPIO 32`) |
+| **Pair 1** | `In1` | **G4** (`GPIO 4`) | `NONE` | App/MQTT only |
+| **Pair 2** | `In2` | **G0** (`GPIO 0`) | `NONE` | App/MQTT only |
+| **Pair 3** | `In3` | **G2** (`GPIO 2`) | `NONE` | App/MQTT only |
+| **Pair 4** | `In4` | **G15** (`GPIO 15`) | `NONE` | App/MQTT only |
+| **Pair 5** | `In5` | **G17** (`GPIO 17`) | `NONE` | App/MQTT only |
+| **Pair 6** | `In6` | **G5** (`GPIO 5`) | `NONE` | App/MQTT only |
 
 ### Zone 3 (`ZONE_ID = 3`, `zone_3` — "3rd One")
 5 active Relays (`OUTPUT`) and 5 Manual Switches (`INPUT_PULLUP`):

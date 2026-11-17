@@ -132,8 +132,9 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     },
   ];
 
-  // 8 Relay <-> Manual Switch pairs for the currently selected Switchboard Zone (1, 2, or 3)
+  // Relay <-> Manual Switch pairs for the currently selected Switchboard Zone (1, 2, or 3)
   late List<_BatchChannelConfig> _batchChannels;
+  bool _hasUserInteractedWithBoard = false;
 
   @override
   void initState() {
@@ -143,6 +144,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     _updateDefaultZone();
     if (widget.preselectedZone != null &&
         !widget.preselectedZone!.toLowerCase().contains('ac')) {
+      _hasUserInteractedWithBoard = true;
       _selectedZone = widget.preselectedZone!;
       final zMatch = RegExp(r'(\d+)').firstMatch(_selectedZone);
       if (zMatch != null) {
@@ -156,7 +158,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     _updateDefaultDeviceName();
     ConnectivityState().addListener(_onConnectivityChanged);
     _scanInitTimer = Timer(const Duration(milliseconds: 280), () {
-      if (mounted) _runMqttHardwareScan();
+      if (mounted) _runMqttHardwareScan(fromUserTap: false);
     });
   }
 
@@ -206,67 +208,89 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     setState(() {});
   }
 
-  void _runMqttHardwareScan() {
+  void _runMqttHardwareScan({bool fromUserTap = true}) {
     if (!mounted) return;
     _scanQueryTimer?.cancel();
     _scanCompleteTimer?.cancel();
     setState(() => _isScanningMqtt = true);
     ConnectivityState().purgeAllDiscoveredNodes(force: false);
 
-    // Unified MQTT Scan: Query `home/discovery/query` and room query topics
-    MqttService().publishStatusQuery(_selectedRoomId);
-    _scanQueryTimer = Timer(const Duration(milliseconds: 250), () {
+    // Ensure live MQTT connection (reconnecting cleanly if stale) & query discovery
+    MqttService().ensureConnectedAndSync(
+      _selectedRoomId.isNotEmpty ? _selectedRoomId : 'reb_room_301',
+    );
+    _scanQueryTimer = Timer(const Duration(milliseconds: 450), () {
       if (!mounted) return;
       MqttService().publishStatusQuery(_selectedRoomId);
     });
 
-    _scanCompleteTimer = Timer(const Duration(milliseconds: 1400), () {
+    _scanCompleteTimer = Timer(const Duration(milliseconds: 1600), () {
       if (!mounted) return;
       setState(() {
         _isScanningMqtt = false;
-        final online = ConnectivityState().discoveredIpNodes;
-        if (online.isNotEmpty) {
-          final currentFound = online
-                  .where((n) => n.zoneId == _selectedZoneId || n.boardId == _selectedBoardId)
-                  .firstOrNull ??
-              online.first;
-          _selectDiscoveredDevice(currentFound);
+        // Only auto-select on initial open if the user hasn't picked a zone/board manually.
+        if (!fromUserTap && !_hasUserInteractedWithBoard) {
+          final online = ConnectivityState().discoveredIpNodes;
+          if (online.isNotEmpty) {
+            final currentFound = online
+                    .where((n) => n.zoneId == _selectedZoneId || n.boardId == _selectedBoardId)
+                    .firstOrNull ??
+                online.first;
+            _applyDiscoveredDeviceSelection(currentFound, triggerHaptic: false);
+          }
         }
       });
     });
   }
 
-  // Handles selection from the Unified MQTT Scan list or Manual Hardware Selector
-  void _selectDiscoveredDevice(IpDeviceNode node) {
-    HapticFeedback.selectionClick();
-    setState(() {
-      _selectedZoneId = node.zoneId;
-      _macController.text = node.ip;
+  void _applyDiscoveredDeviceSelection(
+    IpDeviceNode node, {
+    bool triggerHaptic = true,
+  }) {
+    if (triggerHaptic) {
+      HapticFeedback.selectionClick();
+    }
+    _selectedZoneId = node.zoneId;
+    _macController.text = node.ip;
 
-      if (node.isAcUnit || node.deviceType == 'ac_unit' || node.zoneId == 'zone_ac') {
-        // Standalone Dual-AC selected -> Set isAddingAC = true and hide Zones 1, 2, 3!
-        isAddingAC = true;
-        _selectedBoardId = 4;
-        _selectedBoardName = 'Standalone AC';
-        _selectedCategory = 'Standalone AC';
-        _selectedGpio = 33;
-        _selectedSwitchGpio = 12;
-      } else {
-        // Standard 8-Switch Zone Switchboard selected (Zone 1, 2, or 3)
-        isAddingAC = false;
-        _selectedBoardId = node.boardId.clamp(1, 3);
-        _selectedBoardName = 'Switchboard #$_selectedBoardId';
-        _selectedZone = 'Zone $_selectedBoardId';
-        if (_selectedCategory == 'Standalone AC') {
-          _selectedCategory = 'Ceiling Fan';
-        }
+    if (node.isAcUnit || node.deviceType == 'ac_unit' || node.zoneId == 'zone_ac') {
+      final changed = !isAddingAC || _selectedBoardId != 4;
+      isAddingAC = true;
+      _selectedBoardId = 4;
+      _selectedBoardName = 'Standalone AC';
+      _selectedCategory = 'Standalone AC';
+      _selectedGpio = 33;
+      _selectedSwitchGpio = 12;
+      if (changed) {
+        _updateDefaultDeviceName();
+      }
+    } else {
+      final nextBoardId = node.boardId.clamp(1, 3);
+      final changed = isAddingAC || _selectedBoardId != nextBoardId;
+      isAddingAC = false;
+      _selectedBoardId = nextBoardId;
+      _selectedBoardName = 'Switchboard #$_selectedBoardId';
+      _selectedZone = 'Zone $_selectedBoardId';
+      if (_selectedCategory == 'Standalone AC') {
+        _selectedCategory = 'Ceiling Fan';
+      }
+      if (changed) {
         _refreshBatchChannelPinsForBoard(_selectedBoardId);
         _updateDefaultDeviceName();
       }
+    }
+  }
+
+  // Handles selection from the Unified MQTT Scan list
+  void _selectDiscoveredDevice(IpDeviceNode node) {
+    _hasUserInteractedWithBoard = true;
+    setState(() {
+      _applyDiscoveredDeviceSelection(node, triggerHaptic: true);
     });
   }
 
   void _selectManualHardwareBoard({required int boardId, required bool isAc}) {
+    _hasUserInteractedWithBoard = true;
     HapticFeedback.selectionClick();
     setState(() {
       if (isAc) {
@@ -334,6 +358,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   }
 
   void _onZoneSelected(String zone) {
+    _hasUserInteractedWithBoard = true;
     HapticFeedback.selectionClick();
     setState(() {
       isAddingAC = false;
@@ -1210,7 +1235,9 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '$_selectedZone (${_selectedBoardId == 1 ? "1st Board" : (_selectedBoardId == 2 ? "Unlabeled Board" : "3rd Board")}): Relays ${currentPairs.map((p) => "D${p['gpio']}").join(", ")} ↔ Switches ${currentPairs.first['switchName']}–${currentPairs.last['switchName']}',
+                      (currentPairs.first['switchGpio'] as int) < 0
+                          ? '$_selectedZone (${_selectedBoardId == 1 ? "1st Board" : (_selectedBoardId == 2 ? "Unlabeled Board" : "3rd Board")}): Relays ${currentPairs.map((p) => "G${p['gpio']}").join(", ")} · App/MQTT only'
+                          : '$_selectedZone (${_selectedBoardId == 1 ? "1st Board" : (_selectedBoardId == 2 ? "Unlabeled Board" : "3rd Board")}): Relays ${currentPairs.map((p) => "D${p['gpio']}").join(", ")} ↔ Switches ${currentPairs.first['switchName']}–${currentPairs.last['switchName']}',
                       style: AppTypography.bodySm(color: AppColors.outline).copyWith(fontSize: 10.5),
                     ),
                     const SizedBox(height: 10),
@@ -1387,7 +1414,9 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                             : AppColors.overlay(0.05),
                                       ),
                                       child: Text(
-                                        'Switch ${ch.switchName} · Relay ${ch.relayNumber} (D${ch.gpio})',
+                                        ch.switchGpio < 0
+                                            ? '${ch.relayLabel} · Relay ${ch.relayNumber} (G${ch.gpio})'
+                                            : 'Switch ${ch.switchName} · Relay ${ch.relayNumber} (D${ch.gpio})',
                                         style: AppTypography.labelSm(
                                           color: ch.enabled ? AppColors.primary : AppColors.outline,
                                         ).copyWith(fontWeight: FontWeight.bold, fontSize: 11),
@@ -1552,7 +1581,9 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Selected: Pair $_selectedRelayNumber — GPIO $_selectedGpio (OUTPUT) ↔ Switch D$_selectedSwitchGpio (${_selectedSwitchGpio >= 34 ? "INPUT" : "INPUT_PULLUP"})',
+                              _selectedSwitchGpio < 0
+                                  ? 'Selected: Channel $_selectedRelayNumber — GPIO $_selectedGpio (OUTPUT) · App/MQTT only'
+                                  : 'Selected: Pair $_selectedRelayNumber — GPIO $_selectedGpio (OUTPUT) ↔ Switch D$_selectedSwitchGpio (${_selectedSwitchGpio >= 34 ? "INPUT" : "INPUT_PULLUP"})',
                               style: AppTypography.bodySm(color: AppColors.onSurfaceVariant).copyWith(fontSize: 11),
                             ),
                             const SizedBox(height: 10),
@@ -1567,7 +1598,11 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                 final swPin = p['switchGpio'] as int;
                                 final isSelected = _selectedRelayNumber == rNum;
                                 return ChoiceChip(
-                                  label: Text('P$rNum: $rLabel (D$rPin) ↔ $swName (D$swPin)'),
+                                  label: Text(
+                                    swPin < 0
+                                        ? 'P$rNum: $rLabel (G$rPin)'
+                                        : 'P$rNum: $rLabel (D$rPin) ↔ $swName (D$swPin)',
+                                  ),
                                   selected: isSelected,
                                   selectedColor: AppColors.primary.withValues(alpha: 0.25),
                                   backgroundColor: AppColors.surfaceContainer,

@@ -315,7 +315,7 @@ class ClassroomState extends ChangeNotifier {
             }
           }
           _classrooms = loadedRooms;
-          if (prefs.getBool('migrated_reb_301_pins_v2') != true) {
+          if (prefs.getBool('migrated_reb_301_pins_v3') != true) {
             final rebIdx = _classrooms.indexWhere(
               (r) => r.id == 'reb_room_301' || r.scopedRoomId == 'reb_room_301',
             );
@@ -327,7 +327,7 @@ class ClassroomState extends ChangeNotifier {
                 }
               }
             }
-            await prefs.setBool('migrated_reb_301_pins_v2', true);
+            await prefs.setBool('migrated_reb_301_pins_v3', true);
             await prefs.setString(
               _storageKeyClassrooms,
               jsonEncode(_classrooms.map((c) => c.toMap()).toList()),
@@ -392,6 +392,20 @@ class ClassroomState extends ChangeNotifier {
         name: 'Zone 1 Right Light 2',
         zone: 'Zone 1',
         boardId: 1,
+        relay: 6,
+      ),
+      _reb301ExtraLight(
+        id: 'dev-301-z2-r5',
+        name: 'Zone 2 Center Light 3',
+        zone: 'Zone 2',
+        boardId: 2,
+        relay: 5,
+      ),
+      _reb301ExtraLight(
+        id: 'dev-301-z2-r6',
+        name: 'Zone 2 Center Light 4',
+        zone: 'Zone 2',
+        boardId: 2,
         relay: 6,
       ),
       _reb301ExtraLight(
@@ -1258,7 +1272,7 @@ class ClassroomState extends ChangeNotifier {
             relay: 6,
           ),
 
-          // Zone 2 (Unlabeled Board: 8 Relays <-> SW1..SW8)
+          // Zone 2 (Unlabeled Board: 6 Relays, App/MQTT only)
           ClassroomDevice(
             id: 'dev-301-z2-r1',
             name: 'Zone 2 Center Light 1',
@@ -1314,6 +1328,20 @@ class ClassroomState extends ChangeNotifier {
             ),
             zigbeeOrBleNode: 'Switchboard #2',
             fanSpeed: 0,
+          ),
+          _reb301ExtraLight(
+            id: 'dev-301-z2-r5',
+            name: 'Zone 2 Center Light 3',
+            zone: 'Zone 2',
+            boardId: 2,
+            relay: 5,
+          ),
+          _reb301ExtraLight(
+            id: 'dev-301-z2-r6',
+            name: 'Zone 2 Center Light 4',
+            zone: 'Zone 2',
+            boardId: 2,
+            relay: 6,
           ),
 
           // Zone 3 ("3rd One": 5 Relays <-> SW1..SW5)

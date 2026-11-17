@@ -50,19 +50,29 @@ class ConnectivityState extends ChangeNotifier {
   final List<IpDeviceNode> _discoveredIpNodes = [];
   List<IpDeviceNode> get discoveredIpNodes {
     final now = DateTime.now();
-    // 30-second grace window: stable against network jitter while cleanly pruning offline boards
-    _discoveredIpNodes.removeWhere((n) => now.difference(n.lastSeen).inSeconds > 30 || n.status != 'ONLINE');
-    _discoveredIpNodes.sort((a, b) => a.boardId.compareTo(b.boardId));
-    return List.unmodifiable(_discoveredIpNodes);
+    // 45-second non-destructive grace window (ESP32 heartbeat runs every 10-12s).
+    final active = _discoveredIpNodes
+        .where(
+          (n) =>
+              now.difference(n.lastSeen).inSeconds <= 45 &&
+              n.status == 'ONLINE',
+        )
+        .toList();
+    active.sort((a, b) => a.boardId.compareTo(b.boardId));
+    return List.unmodifiable(active);
   }
 
   void purgeAllDiscoveredNodes({bool force = false}) {
+    final beforeCount = _discoveredIpNodes.length;
     if (force) {
       _discoveredIpNodes.clear();
-      notifyListeners();
     } else {
       final now = DateTime.now();
-      _discoveredIpNodes.removeWhere((n) => now.difference(n.lastSeen).inSeconds > 30);
+      _discoveredIpNodes.removeWhere(
+        (n) => now.difference(n.lastSeen).inSeconds > 45 || n.status != 'ONLINE',
+      );
+    }
+    if (_discoveredIpNodes.length != beforeCount) {
       notifyListeners();
     }
   }
@@ -390,25 +400,27 @@ class ConnectivityState extends ChangeNotifier {
     final int resolvedBoardId = isAc ? 4 : boardId;
     final String nodeName = isAc ? 'Standalone AC' : 'Switchboard #$resolvedBoardId';
 
+    bool sameNodeIdentity(IpDeviceNode n) {
+      if (n.zoneId != resolvedZoneId &&
+          !(n.boardId == resolvedBoardId && n.deviceType == resolvedType)) {
+        return false;
+      }
+      if (roomId.isNotEmpty && n.roomId.isNotEmpty && n.roomId != roomId) {
+        return false;
+      }
+      return true;
+    }
+
     if (!isOnline) {
-      _discoveredIpNodes.removeWhere(
-        (n) =>
-            n.zoneId == resolvedZoneId ||
-            n.boardId == resolvedBoardId ||
-            n.name == nodeName ||
-            (ip.isNotEmpty && n.ip == ip),
-      );
-      notifyListeners();
+      final before = _discoveredIpNodes.length;
+      _discoveredIpNodes.removeWhere(sameNodeIdentity);
+      if (_discoveredIpNodes.length != before) {
+        notifyListeners();
+      }
       return;
     }
 
-    final existingIdx = _discoveredIpNodes.indexWhere(
-      (n) =>
-          n.zoneId == resolvedZoneId ||
-          n.boardId == resolvedBoardId ||
-          n.name == nodeName ||
-          (ip.isNotEmpty && n.ip == ip),
-    );
+    final existingIdx = _discoveredIpNodes.indexWhere(sameNodeIdentity);
     final newNode = IpDeviceNode(
       boardId: resolvedBoardId,
       zoneId: resolvedZoneId,
@@ -422,7 +434,15 @@ class ConnectivityState extends ChangeNotifier {
       roomId: roomId,
     );
     if (existingIdx != -1) {
+      final prev = _discoveredIpNodes[existingIdx];
+      final bool meaningfulChange =
+          prev.ip != newNode.ip ||
+          prev.status != newNode.status ||
+          prev.roomId != newNode.roomId ||
+          prev.boardId != newNode.boardId ||
+          (prev.responseTimeMs - newNode.responseTimeMs).abs() >= 6;
       _discoveredIpNodes[existingIdx] = newNode;
+      if (!meaningfulChange) return;
     } else {
       _discoveredIpNodes.add(newNode);
     }

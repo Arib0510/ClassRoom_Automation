@@ -401,7 +401,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                 'Manual Switch Input',
                 dev.type == DeviceType.hvac
                     ? 'Optical IR (GPIO 33 / GPIO 12)'
-                    : 'GPIO ${dev.switchGpioPinNumber} (INPUT_PULLUP)',
+                    : (dev.switchGpioPinNumber < 0
+                        ? 'None (App/MQTT only)'
+                        : 'GPIO ${dev.switchGpioPinNumber} (${dev.switchGpioPinNumber >= 34 ? "INPUT" : "INPUT_PULLUP"})'),
               ),
               _buildPinoutRow('Control Logic', 'Active LOW Relay ↔ State-Change Switch'),
               _buildPinoutRow('Coil Rating', '5V DC / 70mA'),

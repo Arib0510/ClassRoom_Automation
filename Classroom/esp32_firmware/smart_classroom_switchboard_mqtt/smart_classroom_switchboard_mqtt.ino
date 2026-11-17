@@ -16,15 +16,13 @@
       Pair 5: Relay In5 [R] on D21 (GPIO 21) <-> Switch S5 on D33 (GPIO 33)
       Pair 6: Relay In6 [R] on D19 (GPIO 19) <-> Switch S6 on D34 (GPIO 34, input-only)
 
-  • ZONE 2 (Unlabeled Board, ZONE_ID = 2, 8 Active Pairs):
-      Pair 1: Relay In4 [R] on D15 (GPIO 15) <-> Switch SW1 on D13 (GPIO 13)
-      Pair 2: Relay In3 [R] on D2  (GPIO 2)  <-> Switch SW2 on D12 (GPIO 12)
-      Pair 3: Relay In2 [R] on D4  (GPIO 4)  <-> Switch SW3 on D14 (GPIO 14)
-      Pair 4: Relay In1 [R] on D16 (GPIO 16) <-> Switch SW4 on D27 (GPIO 27)
-      Pair 5: Relay In4 [L] on D5  (GPIO 5)  <-> Switch SW5 on D26 (GPIO 26)
-      Pair 6: Relay In3 [L] on D18 (GPIO 18) <-> Switch SW6 on D25 (GPIO 25)
-      Pair 7: Relay In2 [L] on D19 (GPIO 19) <-> Switch SW7 on D33 (GPIO 33)
-      Pair 8: Relay In1 [L] on D21 (GPIO 21) <-> Switch SW8 on D32 (GPIO 32)
+  • ZONE 2 (Unlabeled Board, ZONE_ID = 2, 6 Active Relays — App/MQTT only, no switches):
+      Pair 1: Relay In1 on G4  (GPIO 4)  (No physical switch)
+      Pair 2: Relay In2 on G0  (GPIO 0)  (No physical switch)
+      Pair 3: Relay In3 on G2  (GPIO 2)  (No physical switch)
+      Pair 4: Relay In4 on G15 (GPIO 15) (No physical switch)
+      Pair 5: Relay In5 on G17 (GPIO 17) (No physical switch; swapped from G11 flash pin)
+      Pair 6: Relay In6 on G5  (GPIO 5)  (No physical switch)
 
   • ZONE 3 ("3rd One", ZONE_ID = 3, 5 Active Pairs):
       Pair 1: Relay In1 on D5  (GPIO 5)  <-> Switch SW1 on D32 (GPIO 32)
@@ -127,17 +125,15 @@ SwitchRelayPair pairConfigs[NUM_RELAYS] = {
   {19, 34, "In6 [R]", "S6", false}  // Pair 6: Relay In6 [R] (D19) <-> Switch S6 (D34, input-only)
 };
 #elif ZONE_ID == 2
-#define NUM_RELAYS 8
-// Zone 2 (Unlabeled Board) Exact 8-Pair Pins:
+#define NUM_RELAYS 6
+// Zone 2 (Unlabeled Board) Exact 6-Relay Pins (App/MQTT only, no physical switches):
 SwitchRelayPair pairConfigs[NUM_RELAYS] = {
-  {15, 13, "In4 [R]", "SW1", false}, // Pair 1: Relay In4 [R] (D15) <-> Switch SW1 (D13)
-  { 2, 12, "In3 [R]", "SW2", false}, // Pair 2: Relay In3 [R] (D2)  <-> Switch SW2 (D12)
-  { 4, 14, "In2 [R]", "SW3", false}, // Pair 3: Relay In2 [R] (D4)  <-> Switch SW3 (D14)
-  {16, 27, "In1 [R]", "SW4", false}, // Pair 4: Relay In1 [R] (D16) <-> Switch SW4 (D27)
-  { 5, 26, "In4 [L]", "SW5", false}, // Pair 5: Relay In4 [L] (D5)  <-> Switch SW5 (D26)
-  {18, 25, "In3 [L]", "SW6", false}, // Pair 6: Relay In3 [L] (D18) <-> Switch SW6 (D25)
-  {19, 33, "In2 [L]", "SW7", false}, // Pair 7: Relay In2 [L] (D19) <-> Switch SW7 (D33)
-  {21, 32, "In1 [L]", "SW8", false}  // Pair 8: Relay In1 [L] (D21) <-> Switch SW8 (D32)
+  { 4, -1, "In1", "NONE", false}, // Pair 1: Relay In1 (G4)  (No physical switch)
+  { 0, -1, "In2", "NONE", false}, // Pair 2: Relay In2 (G0)  (No physical switch)
+  { 2, -1, "In3", "NONE", false}, // Pair 3: Relay In3 (G2)  (No physical switch)
+  {15, -1, "In4", "NONE", false}, // Pair 4: Relay In4 (G15) (No physical switch)
+  {17, -1, "In5", "NONE", false}, // Pair 5: Relay In5 (G17) (No physical switch)
+  { 5, -1, "In6", "NONE", false}  // Pair 6: Relay In6 (G5)  (No physical switch)
 };
 #else
 #define NUM_RELAYS 5
@@ -229,14 +225,20 @@ void configureHardwarePins() {
     digitalWrite(pairConfigs[i].relayPin, relayLevel(relayStates[i]));
     pinMode(pairConfigs[i].relayPin, OUTPUT);
 
-    // 2. Configure Manual Switch Pin (GPIO 34-39 are input-only with no internal pull-up)
-    int switchMode = (pairConfigs[i].switchPin >= 34) ? INPUT : INPUT_PULLUP;
-    pinMode(pairConfigs[i].switchPin, switchMode);
-    int initialReading = digitalRead(pairConfigs[i].switchPin);
-    lastStableSwitchState[i] = initialReading;
-    lastRawSwitchReading[i]  = initialReading;
-    lastSwitchDebounceMs[i]  = now;
-    attachInterrupt(digitalPinToInterrupt(pairConfigs[i].switchPin), switchIsrTable[i], CHANGE);
+    // 2. Configure Manual Switch Pin (skip if -1; GPIO 34-39 are input-only without pull-up)
+    if (pairConfigs[i].switchPin >= 0) {
+      int switchMode = (pairConfigs[i].switchPin >= 34) ? INPUT : INPUT_PULLUP;
+      pinMode(pairConfigs[i].switchPin, switchMode);
+      int initialReading = digitalRead(pairConfigs[i].switchPin);
+      lastStableSwitchState[i] = initialReading;
+      lastRawSwitchReading[i]  = initialReading;
+      lastSwitchDebounceMs[i]  = now;
+      attachInterrupt(digitalPinToInterrupt(pairConfigs[i].switchPin), switchIsrTable[i], CHANGE);
+    } else {
+      lastStableSwitchState[i] = HIGH;
+      lastRawSwitchReading[i]  = HIGH;
+      lastSwitchDebounceMs[i]  = now;
+    }
   }
 }
 
@@ -376,6 +378,7 @@ void setRelay(int index, bool turnOn, bool publishFeedback) {
 void pollManualSwitches() {
   unsigned long now = millis();
   for (int i = 0; i < NUM_RELAYS; i++) {
+    if (pairConfigs[i].switchPin < 0) continue;
     int currentReading = digitalRead(pairConfigs[i].switchPin);
 
     if (currentReading != lastRawSwitchReading[i] || switchIrqTriggered[i]) {
@@ -739,9 +742,14 @@ void setup() {
 
   configureHardwarePins();
   for (int i = 0; i < NUM_RELAYS; i++) {
-    Serial.printf("  Pair %d: Relay %-7s (GPIO %2d) <-> Switch %-3s (GPIO %2d)\n",
-                  i + 1, pairConfigs[i].relayLabel, pairConfigs[i].relayPin,
-                  pairConfigs[i].switchName, pairConfigs[i].switchPin);
+    if (pairConfigs[i].switchPin >= 0) {
+      Serial.printf("  Pair %d: Relay %-7s (GPIO %2d) <-> Switch %-3s (GPIO %2d)\n",
+                    i + 1, pairConfigs[i].relayLabel, pairConfigs[i].relayPin,
+                    pairConfigs[i].switchName, pairConfigs[i].switchPin);
+    } else {
+      Serial.printf("  Pair %d: Relay %-7s (GPIO %2d) <-> No physical switch (App/MQTT only)\n",
+                    i + 1, pairConfigs[i].relayLabel, pairConfigs[i].relayPin);
+    }
   }
 
   connectWifi();
